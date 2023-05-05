@@ -63,7 +63,6 @@ impl BitVector {
         }
     }
 
-    // todo make sure popcount() is used
     pub fn rank(&self, zero: bool, pos: usize) -> usize {
         let index = pos / WORD_SIZE;
         let block_index = pos / BLOCK_SIZE;
@@ -98,7 +97,7 @@ impl BitVector {
         }
 
         if zero {
-            rank += (self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_zeros() as usize;
+            rank += (!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize;
         } else {
             rank += (self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize;
         }
@@ -124,6 +123,26 @@ mod tests {
         bv.append_bit(1u8);
         bv.append_bit(1u8);
         assert_eq!(bv.data, vec![0b110]);
+    }
+
+    #[test]
+    fn test_rank() {
+        let mut bv = BitVector {
+            data: Vec::new(),
+            len: 0,
+            blocks: vec![BlockDescriptor { zeros: 0 }],
+            super_blocks: vec![BlockDescriptor { zeros: 0 }],
+        };
+
+        bv.append_bit(0u8);
+        bv.append_bit(1u8);
+        bv.append_bit(1u8);
+        bv.append_bit(0u8);
+        bv.append_bit(1u8);
+        bv.append_bit(1u8);
         assert_eq!(bv.rank(false, 2), 1);
+        assert_eq!(bv.rank(false, 3), 2);
+        assert_eq!(bv.rank(false, 4), 2);
+        assert_eq!(bv.rank(true, 3), 1);
     }
 }
