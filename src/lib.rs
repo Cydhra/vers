@@ -140,9 +140,27 @@ mod tests {
         bv.append_bit(0u8);
         bv.append_bit(1u8);
         bv.append_bit(1u8);
+        // first bit must always have rank 0
+        assert_eq!(bv.rank(true, 0), 0);
+        assert_eq!(bv.rank(true, 0), 0);
+
         assert_eq!(bv.rank(false, 2), 1);
         assert_eq!(bv.rank(false, 3), 2);
         assert_eq!(bv.rank(false, 4), 2);
         assert_eq!(bv.rank(true, 3), 1);
+    }
+
+    #[test]
+    fn test_multi_words() {
+        let bv = BitVector {
+            data: vec![0, 0b110],
+            len: 67,
+            blocks: vec![BlockDescriptor { zeros: 0 }],
+            super_blocks: vec![BlockDescriptor { zeros: 0 }],
+        };
+
+        assert_eq!(bv.rank(true, 64), 64);
+        assert_eq!(bv.rank(true, 65), 65);
+        assert_eq!(bv.rank(true, 66), 65);
     }
 }
