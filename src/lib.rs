@@ -63,6 +63,14 @@ impl BitVector {
         }
     }
 
+    pub fn rank0(&self, pos: usize) -> usize {
+        self.rank(true, pos)
+    }
+
+    pub fn rank1(&self, pos: usize) -> usize {
+        self.rank(false, pos)
+    }
+
     pub fn rank(&self, zero: bool, pos: usize) -> usize {
         let index = pos / WORD_SIZE;
         let block_index = pos / BLOCK_SIZE;
@@ -141,13 +149,13 @@ mod tests {
         bv.append_bit(1u8);
         bv.append_bit(1u8);
         // first bit must always have rank 0
-        assert_eq!(bv.rank(true, 0), 0);
-        assert_eq!(bv.rank(true, 0), 0);
+        assert_eq!(bv.rank0(0), 0);
+        assert_eq!(bv.rank1(0), 0);
 
-        assert_eq!(bv.rank(false, 2), 1);
-        assert_eq!(bv.rank(false, 3), 2);
-        assert_eq!(bv.rank(false, 4), 2);
-        assert_eq!(bv.rank(true, 3), 1);
+        assert_eq!(bv.rank1(2), 1);
+        assert_eq!(bv.rank1(3), 2);
+        assert_eq!(bv.rank1(4), 2);
+        assert_eq!(bv.rank0(3), 1);
     }
 
     #[test]
@@ -159,8 +167,8 @@ mod tests {
             super_blocks: vec![BlockDescriptor { zeros: 0 }],
         };
 
-        assert_eq!(bv.rank(true, 64), 64);
-        assert_eq!(bv.rank(true, 65), 65);
-        assert_eq!(bv.rank(true, 66), 65);
+        assert_eq!(bv.rank0(64), 64);
+        assert_eq!(bv.rank0(65), 65);
+        assert_eq!(bv.rank0(66), 65);
     }
 }
