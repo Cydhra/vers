@@ -8,7 +8,12 @@ edition = "2021"
 [dev-dependencies]
 criterion = { version = "0.4", features = ["html_reports"] }
 rand = "0.8"
+rsdict = { version = "0.0.6", features = ["simd"] }
 
 [[bench]]
 name = "rank_benchmark"
+harness = false
+
+[[bench]]
+name = "comparison_benchmark"
 harness = false
