@@ -103,7 +103,11 @@ impl BitVector {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     pub fn rank0(&self, pos: usize) -> usize {
-        self.rank(true, pos)
+        if cfg!(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2")) {
+            unsafe { self.avx_rank0(pos) }
+        } else {
+            self.naive_rank0(pos)
+        }
     }
 
     /// Return the 1-rank of the bit at the given position. The 1-rank is the number of
@@ -112,6 +116,28 @@ impl BitVector {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     pub fn rank1(&self, pos: usize) -> usize {
+        if cfg!(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2")) {
+            unsafe { self.avx_rank1(pos) }
+        } else {
+            self.naive_rank1(pos)
+        }
+    }
+
+    fn naive_rank0(&self, pos: usize) -> usize {
+        self.rank(true, pos)
+    }
+
+    fn naive_rank1(&self, pos: usize) -> usize {
+        self.rank(false, pos)
+    }
+
+    #[target_feature(enable = "avx2")]
+    unsafe fn avx_rank0(&self, pos: usize) -> usize {
+        self.rank(true, pos)
+    }
+
+    #[target_feature(enable = "avx2")]
+    unsafe fn avx_rank1(&self, pos: usize) -> usize {
         self.rank(false, pos)
     }
 
@@ -142,7 +168,7 @@ impl BitVector {
             };
         }
 
-        #[cfg(any(not(feature = "simd"), not(target_arch = "x86_64")))]
+        #[cfg(any(not(feature = "simd"), not(target_arch = "x86_64"), not(target_feature = "avx2")))]
         {
             // naive popcount of blocks
 
@@ -163,7 +189,7 @@ impl BitVector {
             };
         }
 
-        #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+        #[cfg(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2"))]
         {
             // Wojciech Muła algorithm for SIMD popcount on SSSE3.
             rank += unsafe {
