@@ -103,7 +103,11 @@ impl BitVector {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     pub fn rank0(&self, pos: usize) -> usize {
-        if cfg!(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2")) {
+        if cfg!(all(
+            feature = "simd",
+            target_arch = "x86_64",
+            target_feature = "avx2"
+        )) {
             unsafe { self.avx_rank0(pos) }
         } else {
             self.naive_rank0(pos)
@@ -116,7 +120,11 @@ impl BitVector {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     pub fn rank1(&self, pos: usize) -> usize {
-        if cfg!(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2")) {
+        if cfg!(all(
+            feature = "simd",
+            target_arch = "x86_64",
+            target_feature = "avx2"
+        )) {
             unsafe { self.avx_rank1(pos) }
         } else {
             self.naive_rank1(pos)
@@ -164,17 +172,19 @@ impl BitVector {
             rank += if zero {
                 self.blocks[block_index - 1].zeros
             } else {
-                (block_index * BLOCK_SIZE) - self.blocks[block_index - 1].zeros
+                (((block_index) % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
+                    - self.blocks[block_index - 1].zeros
             };
         }
 
-        #[cfg(any(not(feature = "simd"), not(target_arch = "x86_64"), not(target_feature = "avx2")))]
+        #[cfg(any(
+            not(feature = "simd"),
+            not(target_arch = "x86_64"),
+            not(target_feature = "avx2")
+        ))]
         {
             // naive popcount of blocks
-
-            for i in ((super_block_index * SUPER_BLOCK_SIZE) + (block_index * BLOCK_SIZE))
-                / WORD_SIZE..index
-            {
+            for i in (block_index * BLOCK_SIZE) / WORD_SIZE..index {
                 rank += if zero {
                     self.data[i].count_zeros() as usize
                 } else {
@@ -286,6 +296,9 @@ impl Default for BitVector {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::distributions::Distribution;
+    use rand::distributions::Uniform;
+    use rand::Rng;
 
     #[test]
     fn test_append_bit() {
@@ -348,5 +361,45 @@ mod tests {
         assert_eq!(bv.rank0(64), 64);
         assert_eq!(bv.rank0(65), 65);
         assert_eq!(bv.rank0(66), 65);
+    }
+
+    #[test]
+    fn test_super_block() {
+        let mut bv = BitVector::new();
+        let mut rng = rand::thread_rng();
+        let mut sample = Uniform::new(0, 2);
+        static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
+
+        for _ in 0..LENGTH {
+            bv.append_bit(sample.sample(&mut rng) as u8);
+        }
+
+        assert_eq!(bv.len(), LENGTH);
+
+        for _ in 0..100 {
+            let rnd_index = rng.gen_range(0..LENGTH);
+            let actual_rank1 = bv.rank1(rnd_index);
+            let actual_rank0 = bv.rank0(rnd_index);
+
+            let data = &bv.data;
+            let mut expected_rank1 = 0;
+            let mut expected_rank0 = 0;
+
+            let data_index = rnd_index / WORD_SIZE;
+            let bit_index = rnd_index % WORD_SIZE;
+
+            for i in 0..data_index {
+                expected_rank1 += data[i].count_ones() as usize;
+                expected_rank0 += data[i].count_zeros() as usize;
+            }
+
+            if bit_index > 0 {
+                expected_rank1 += (data[data_index] & (1 << bit_index) - 1).count_ones() as usize;
+                expected_rank0 += (!data[data_index] & (1 << bit_index) - 1).count_ones() as usize;
+            }
+
+            assert_eq!(actual_rank1, expected_rank1);
+            assert_eq!(actual_rank0, expected_rank0);
+        }
     }
 }
