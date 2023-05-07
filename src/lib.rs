@@ -176,11 +176,11 @@ impl BitVector {
         ))]
         {
             // naive popcount of blocks
-            for i in (block_index * BLOCK_SIZE) / WORD_SIZE..index {
+            for &i in &self.data[(block_index * BLOCK_SIZE) / WORD_SIZE..index] {
                 rank += if zero {
-                    self.data[i].count_zeros() as usize
+                    i.count_zeros() as usize
                 } else {
-                    self.data[i].count_ones() as usize
+                    i.count_ones() as usize
                 };
             }
 
