@@ -90,7 +90,7 @@ impl BitVector {
             self.append_new_block();
         }
 
-        self.data[(self.len + 1) / WORD_SIZE] = word;
+        self.data[self.len / WORD_SIZE] = word;
         self.len += WORD_SIZE;
 
         self.blocks.last_mut().unwrap().zeros += WORD_SIZE - word.count_ones() as usize;
