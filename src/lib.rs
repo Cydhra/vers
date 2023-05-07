@@ -25,8 +25,8 @@ impl BitVector {
         BitVector {
             data: Vec::new(),
             len: 0,
-            blocks: vec![BlockDescriptor { zeros: 0 }],
-            super_blocks: vec![BlockDescriptor { zeros: 0 }],
+            blocks: vec![],
+            super_blocks: vec![],
         }
     }
 
@@ -40,7 +40,7 @@ impl BitVector {
 
         if self.data.len() > (self.super_blocks.len() * SUPER_BLOCK_SIZE) / WORD_SIZE {
             let new_super_block = BlockDescriptor {
-                zeros: self.super_blocks[self.super_blocks.len() - 1].zeros,
+                zeros: self.super_blocks.last().map(|b| b.zeros).unwrap_or(0),
             };
             self.super_blocks.push(new_super_block);
 
@@ -163,8 +163,7 @@ impl BitVector {
             rank += if zero {
                 self.super_blocks[super_block_index - 1].zeros
             } else {
-                (super_block_index * SUPER_BLOCK_SIZE)
-                    - self.super_blocks[super_block_index - 1].zeros
+                (super_block_index * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_index - 1].zeros
             };
         }
 
@@ -172,8 +171,7 @@ impl BitVector {
             rank += if zero {
                 self.blocks[block_index - 1].zeros
             } else {
-                (((block_index) % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
-                    - self.blocks[block_index - 1].zeros
+                (((block_index) % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE) - self.blocks[block_index - 1].zeros
             };
         }
 
