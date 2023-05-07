@@ -3,7 +3,12 @@ name = "vers"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+simd = ["packed_simd"]
+
 [dependencies]
+packed_simd = { version = "0.3.8", features = ["into_bits"], optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.4", features = ["html_reports"] }

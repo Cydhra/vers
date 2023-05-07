@@ -1,5 +1,8 @@
 use std::ops::Rem;
 
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
+use packed_simd::*;
+
 const WORD_SIZE: usize = 64;
 const BLOCK_SIZE: usize = 512;
 const SUPER_BLOCK_SIZE: usize = 4096;
@@ -135,21 +138,68 @@ impl BitVector {
             };
         }
 
-        for i in
-            ((super_block_index * SUPER_BLOCK_SIZE) + (block_index * BLOCK_SIZE)) / WORD_SIZE..index
+        #[cfg(any(not(feature = "simd"), not(target_arch = "x86_64")))]
         {
+            // naive popcount of blocks
+
+            for i in ((super_block_index * SUPER_BLOCK_SIZE) + (block_index * BLOCK_SIZE))
+                / WORD_SIZE..index
+            {
+                rank += if zero {
+                    self.data[i].count_zeros() as usize
+                } else {
+                    self.data[i].count_ones() as usize
+                };
+            }
+
             rank += if zero {
-                self.data[i].count_zeros() as usize
+                (!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
             } else {
-                self.data[i].count_ones() as usize
+                (self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
             };
         }
 
-        rank += if zero {
-            (!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
-        } else {
-            (self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
-        };
+        #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+        {
+            // Wojciech Muła algorithm for SIMD popcount on SSSE3.
+
+            // step 1 pack last partial into vectors
+            let mut slice = vec![0u64; BLOCK_SIZE / WORD_SIZE];
+
+            let full_block_boundary = (super_block_index * SUPER_BLOCK_SIZE
+                + (block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
+                / WORD_SIZE;
+            let partial_block_size = index - full_block_boundary;
+
+            if zero {
+                slice[..=partial_block_size]
+                    .iter_mut()
+                    .zip(&self.data[full_block_boundary..=index])
+                    .for_each(|(target, src)| *target = !*src);
+            } else {
+                slice[..=partial_block_size]
+                    .copy_from_slice(&self.data[full_block_boundary..=index]);
+            }
+            slice[partial_block_size] &= (1 << (pos % WORD_SIZE)) - 1;
+
+            let block = u8x32::from_bits(u64x4::from_slice_unaligned(&slice));
+            let shifted_block = block >> 4;
+
+            let mask = u8x32::from_slice_unaligned(&[0x0f; 32]);
+            let lookup = u8x32::from_slice_unaligned(&[
+                0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0,
+            ]);
+
+            // mask the upper nibbles so that the sign bit is cleared
+            let masked_block = block & mask;
+            let masked_shifted_block = shifted_block & mask;
+
+            // step 2: count nibbles by table lookup
+            let count =
+                lookup.shuffle1_dyn(masked_block) + lookup.shuffle1_dyn(masked_shifted_block);
+            rank += count.wrapping_sum() as usize;
+        }
 
         rank
     }
@@ -224,6 +274,7 @@ mod tests {
             super_blocks: vec![BlockDescriptor { zeros: 0 }],
         };
 
+        assert_eq!(bv.rank0(63), 63);
         assert_eq!(bv.rank0(64), 64);
         assert_eq!(bv.rank0(65), 65);
         assert_eq!(bv.rank0(66), 65);
