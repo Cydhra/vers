@@ -191,13 +191,13 @@ impl BitVector {
                 // calculate a mask
                 let mask1 = !u64::MAX.checked_shl((pos % BLOCK_SIZE) as u32).unwrap_or(0);
                 let mask2 = !u64::MAX
-                    .checked_shl((pos.saturating_sub(WORD_SIZE) % BLOCK_SIZE) as u32)
+                    .checked_shl(((pos % BLOCK_SIZE).saturating_sub(WORD_SIZE)) as u32)
                     .unwrap_or(0);
                 let mask3 = !u64::MAX
-                    .checked_shl((pos.saturating_sub(WORD_SIZE * 2) % BLOCK_SIZE) as u32)
+                    .checked_shl(((pos % BLOCK_SIZE).saturating_sub(WORD_SIZE * 2)) as u32)
                     .unwrap_or(0);
                 let mask4 = !u64::MAX
-                    .checked_shl((pos.saturating_sub(WORD_SIZE * 3) % BLOCK_SIZE) as u32)
+                    .checked_shl(((pos % BLOCK_SIZE).saturating_sub(WORD_SIZE * 3)) as u32)
                     .unwrap_or(0);
                 let enable_mask =
                     _mm256_set_epi64x(mask1 as i64, mask2 as i64, mask3 as i64, mask4 as i64);
