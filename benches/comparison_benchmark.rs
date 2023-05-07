@@ -19,12 +19,12 @@ fn compare_ranks(b: &mut Criterion) {
 
     let mut group = b.benchmark_group("comparison");
 
-    for l in [2 << 8, 2 << 10, 2 << 12, 2 << 14, 2 << 16, 2 << 18, 2 << 20] {
+    for l in [2 << 8, 2 << 10, 2 << 12, 2 << 14, 2 << 16, 2 << 18] {
         let vers_vec = common::construct_vers_vec(&mut rng, l);
         let rsdict = construct_rsdict_vec(&mut rng, l);
         let sample = Uniform::new(0, l);
 
-        group.bench_with_input(BenchmarkId::new("vers.rank0", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("vers", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng),
                 |e| black_box(vers_vec.rank0(e)),
