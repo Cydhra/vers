@@ -6,10 +6,12 @@ const WORD_SIZE: usize = 64;
 const BLOCK_SIZE: usize = 256;
 const SUPER_BLOCK_SIZE: usize = 4096;
 
+#[derive(Clone, Copy, Debug)]
 struct BlockDescriptor {
     zeros: usize,
 }
 
+#[derive(Clone, Debug)]
 pub struct BitVector {
     data: Vec<u64>,
     len: usize,
@@ -132,7 +134,7 @@ impl BitVector {
             };
         }
 
-        if block_index > 0 {
+        if block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE) > 0 {
             rank += if zero {
                 self.blocks[block_index - 1].zeros
             } else {
@@ -261,12 +263,7 @@ mod tests {
 
     #[test]
     fn test_append_bit() {
-        let mut bv = BitVector {
-            data: Vec::new(),
-            len: 0,
-            blocks: vec![BlockDescriptor { zeros: 0 }],
-            super_blocks: vec![BlockDescriptor { zeros: 0 }],
-        };
+        let mut bv = BitVector::new();
 
         bv.append_bit(0u8);
         bv.append_bit(1u8);
@@ -275,13 +272,23 @@ mod tests {
     }
 
     #[test]
+    fn test_append_bit_long() {
+        let mut bv = BitVector::new();
+
+        let len = SUPER_BLOCK_SIZE + 1;
+        for _ in 0..len {
+            bv.append_bit(0u8);
+            bv.append_bit(1u8);
+        }
+
+        assert_eq!(bv.len(), len * 2);
+        assert_eq!(bv.rank0(2 * len - 1), len);
+        assert_eq!(bv.rank1(2 * len - 1), len - 1);
+    }
+
+    #[test]
     fn test_rank() {
-        let mut bv = BitVector {
-            data: Vec::new(),
-            len: 0,
-            blocks: vec![BlockDescriptor { zeros: 0 }],
-            super_blocks: vec![BlockDescriptor { zeros: 0 }],
-        };
+        let mut bv = BitVector::new();
 
         bv.append_bit(0u8);
         bv.append_bit(1u8);
