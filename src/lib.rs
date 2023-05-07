@@ -1,12 +1,10 @@
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
+use std::arch::x86_64::*;
 use std::ops::Rem;
 
-#[cfg(all(feature = "simd", target_arch = "x86_64"))]
-use packed_simd::*;
-
 const WORD_SIZE: usize = 64;
-const BLOCK_SIZE: usize = 512;
+const BLOCK_SIZE: usize = 256;
 const SUPER_BLOCK_SIZE: usize = 4096;
-const PAGE_SIZE: usize = u32::MAX as usize;
 
 struct BlockDescriptor {
     zeros: usize,
@@ -17,7 +15,6 @@ pub struct BitVector {
     len: usize,
     blocks: Vec<BlockDescriptor>,
     super_blocks: Vec<BlockDescriptor>,
-    // TODO: pages
 }
 
 impl BitVector {
@@ -33,23 +30,24 @@ impl BitVector {
 
     /// Appends a new 0 to the end of `data`. If the last block is full, a new block is
     /// created. If the last super block is full, a new super block is created.
-    fn begin_new_word(&mut self) {
-        self.data.push(0);
+    fn append_new_block(&mut self) {
+        // append a full new block
+        for _ in 0..BLOCK_SIZE / WORD_SIZE {
+            self.data.push(0);
+        }
 
-        if self.data.len() > (self.blocks.len() * BLOCK_SIZE) / WORD_SIZE {
-            if self.data.len() > (self.super_blocks.len() * SUPER_BLOCK_SIZE) / WORD_SIZE {
-                let new_super_block = BlockDescriptor {
-                    zeros: self.super_blocks[self.super_blocks.len() - 1].zeros,
-                };
-                self.super_blocks.push(new_super_block);
+        if self.data.len() > (self.super_blocks.len() * SUPER_BLOCK_SIZE) / WORD_SIZE {
+            let new_super_block = BlockDescriptor {
+                zeros: self.super_blocks[self.super_blocks.len() - 1].zeros,
+            };
+            self.super_blocks.push(new_super_block);
 
-                self.blocks.push(BlockDescriptor { zeros: 0 });
-            } else {
-                let new_block = BlockDescriptor {
-                    zeros: self.blocks[self.blocks.len() - 1].zeros,
-                };
-                self.blocks.push(new_block);
-            }
+            self.blocks.push(BlockDescriptor { zeros: 0 });
+        } else {
+            let new_block = BlockDescriptor {
+                zeros: self.blocks[self.blocks.len() - 1].zeros,
+            };
+            self.blocks.push(new_block);
         }
     }
 
@@ -62,8 +60,8 @@ impl BitVector {
     {
         let bit = (bit % T::from(2u8)).into();
 
-        if self.len % WORD_SIZE == 0 {
-            self.begin_new_word();
+        if self.len % BLOCK_SIZE == 0 {
+            self.append_new_block();
         }
 
         let pos = self.len % WORD_SIZE;
@@ -86,8 +84,11 @@ impl BitVector {
     pub fn append_word(&mut self, word: u64) {
         debug_assert!(self.len % WORD_SIZE == 0);
 
-        self.begin_new_word();
-        *self.data.last_mut().unwrap() = word;
+        if self.len % BLOCK_SIZE == 0 {
+            self.append_new_block();
+        }
+
+        self.data[(self.len + 1) / WORD_SIZE] = word;
         self.len += WORD_SIZE;
 
         self.blocks.last_mut().unwrap().zeros += WORD_SIZE - word.count_ones() as usize;
@@ -116,6 +117,7 @@ impl BitVector {
     // branch elimination profits alone should make it worth it.
     #[inline(always)]
     fn rank(&self, zero: bool, pos: usize) -> usize {
+        #[allow(unused_variables)]
         let index = pos / WORD_SIZE;
         let block_index = pos / BLOCK_SIZE;
         let super_block_index = pos / SUPER_BLOCK_SIZE;
@@ -162,46 +164,78 @@ impl BitVector {
         #[cfg(all(feature = "simd", target_arch = "x86_64"))]
         {
             // Wojciech Muła algorithm for SIMD popcount on SSSE3.
+            rank += unsafe {
+                let full_block_boundary = (super_block_index * SUPER_BLOCK_SIZE
+                    + (block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
+                    / WORD_SIZE;
+                // if BLOCK_SIZE is changed, this method must be updated
+                debug_assert!(BLOCK_SIZE / WORD_SIZE == 4);
+                let block = if zero {
+                    _mm256_set_epi64x(
+                        !self.data[full_block_boundary] as i64,
+                        !self.data[full_block_boundary + 1] as i64,
+                        !self.data[full_block_boundary + 2] as i64,
+                        !self.data[full_block_boundary + 3] as i64,
+                    )
+                } else {
+                    _mm256_set_epi64x(
+                        self.data[full_block_boundary] as i64,
+                        self.data[full_block_boundary + 1] as i64,
+                        self.data[full_block_boundary + 2] as i64,
+                        self.data[full_block_boundary + 3] as i64,
+                    )
+                };
 
-            // step 1 pack last partial into vectors
-            let mut slice = vec![0u64; BLOCK_SIZE / WORD_SIZE];
+                // calculate a mask
+                let mask1 = !u64::MAX.checked_shl((pos % BLOCK_SIZE) as u32).unwrap_or(0);
+                let mask2 = !u64::MAX
+                    .checked_shl((pos.saturating_sub(WORD_SIZE) % BLOCK_SIZE) as u32)
+                    .unwrap_or(0);
+                let mask3 = !u64::MAX
+                    .checked_shl((pos.saturating_sub(WORD_SIZE * 2) % BLOCK_SIZE) as u32)
+                    .unwrap_or(0);
+                let mask4 = !u64::MAX
+                    .checked_shl((pos.saturating_sub(WORD_SIZE * 3) % BLOCK_SIZE) as u32)
+                    .unwrap_or(0);
+                let enable_mask =
+                    _mm256_set_epi64x(mask1 as i64, mask2 as i64, mask3 as i64, mask4 as i64);
+                let masked_block = _mm256_and_si256(block, enable_mask);
 
-            let full_block_boundary = (super_block_index * SUPER_BLOCK_SIZE
-                + (block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
-                / WORD_SIZE;
-            let partial_block_size = index - full_block_boundary;
+                // mask lower then higher nibbles
+                let mask = _mm256_set1_epi8(0x0f);
+                let rank_lookup = _mm256_set_epi8(
+                    4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0, 4, 3, 3, 2, 3, 2, 2, 1, 3, 2,
+                    2, 1, 2, 1, 1, 0,
+                );
 
-            if zero {
-                slice[..=partial_block_size]
-                    .iter_mut()
-                    .zip(&self.data[full_block_boundary..=index])
-                    .for_each(|(target, src)| *target = !*src);
-            } else {
-                slice[..=partial_block_size]
-                    .copy_from_slice(&self.data[full_block_boundary..=index]);
-            }
-            slice[partial_block_size] &= (1 << (pos % WORD_SIZE)) - 1;
-
-            let block = u8x32::from_bits(u64x4::from_slice_unaligned(&slice));
-            let shifted_block = block >> 4;
-
-            let mask = u8x32::from_slice_unaligned(&[0x0f; 32]);
-            let lookup = u8x32::from_slice_unaligned(&[
-                0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0,
-            ]);
-
-            // mask the upper nibbles so that the sign bit is cleared
-            let masked_block = block & mask;
-            let masked_shifted_block = shifted_block & mask;
-
-            // step 2: count nibbles by table lookup
-            let count =
-                lookup.shuffle1_dyn(masked_block) + lookup.shuffle1_dyn(masked_shifted_block);
-            rank += count.wrapping_sum() as usize;
+                // calculate popcount for lower and higher nibbles by using lookup table
+                let low = _mm256_shuffle_epi8(rank_lookup, _mm256_and_si256(masked_block, mask));
+                let high = _mm256_shuffle_epi8(
+                    rank_lookup,
+                    _mm256_and_si256(_mm256_srli_epi64::<4>(masked_block), mask),
+                );
+                (Self::hsum(low) + Self::hsum(high)) as usize
+            };
         }
 
         rank
+    }
+
+    #[inline(always)]
+    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+    unsafe fn hsum(v: __m256i) -> u64 {
+        let vlow = _mm256_castsi256_si128(v);
+        let vhigh = _mm256_extracti128_si256::<1>(v);
+        let vlow = _mm_add_epi64(vlow, vhigh);
+        let conv = _mm_cvtsi128_si64(_mm_add_epi64(vlow, _mm_unpackhi_epi64(vlow, vlow))) as u64;
+        (conv & 0x0F)
+            + (conv >> 8 & 0x0F)
+            + (conv >> 16 & 0x0F)
+            + (conv >> 24 & 0x0F)
+            + (conv >> 32 & 0x0F)
+            + (conv >> 40 & 0x0F)
+            + (conv >> 48 & 0x0F)
+            + (conv >> 56 & 0x0F)
     }
 
     /// Return the length of the vector, i.e. the number of bits it contains.
@@ -237,7 +271,7 @@ mod tests {
         bv.append_bit(0u8);
         bv.append_bit(1u8);
         bv.append_bit(1u8);
-        assert_eq!(bv.data, vec![0b110]);
+        assert_eq!(bv.data[..1], vec![0b110]);
     }
 
     #[test]
@@ -268,11 +302,14 @@ mod tests {
     #[test]
     fn test_multi_words() {
         let bv = BitVector {
-            data: vec![0, 0b110],
+            data: vec![0, 0b110, 0, 0],
             len: 67,
             blocks: vec![BlockDescriptor { zeros: 0 }],
             super_blocks: vec![BlockDescriptor { zeros: 0 }],
         };
+
+        // if BLOCK_SIZE is changed, we need to update this test case
+        assert_eq!(bv.data.len(), BLOCK_SIZE / WORD_SIZE);
 
         assert_eq!(bv.rank0(63), 63);
         assert_eq!(bv.rank0(64), 64);
