@@ -103,11 +103,7 @@ impl BitVector {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     pub fn rank0(&self, pos: usize) -> usize {
-        if cfg!(all(
-            feature = "simd",
-            target_arch = "x86_64",
-            target_feature = "avx2"
-        )) {
+        if cfg!(all(feature = "simd", target_arch = "x86_64")) {
             unsafe { self.avx_rank0(pos) }
         } else {
             self.naive_rank0(pos)
@@ -120,11 +116,7 @@ impl BitVector {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     pub fn rank1(&self, pos: usize) -> usize {
-        if cfg!(all(
-            feature = "simd",
-            target_arch = "x86_64",
-            target_feature = "avx2"
-        )) {
+        if cfg!(all(feature = "simd", target_arch = "x86_64")) {
             unsafe { self.avx_rank1(pos) }
         } else {
             self.naive_rank1(pos)
@@ -163,7 +155,8 @@ impl BitVector {
             rank += if zero {
                 self.super_blocks[super_block_index - 1].zeros
             } else {
-                (super_block_index * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_index - 1].zeros
+                (super_block_index * SUPER_BLOCK_SIZE)
+                    - self.super_blocks[super_block_index - 1].zeros
             };
         }
 
@@ -171,7 +164,8 @@ impl BitVector {
             rank += if zero {
                 self.blocks[block_index - 1].zeros
             } else {
-                (((block_index) % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE) - self.blocks[block_index - 1].zeros
+                ((block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
+                    - self.blocks[block_index - 1].zeros
             };
         }
 
@@ -365,7 +359,7 @@ mod tests {
     fn test_super_block() {
         let mut bv = BitVector::new();
         let mut rng = rand::thread_rng();
-        let mut sample = Uniform::new(0, 2);
+        let sample = Uniform::new(0, 2);
         static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
 
         for _ in 0..LENGTH {
