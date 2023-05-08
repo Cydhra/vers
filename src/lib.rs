@@ -50,83 +50,6 @@ pub struct BitVector {
 }
 
 impl BitVector {
-    /// Create a new empty bitvector.
-    pub fn new() -> BitVector {
-        BitVector {
-            data: Vec::new(),
-            len: 0,
-            blocks: vec![],
-            super_blocks: vec![],
-        }
-    }
-
-    /// Appends a new 0 to the end of `data`. If the last block is full, a new block is
-    /// created. If the last super block is full, a new super block is created.
-    fn append_new_block(&mut self) {
-        // append a full new block
-        for _ in 0..BLOCK_SIZE / WORD_SIZE {
-            self.data.push(0);
-        }
-
-        if self.data.len() > (self.super_blocks.len() * SUPER_BLOCK_SIZE) / WORD_SIZE {
-            let new_super_block = SuperBlockDescriptor {
-                zeros: self.super_blocks.last().map(|b| b.zeros).unwrap_or(0) as usize,
-            };
-            self.super_blocks.push(new_super_block);
-
-            self.blocks.push(BlockDescriptor { zeros: 0 });
-        } else {
-            let new_block = BlockDescriptor {
-                zeros: self.blocks[self.blocks.len() - 1].zeros,
-            };
-            self.blocks.push(new_block);
-        }
-    }
-
-    /// Appends a bit to the end of the vector. Accepts any numerical type that implements
-    /// the `Rem` trait, and will only use the least significant bit (i.e. will calculate
-    /// `bit % 2`). Any other bit of the input will be ignored.
-    pub fn append_bit<T: Rem + From<u8>>(&mut self, bit: T)
-    where
-        T::Output: Into<u64>,
-    {
-        let bit = (bit % T::from(2u8)).into();
-
-        if self.len % BLOCK_SIZE == 0 {
-            self.append_new_block();
-        }
-
-        let pos = self.len % WORD_SIZE;
-        self.data[self.len / WORD_SIZE] |= bit << pos;
-        self.len += 1;
-
-        if bit == 0 {
-            self.blocks.last_mut().unwrap().zeros += 1;
-            self.super_blocks.last_mut().unwrap().zeros += 1;
-        }
-    }
-
-    /// Appends a word to the end of the vector. The word is interpreted as a sequence of
-    /// bits, with the least significant bit being the first one (i.e. the word is
-    /// interpreted as little-endian). The vector will be extended by the number of bits
-    /// in the word.
-    ///
-    /// It is a logic error if the word has a partial word at its end before this operation
-    /// (i.e. the length of the vector must be a multiple of the word size).
-    pub fn append_word(&mut self, word: u64) {
-        debug_assert!(self.len % WORD_SIZE == 0);
-
-        if self.len % BLOCK_SIZE == 0 {
-            self.append_new_block();
-        }
-
-        self.data[self.len / WORD_SIZE] = word;
-        self.len += WORD_SIZE;
-
-        self.blocks.last_mut().unwrap().zeros += (WORD_SIZE - word.count_ones() as usize) as u16;
-        self.super_blocks.last_mut().unwrap().zeros += WORD_SIZE - word.count_ones() as usize;
-    }
-
     /// Return the 0-rank of the bit at the given position. The 0-rank is the number of
     /// 0-bits in the vector up to but excluding the bit at the given position.
     ///
@@ -316,9 +239,116 @@ impl BitVector {
     }
 }
 
-impl Default for BitVector {
-    fn default() -> Self {
-        Self::new()
+/// A builder for `BitVector`s. This is used to efficiently construct a `BitVector` by appending
+/// bits to it. Once all bits have been appended, the `BitVector` can be built using the `build`
+/// method. If the number of bits to be appended is known in advance, it is recommended to use
+/// `with_capacity` to avoid re-allocations. If bits are already available in little endian u64
+/// words, those words can be appended using `append_word`.
+#[derive(Clone, Debug)]
+pub struct BitVectorBuilder {
+    words: Vec<u64>,
+    len: usize,
+}
+
+impl BitVectorBuilder {
+    /// Create a new empty `BitVectorBuilder`.
+    pub fn new() -> BitVectorBuilder {
+        BitVectorBuilder {
+            words: Vec::new(),
+            len: 0,
+        }
+    }
+
+    /// Create a new empty `BitVectorBuilder` with the specified initial capacity to avoid
+    /// re-allocations.
+    pub fn with_capacity(capacity: usize) -> BitVectorBuilder {
+        BitVectorBuilder {
+            words: Vec::with_capacity(capacity),
+            len: 0,
+        }
+    }
+
+    /// Append a bit to the vector.
+    pub fn append_bit<T: Rem + From<u8>>(&mut self, bit: T)
+    where
+        T::Output: Into<u64>,
+    {
+        let bit = (bit % T::from(2u8)).into();
+
+        if self.len % WORD_SIZE == 0 {
+            self.words.push(0);
+        }
+
+        self.words[self.len / WORD_SIZE] |= (bit as u64) << (self.len % WORD_SIZE);
+        self.len += 1;
+    }
+
+    /// Append a word to the vector. The word is assumed to be in little endian, i.e. the least
+    /// significant bit is the first bit. It is a logical error to append a word if the vector is
+    /// not 64-bit aligned (i.e. has not a length that is a multiple of 64). If the vector is not
+    /// 64-bit aligned, the last word already present will be padded with zeros, which will not
+    /// affect the length, meaning the bit-vector is corrupted afterwards.
+    pub fn append_word(&mut self, word: u64) {
+        debug_assert!(self.len % WORD_SIZE == 0);
+        self.words.push(word);
+        self.len += WORD_SIZE;
+    }
+
+    /// Build the `BitVector` from all bits that have been appended so far. This will consume the
+    /// `BitVectorBuilder`.
+    pub fn build(mut self) -> BitVector {
+        let mut blocks = Vec::with_capacity(self.len / BLOCK_SIZE + 1);
+        let mut super_blocks = Vec::with_capacity(self.len / SUPER_BLOCK_SIZE + 1);
+
+        let mut total_zeros: usize = 0;
+        let mut current_zeros: u16 = 0;
+        for (idx, &word) in self.words.iter().enumerate() {
+            if idx > 0 && idx % (BLOCK_SIZE / WORD_SIZE) == 0 {
+                blocks.push(BlockDescriptor {
+                    zeros: current_zeros,
+                });
+
+                if idx % (SUPER_BLOCK_SIZE / WORD_SIZE) == 0 {
+                    total_zeros += current_zeros as usize;
+                    current_zeros = 0;
+                    super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
+                }
+            }
+
+            if idx < self.words.len() - 1 || self.len % WORD_SIZE == 0 {
+                current_zeros += word.count_zeros() as u16;
+            } else {
+                // the last word may contain padding, so we only count the zeros up to the length
+                // of the vector
+                current_zeros += (!word & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones() as u16;
+            }
+        }
+
+        // append the last incomplete blocks if the vector is not (super-)block-aligned
+        if self.len % (SUPER_BLOCK_SIZE / WORD_SIZE) != 0 {
+            if self.len % (BLOCK_SIZE / WORD_SIZE) != 0 {
+                blocks.push(BlockDescriptor {
+                    zeros: current_zeros,
+                });
+            }
+
+            total_zeros += current_zeros as usize;
+            super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
+        }
+
+        // pad the vector to be block-aligned, so SIMD operations don't try to read past a block.
+        // note that this operation does not affect the content of the vector, because those bits
+        // are not considered part of the vector.
+        while self.words.len() % (BLOCK_SIZE / WORD_SIZE) != 0 {
+            self.words.push(0);
+        }
+
+        BitVector {
+            data: self.words,
+            len: self.len,
+            blocks,
+            super_blocks,
+        }
     }
 }
 
@@ -331,23 +361,26 @@ mod tests {
 
     #[test]
     fn test_append_bit() {
-        let mut bv = BitVector::new();
-
+        let mut bv = BitVectorBuilder::new();
         bv.append_bit(0u8);
         bv.append_bit(1u8);
         bv.append_bit(1u8);
+        let bv = bv.build();
+
         assert_eq!(bv.data[..1], vec![0b110]);
     }
 
     #[test]
     fn test_append_bit_long() {
-        let mut bv = BitVector::new();
+        let mut bv = BitVectorBuilder::new();
 
         let len = SUPER_BLOCK_SIZE + 1;
         for _ in 0..len {
             bv.append_bit(0u8);
             bv.append_bit(1u8);
         }
+
+        let bv = bv.build();
 
         assert_eq!(bv.len(), len * 2);
         assert_eq!(bv.rank0(2 * len - 1), len);
@@ -356,14 +389,15 @@ mod tests {
 
     #[test]
     fn test_rank() {
-        let mut bv = BitVector::new();
+        let mut bv = BitVectorBuilder::new();
+        bv.append_bit(0u8);
+        bv.append_bit(1u8);
+        bv.append_bit(1u8);
+        bv.append_bit(0u8);
+        bv.append_bit(1u8);
+        bv.append_bit(1u8);
+        let bv = bv.build();
 
-        bv.append_bit(0u8);
-        bv.append_bit(1u8);
-        bv.append_bit(1u8);
-        bv.append_bit(0u8);
-        bv.append_bit(1u8);
-        bv.append_bit(1u8);
         // first bit must always have rank 0
         assert_eq!(bv.rank0(0), 0);
         assert_eq!(bv.rank1(0), 0);
@@ -376,11 +410,12 @@ mod tests {
 
     #[test]
     fn test_multi_words() {
-        let mut bv = BitVector::new();
+        let mut bv = BitVectorBuilder::new();
         bv.append_word(0);
         bv.append_bit(0u8);
         bv.append_bit(1u8);
         bv.append_bit(1u8);
+        let bv = bv.build();
 
         // if BLOCK_SIZE is changed, we need to update this test case
         assert_eq!(bv.data.len(), BLOCK_SIZE / WORD_SIZE);
@@ -393,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_super_block() {
-        let mut bv = BitVector::new();
+        let mut bv = BitVectorBuilder::with_capacity(LENGTH);
         let mut rng = rand::thread_rng();
         let sample = Uniform::new(0, 2);
         static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
@@ -402,6 +437,7 @@ mod tests {
             bv.append_bit(sample.sample(&mut rng) as u8);
         }
 
+        let bv = bv.build();
         assert_eq!(bv.len(), LENGTH);
 
         for _ in 0..100 {
