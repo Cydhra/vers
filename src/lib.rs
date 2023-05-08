@@ -4,10 +4,25 @@ use std::ops::Rem;
 
 const WORD_SIZE: usize = 64;
 const BLOCK_SIZE: usize = 256;
-const SUPER_BLOCK_SIZE: usize = 4096;
+
+// increasing or decreasing the super block size has neglegible effect on performance except for
+// blocks that fit within the very first superblock (because those don't require a lookup). This
+// means we want to make the super block size as large as possible, as long as the zero-counter
+// in normal blocks still fits in a reasonable amount of bits.
+// We chose a u16-counter for blocks, but that is unfortunately not enough to store exactly 2^16
+// zeros. Since block sizes should be a power of two for performance reasons, we set it to 2^15.
+// TODO: Technically it should be possible to store 2^16 zeros, because the counter of the last
+//  block is never touched. This only presents a challenge during construction (but there,
+//  micro-optimizations are unnecessary)
+const SUPER_BLOCK_SIZE: usize = 1 << 15;
 
 #[derive(Clone, Copy, Debug)]
 struct BlockDescriptor {
+    zeros: u16,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct SuperBlockDescriptor {
     zeros: usize,
 }
 
@@ -16,7 +31,7 @@ pub struct BitVector {
     data: Vec<u64>,
     len: usize,
     blocks: Vec<BlockDescriptor>,
-    super_blocks: Vec<BlockDescriptor>,
+    super_blocks: Vec<SuperBlockDescriptor>,
 }
 
 impl BitVector {
@@ -39,8 +54,8 @@ impl BitVector {
         }
 
         if self.data.len() > (self.super_blocks.len() * SUPER_BLOCK_SIZE) / WORD_SIZE {
-            let new_super_block = BlockDescriptor {
-                zeros: self.super_blocks.last().map(|b| b.zeros).unwrap_or(0),
+            let new_super_block = SuperBlockDescriptor {
+                zeros: self.super_blocks.last().map(|b| b.zeros).unwrap_or(0) as usize,
             };
             self.super_blocks.push(new_super_block);
 
@@ -93,7 +108,7 @@ impl BitVector {
         self.data[self.len / WORD_SIZE] = word;
         self.len += WORD_SIZE;
 
-        self.blocks.last_mut().unwrap().zeros += WORD_SIZE - word.count_ones() as usize;
+        self.blocks.last_mut().unwrap().zeros += (WORD_SIZE - word.count_ones() as usize) as u16;
         self.super_blocks.last_mut().unwrap().zeros += WORD_SIZE - word.count_ones() as usize;
     }
 
@@ -162,10 +177,10 @@ impl BitVector {
 
         if block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE) > 0 {
             rank += if zero {
-                self.blocks[block_index - 1].zeros
+                self.blocks[block_index - 1].zeros as usize
             } else {
                 ((block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
-                    - self.blocks[block_index - 1].zeros
+                    - self.blocks[block_index - 1].zeros as usize
             };
         }
 
@@ -193,7 +208,7 @@ impl BitVector {
 
         #[cfg(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2"))]
         {
-            // Wojciech Muła algorithm for SIMD popcount on SSSE3.
+            // Wojciech Muła algorithm for SIMD popcount on AVX2.
             rank += unsafe {
                 let full_block_boundary = (super_block_index * SUPER_BLOCK_SIZE
                     + (block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
@@ -339,12 +354,11 @@ mod tests {
 
     #[test]
     fn test_multi_words() {
-        let bv = BitVector {
-            data: vec![0, 0b110, 0, 0],
-            len: 67,
-            blocks: vec![BlockDescriptor { zeros: 0 }],
-            super_blocks: vec![BlockDescriptor { zeros: 0 }],
-        };
+        let mut bv = BitVector::new();
+        bv.append_word(0);
+        bv.append_bit(0u8);
+        bv.append_bit(1u8);
+        bv.append_bit(1u8);
 
         // if BLOCK_SIZE is changed, we need to update this test case
         assert_eq!(bv.data.len(), BLOCK_SIZE / WORD_SIZE);
