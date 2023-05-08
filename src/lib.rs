@@ -2,30 +2,45 @@
 use std::arch::x86_64::*;
 use std::ops::Rem;
 
+/// Size of a word in the bitvector.
 const WORD_SIZE: usize = 64;
+
+/// Size of a block in the bitvector. The size is deliberately chosen to fit one block into a
+/// AVX256 register, so that we can use SIMD instructions to speed up rank and select queries.
 const BLOCK_SIZE: usize = 256;
 
-// increasing or decreasing the super block size has neglegible effect on performance except for
-// blocks that fit within the very first superblock (because those don't require a lookup). This
-// means we want to make the super block size as large as possible, as long as the zero-counter
-// in normal blocks still fits in a reasonable amount of bits.
-// We chose a u16-counter for blocks, but that is unfortunately not enough to store exactly 2^16
-// zeros. Since block sizes should be a power of two for performance reasons, we set it to 2^15.
+/// Size of a super block in the bitvector. Super-blocks exist to decrease the memory overhead
+/// of block descriptors.
+/// Increasing or decreasing the super block size has negligible effect on performance except for
+/// blocks that fit within the very first super-block (because those don't require a lookup). This
+/// means we want to make the super block size as large as possible, as long as the zero-counter
+/// in normal blocks still fits in a reasonable amount of bits.
+/// We chose a u16-counter for blocks, but that is unfortunately not enough to store exactly 2^16
+/// zeros. Since block sizes should be a power of two for performance reasons, we set it to 2^15.
 // TODO: Technically it should be possible to store 2^16 zeros, because the counter of the last
 //  block is never touched. This only presents a challenge during construction (but there,
 //  micro-optimizations are unnecessary)
 const SUPER_BLOCK_SIZE: usize = 1 << 15;
 
+/// Meta-data for a block. The `zeros` field stores the number of zeros up to and in the block,
+/// beginning from the last super-block boundary.
 #[derive(Clone, Copy, Debug)]
 struct BlockDescriptor {
     zeros: u16,
 }
 
+/// Meta-data for a super-block. The `zeros` field stores the number of zeros up to and in the
+/// super-block. This allows the `BlockDescriptor` to store the number of zeros in a much smaller
+/// space.
 #[derive(Clone, Copy, Debug)]
 struct SuperBlockDescriptor {
     zeros: usize,
 }
 
+/// A bitvector that supports constant-time rank and select queries. The bitvector is stored as
+/// a vector of `u64`s. The last word is not necessarily full, in which case the remaining bits
+/// are set to 0. The bit-vector stores meta-data for constant-time rank and select queries, which
+/// takes sub-linear additional space.
 #[derive(Clone, Debug)]
 pub struct BitVector {
     data: Vec<u64>,
@@ -272,6 +287,7 @@ impl BitVector {
         rank
     }
 
+    /// Horizontal sum (popcount) of a 256 bit vector.
     #[inline(always)]
     #[cfg(all(feature = "simd", target_arch = "x86_64"))]
     unsafe fn hsum(v: __m256i) -> u64 {
