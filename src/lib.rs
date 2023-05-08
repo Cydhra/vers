@@ -118,10 +118,12 @@ impl BitVector {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     pub fn rank0(&self, pos: usize) -> usize {
-        if cfg!(all(feature = "simd", target_arch = "x86_64")) {
-            unsafe { self.avx_rank0(pos) }
-        } else {
-            self.naive_rank0(pos)
+        unsafe {
+            if cfg!(all(feature = "simd", target_arch = "x86_64")) {
+                self.avx_rank0(pos)
+            } else {
+                self.naive_rank0(pos)
+            }
         }
     }
 
@@ -131,18 +133,22 @@ impl BitVector {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     pub fn rank1(&self, pos: usize) -> usize {
-        if cfg!(all(feature = "simd", target_arch = "x86_64")) {
-            unsafe { self.avx_rank1(pos) }
-        } else {
-            self.naive_rank1(pos)
+        unsafe {
+            if cfg!(all(feature = "simd", target_arch = "x86_64")) {
+                self.avx_rank1(pos)
+            } else {
+                self.naive_rank1(pos)
+            }
         }
     }
 
-    fn naive_rank0(&self, pos: usize) -> usize {
+    #[target_feature(enable = "popcnt")]
+    unsafe fn naive_rank0(&self, pos: usize) -> usize {
         self.rank(true, pos)
     }
 
-    fn naive_rank1(&self, pos: usize) -> usize {
+    #[target_feature(enable = "popcnt")]
+    unsafe fn naive_rank1(&self, pos: usize) -> usize {
         self.rank(false, pos)
     }
 
