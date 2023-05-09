@@ -11,24 +11,26 @@ const BLOCK_SIZE: usize = 256;
 
 /// Size of a super block in the bitvector. Super-blocks exist to decrease the memory overhead
 /// of block descriptors.
-/// Increasing or decreasing the super block size has negligible effect on performance except for
-/// blocks that fit within the very first super-block (because those don't require a lookup). This
+/// Increasing or decreasing the super block size has negligible effect on performance. This
 /// means we want to make the super block size as large as possible, as long as the zero-counter
-/// in normal blocks still fits in a reasonable amount of bits.
+/// in normal blocks still fits in a reasonable amount of bits. So we chose the super block size
+/// to be the largest power of two that still fits into a `u16`. Note that blocks store the number
+/// of zeros up to the block, so they will never overflow even if the entire vector contains only
+/// zeros.
 const SUPER_BLOCK_SIZE: usize = 1 << 16;
 
-/// Meta-data for a block. The `zeros` field stores the number of zeros up to and in the block,
-/// beginning from the last super-block boundary, unless it is the last block in a super-block,
-/// in which case it may be zero. Do not read this number if the block is the last block in the
-/// super-block.
+/// Meta-data for a block. The `zeros` field stores the number of zeros up to the block,
+/// beginning from the last super-block boundary. This means the first block in a super-block
+/// always stores the number zero, which serves as a sentinel value to avoid special-casing the
+/// first block in a super-block (which would be a performance hit due branch prediction failures).
 #[derive(Clone, Copy, Debug)]
 struct BlockDescriptor {
     zeros: u16,
 }
 
-/// Meta-data for a super-block. The `zeros` field stores the number of zeros up to and in the
-/// super-block. This allows the `BlockDescriptor` to store the number of zeros in a much smaller
-/// space.
+/// Meta-data for a super-block. The `zeros` field stores the number of zeros up to this super-block.
+/// This allows the `BlockDescriptor` to store the number of zeros in a much smaller
+/// space. The `zeros` field is the number of zeros up to the super-block.
 #[derive(Clone, Copy, Debug)]
 struct SuperBlockDescriptor {
     zeros: usize,
@@ -107,9 +109,7 @@ impl BitVector {
         let super_block_index = pos / SUPER_BLOCK_SIZE;
         let mut rank = 0;
 
-        // at first look up the super block. The first super-block descriptor is a sentinel value,
-        // so we don't need to check if we are in the first super-block (which messes up branch
-        // prediction in vectors slightly exceeding one super-block size).
+        // at first add the number of zeros/ones before the current super block
         rank += if zero {
             self.super_blocks[super_block_index].zeros
         } else {
@@ -117,15 +117,15 @@ impl BitVector {
                 - self.super_blocks[super_block_index].zeros
         };
 
-        if block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE) > 0 {
-            rank += if zero {
-                self.blocks[block_index - 1].zeros as usize
-            } else {
-                ((block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
-                    - self.blocks[block_index - 1].zeros as usize
-            };
-        }
+        // then add the number of zeros/ones before the current block
+        rank += if zero {
+            self.blocks[block_index].zeros as usize
+        } else {
+            ((block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
+                - self.blocks[block_index].zeros as usize
+        };
 
+        // then add the number of zeros/ones in the current block up to the current position
         #[cfg(any(
             not(feature = "simd"),
             not(target_arch = "x86_64"),
@@ -284,8 +284,8 @@ impl BitVectorBuilder {
     /// Append a word to the vector. The word is assumed to be in little endian, i.e. the least
     /// significant bit is the first bit. It is a logical error to append a word if the vector is
     /// not 64-bit aligned (i.e. has not a length that is a multiple of 64). If the vector is not
-    /// 64-bit aligned, the last word already present will be padded with zeros, which will not
-    /// affect the length, meaning the bit-vector is corrupted afterwards.
+    /// 64-bit aligned, the last word already present will be padded with zeros,without
+    /// affecting the length, meaning the bit-vector is corrupted afterwards.
     pub fn append_word(&mut self, word: u64) {
         debug_assert!(self.len % WORD_SIZE == 0);
         self.words.push(word);
@@ -295,58 +295,35 @@ impl BitVectorBuilder {
     /// Build the `BitVector` from all bits that have been appended so far. This will consume the
     /// `BitVectorBuilder`.
     pub fn build(mut self) -> BitVector {
-        // construct the block descriptor meta data. Each block descriptor contains the number of
-        // zeros in the super-block, up to and including the block. The last block descriptor is
-        // not used, it may contain an invalid value if the super-block is entirely filled with
-        // zeros.
+        // Construct the block descriptor meta data. Each block descriptor contains the number of
+        // zeros in the super-block, up to but excluding the block.
         let mut blocks = Vec::with_capacity(self.len / BLOCK_SIZE + 1);
         let mut super_blocks = Vec::with_capacity(self.len / SUPER_BLOCK_SIZE + 1);
-
-        // at first append a sentinel super-block descriptor, which we use to avoid
-        // a check in the rank routine because it messes up the branch prediction in vectors
-        // which slightly exceed one super-block.
-        super_blocks.push(SuperBlockDescriptor { zeros: 0 });
 
         let mut total_zeros: usize = 0;
         let mut current_zeros: u32 = 0;
         for (idx, &word) in self.words.iter().enumerate() {
-            // if we moved past a block boundary, append the block information
-            if idx > 0 && idx % (BLOCK_SIZE / WORD_SIZE) == 0 {
-                // if this counter overflows, the last block within a super-block will have count
-                // zero. This is intentional, as it allows us to use a smaller data type for the
-                // block descriptors, and the last block is never read anyway.
-                blocks.push(BlockDescriptor {
-                    zeros: current_zeros as u16,
-                });
-
+            // if we moved past a block boundary, append the block information for the previous
+            // block and reset the counter if we moved past a super-block boundary.
+            if idx % (BLOCK_SIZE / WORD_SIZE) == 0 {
                 if idx % (SUPER_BLOCK_SIZE / WORD_SIZE) == 0 {
                     total_zeros += current_zeros as usize;
                     current_zeros = 0;
                     super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
                 }
+
+                blocks.push(BlockDescriptor { zeros: current_zeros as u16, });
             }
 
             // count the zeros in the current word and add them to the counter
-            if idx < self.words.len() - 1 || self.len % WORD_SIZE == 0 {
-                current_zeros += word.count_zeros();
-            } else {
-                // the last word in the vector may contain padding,
-                // so we only count the zeros up to the length of the vector
-                current_zeros += (!word & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones();
-            }
+            // the last word may contain padding zeros, which should not be counted,
+            // but since we do not append the last block descriptor, this is not a problem
+            current_zeros += word.count_zeros();
         }
 
-        // append the last incomplete block
-        blocks.push(BlockDescriptor {
-            zeros: current_zeros as u16,
-        });
-        super_blocks.push(SuperBlockDescriptor {
-            zeros: total_zeros + current_zeros as usize,
-        });
-
-        // pad the vector to be block-aligned, so SIMD operations don't try to read past a block.
-        // note that this operation does not affect the content of the vector, because those bits
-        // are not considered part of the vector.
+        // pad the internal vector to be block-aligned, so SIMD operations don't try to read
+        // past the end of the vector. Note that this does not affect the content of the vector,
+        // because those bits are not considered part of the vector.
         while self.words.len() % (BLOCK_SIZE / WORD_SIZE) != 0 {
             self.words.push(0);
         }
@@ -481,9 +458,10 @@ mod tests {
         for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
             bv.append_word(0);
         }
+        bv.append_bit(0u8);
         let bv = bv.build();
 
-        assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE);
+        assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE + 1);
 
         for i in 0..bv.len() {
             assert_eq!(bv.rank0(i), i);
@@ -497,9 +475,10 @@ mod tests {
         for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
             bv.append_word(u64::MAX);
         }
+        bv.append_bit(1u8);
         let bv = bv.build();
 
-        assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE);
+        assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE + 1);
 
         for i in 0..bv.len() {
             assert_eq!(bv.rank0(i), 0);
