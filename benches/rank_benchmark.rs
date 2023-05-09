@@ -1,5 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 use rand::distributions::{Distribution, Uniform};
+use vers::BitVector;
 
 mod common;
 
