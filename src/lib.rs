@@ -15,15 +15,12 @@ const BLOCK_SIZE: usize = 256;
 /// blocks that fit within the very first super-block (because those don't require a lookup). This
 /// means we want to make the super block size as large as possible, as long as the zero-counter
 /// in normal blocks still fits in a reasonable amount of bits.
-/// We chose a u16-counter for blocks, but that is unfortunately not enough to store exactly 2^16
-/// zeros. Since block sizes should be a power of two for performance reasons, we set it to 2^15.
-// TODO: Technically it should be possible to store 2^16 zeros, because the counter of the last
-//  block is never touched. This only presents a challenge during construction (but there,
-//  micro-optimizations are unnecessary)
-const SUPER_BLOCK_SIZE: usize = 1 << 15;
+const SUPER_BLOCK_SIZE: usize = 1 << 16;
 
 /// Meta-data for a block. The `zeros` field stores the number of zeros up to and in the block,
-/// beginning from the last super-block boundary.
+/// beginning from the last super-block boundary, unless it is the last block in a super-block,
+/// in which case it may be zero. Do not read this number if the block is the last block in the
+/// super-block.
 #[derive(Clone, Copy, Debug)]
 struct BlockDescriptor {
     zeros: u16,
@@ -301,11 +298,15 @@ impl BitVectorBuilder {
         let mut super_blocks = Vec::with_capacity(self.len / SUPER_BLOCK_SIZE + 1);
 
         let mut total_zeros: usize = 0;
-        let mut current_zeros: u16 = 0;
+        let mut current_zeros: u32 = 0;
         for (idx, &word) in self.words.iter().enumerate() {
+            // if we moved past a block boundary, append the block information
             if idx > 0 && idx % (BLOCK_SIZE / WORD_SIZE) == 0 {
+                // if this counter overflows, the last block within a super-block will have count
+                // zero. This is intentional, as it allows us to use a smaller data type for the
+                // block descriptors, and the last block is never read anyway.
                 blocks.push(BlockDescriptor {
-                    zeros: current_zeros,
+                    zeros: current_zeros as u16,
                 });
 
                 if idx % (SUPER_BLOCK_SIZE / WORD_SIZE) == 0 {
@@ -315,26 +316,23 @@ impl BitVectorBuilder {
                 }
             }
 
+            // count the zeros in the current word and add them to the counter
             if idx < self.words.len() - 1 || self.len % WORD_SIZE == 0 {
-                current_zeros += word.count_zeros() as u16;
+                current_zeros += word.count_zeros();
             } else {
-                // the last word may contain padding, so we only count the zeros up to the length
-                // of the vector
-                current_zeros += (!word & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones() as u16;
+                // the last word in the vector may contain padding,
+                // so we only count the zeros up to the length of the vector
+                current_zeros += (!word & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones();
             }
         }
 
-        // append the last incomplete blocks if the vector is not (super-)block-aligned
-        if self.len % (SUPER_BLOCK_SIZE / WORD_SIZE) != 0 {
-            if self.len % (BLOCK_SIZE / WORD_SIZE) != 0 {
-                blocks.push(BlockDescriptor {
-                    zeros: current_zeros,
-                });
-            }
-
-            total_zeros += current_zeros as usize;
-            super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
-        }
+        // append the last incomplete block
+        blocks.push(BlockDescriptor {
+            zeros: current_zeros as u16,
+        });
+        super_blocks.push(SuperBlockDescriptor {
+            zeros: total_zeros + current_zeros as usize,
+        });
 
         // pad the vector to be block-aligned, so SIMD operations don't try to read past a block.
         // note that this operation does not affect the content of the vector, because those bits
@@ -464,6 +462,38 @@ mod tests {
 
             assert_eq!(actual_rank1, expected_rank1);
             assert_eq!(actual_rank0, expected_rank0);
+        }
+    }
+
+    #[test]
+    fn test_only_zeros() {
+        let mut bv = BitVectorBuilder::new();
+        for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
+            bv.append_word(0);
+        }
+        let bv = bv.build();
+
+        assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE);
+
+        for i in 0..bv.len() {
+            assert_eq!(bv.rank0(i), i);
+            assert_eq!(bv.rank1(i), 0);
+        }
+    }
+
+    #[test]
+    fn test_only_ones() {
+        let mut bv = BitVectorBuilder::new();
+        for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
+            bv.append_word(u64::MAX);
+        }
+        let bv = bv.build();
+
+        assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE);
+
+        for i in 0..bv.len() {
+            assert_eq!(bv.rank0(i), 0);
+            assert_eq!(bv.rank1(i), i);
         }
     }
 }
