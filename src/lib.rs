@@ -181,13 +181,13 @@ impl BitVectorBuilder {
     where
         T::Output: Into<u64>,
     {
-        let bit = (bit % T::from(2u8)).into();
+        let bit: u64 = (bit % T::from(2u8)).into();
 
         if self.len % WORD_SIZE == 0 {
             self.words.push(0);
         }
 
-        self.words[self.len / WORD_SIZE] |= (bit as u64) << (self.len % WORD_SIZE);
+        self.words[self.len / WORD_SIZE] |= bit << (self.len % WORD_SIZE);
         self.len += 1;
     }
 
@@ -222,6 +222,9 @@ impl BitVectorBuilder {
                     super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
                 }
 
+                // this cannot overflow because the only block where it could (the last in a super-
+                // block) is not added to the list of blocks
+                #[allow(clippy::cast_possible_truncation)]
                 blocks.push(BlockDescriptor {
                     zeros: current_zeros as u16,
                 });
@@ -246,6 +249,12 @@ impl BitVectorBuilder {
             blocks,
             super_blocks,
         }
+    }
+}
+
+impl Default for BitVectorBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
