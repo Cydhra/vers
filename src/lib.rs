@@ -107,14 +107,15 @@ impl BitVector {
         let super_block_index = pos / SUPER_BLOCK_SIZE;
         let mut rank = 0;
 
-        if super_block_index > 0 {
-            rank += if zero {
-                self.super_blocks[super_block_index - 1].zeros
-            } else {
-                (super_block_index * SUPER_BLOCK_SIZE)
-                    - self.super_blocks[super_block_index - 1].zeros
-            };
-        }
+        // at first look up the super block. The first super-block descriptor is a sentinel value,
+        // so we don't need to check if we are in the first super-block (which messes up branch
+        // prediction in vectors slightly exceeding one super-block size).
+        rank += if zero {
+            self.super_blocks[super_block_index].zeros
+        } else {
+            (super_block_index * SUPER_BLOCK_SIZE)
+                - self.super_blocks[super_block_index].zeros
+        };
 
         if block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE) > 0 {
             rank += if zero {
@@ -294,8 +295,17 @@ impl BitVectorBuilder {
     /// Build the `BitVector` from all bits that have been appended so far. This will consume the
     /// `BitVectorBuilder`.
     pub fn build(mut self) -> BitVector {
+        // construct the block descriptor meta data. Each block descriptor contains the number of
+        // zeros in the super-block, up to and including the block. The last block descriptor is
+        // not used, it may contain an invalid value if the super-block is entirely filled with
+        // zeros.
         let mut blocks = Vec::with_capacity(self.len / BLOCK_SIZE + 1);
         let mut super_blocks = Vec::with_capacity(self.len / SUPER_BLOCK_SIZE + 1);
+
+        // at first append a sentinel super-block descriptor, which we use to avoid
+        // a check in the rank routine because it messes up the branch prediction in vectors
+        // which slightly exceed one super-block.
+        super_blocks.push(SuperBlockDescriptor { zeros: 0 });
 
         let mut total_zeros: usize = 0;
         let mut current_zeros: u32 = 0;
