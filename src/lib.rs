@@ -1,5 +1,3 @@
-#[cfg(all(feature = "simd", target_arch = "x86_64"))]
-use std::arch::x86_64::*;
 use std::ops::Rem;
 
 /// Size of a word in the bitvector.
@@ -7,7 +5,7 @@ const WORD_SIZE: usize = 64;
 
 /// Size of a block in the bitvector. The size is deliberately chosen to fit one block into a
 /// AVX256 register, so that we can use SIMD instructions to speed up rank and select queries.
-const BLOCK_SIZE: usize = 256;
+const BLOCK_SIZE: usize = 512;
 
 /// Size of a super block in the bitvector. Super-blocks exist to decrease the memory overhead
 /// of block descriptors.
@@ -55,13 +53,7 @@ impl BitVector {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     pub fn rank0(&self, pos: usize) -> usize {
-        unsafe {
-            if cfg!(all(feature = "simd", target_arch = "x86_64")) {
-                self.avx_rank0(pos)
-            } else {
-                self.naive_rank0(pos)
-            }
-        }
+        unsafe { self.naive_rank0(pos) }
     }
 
     /// Return the 1-rank of the bit at the given position. The 1-rank is the number of
@@ -70,13 +62,7 @@ impl BitVector {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     pub fn rank1(&self, pos: usize) -> usize {
-        unsafe {
-            if cfg!(all(feature = "simd", target_arch = "x86_64")) {
-                self.avx_rank1(pos)
-            } else {
-                self.naive_rank1(pos)
-            }
-        }
+        unsafe { self.naive_rank1(pos) }
     }
 
     #[target_feature(enable = "popcnt")]
@@ -86,16 +72,6 @@ impl BitVector {
 
     #[target_feature(enable = "popcnt")]
     unsafe fn naive_rank1(&self, pos: usize) -> usize {
-        self.rank(false, pos)
-    }
-
-    #[target_feature(enable = "avx2")]
-    unsafe fn avx_rank0(&self, pos: usize) -> usize {
-        self.rank(true, pos)
-    }
-
-    #[target_feature(enable = "avx2")]
-    unsafe fn avx_rank1(&self, pos: usize) -> usize {
         self.rank(false, pos)
     }
 
@@ -113,8 +89,7 @@ impl BitVector {
         rank += if zero {
             self.super_blocks[super_block_index].zeros
         } else {
-            (super_block_index * SUPER_BLOCK_SIZE)
-                - self.super_blocks[super_block_index].zeros
+            (super_block_index * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_index].zeros
         };
 
         // then add the number of zeros/ones before the current block
@@ -125,85 +100,20 @@ impl BitVector {
                 - self.blocks[block_index].zeros as usize
         };
 
-        // then add the number of zeros/ones in the current block up to the current position
-        #[cfg(any(
-            not(feature = "simd"),
-            not(target_arch = "x86_64"),
-            not(target_feature = "avx2")
-        ))]
-        {
-            // naive popcount of blocks
-            for &i in &self.data[(block_index * BLOCK_SIZE) / WORD_SIZE..index] {
-                rank += if zero {
-                    i.count_zeros() as usize
-                } else {
-                    i.count_ones() as usize
-                };
-            }
-
+        // naive popcount of blocks
+        for &i in &self.data[(block_index * BLOCK_SIZE) / WORD_SIZE..index] {
             rank += if zero {
-                (!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
+                i.count_zeros() as usize
             } else {
-                (self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
+                i.count_ones() as usize
             };
         }
 
-        #[cfg(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2"))]
-        {
-            // Wojciech Muła algorithm for SIMD popcount on AVX2.
-            rank += unsafe {
-                let full_block_boundary = (super_block_index * SUPER_BLOCK_SIZE
-                    + (block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
-                    / WORD_SIZE;
-                // if BLOCK_SIZE is changed, this method must be updated
-                debug_assert!(BLOCK_SIZE / WORD_SIZE == 4);
-                let block = if zero {
-                    _mm256_set_epi64x(
-                        !self.data[full_block_boundary] as i64,
-                        !self.data[full_block_boundary + 1] as i64,
-                        !self.data[full_block_boundary + 2] as i64,
-                        !self.data[full_block_boundary + 3] as i64,
-                    )
-                } else {
-                    _mm256_set_epi64x(
-                        self.data[full_block_boundary] as i64,
-                        self.data[full_block_boundary + 1] as i64,
-                        self.data[full_block_boundary + 2] as i64,
-                        self.data[full_block_boundary + 3] as i64,
-                    )
-                };
-
-                // calculate a mask
-                let mask1 = !u64::MAX.checked_shl((pos % BLOCK_SIZE) as u32).unwrap_or(0);
-                let mask2 = !u64::MAX
-                    .checked_shl(((pos % BLOCK_SIZE).saturating_sub(WORD_SIZE)) as u32)
-                    .unwrap_or(0);
-                let mask3 = !u64::MAX
-                    .checked_shl(((pos % BLOCK_SIZE).saturating_sub(WORD_SIZE * 2)) as u32)
-                    .unwrap_or(0);
-                let mask4 = !u64::MAX
-                    .checked_shl(((pos % BLOCK_SIZE).saturating_sub(WORD_SIZE * 3)) as u32)
-                    .unwrap_or(0);
-                let enable_mask =
-                    _mm256_set_epi64x(mask1 as i64, mask2 as i64, mask3 as i64, mask4 as i64);
-                let masked_block = _mm256_and_si256(block, enable_mask);
-
-                // mask lower then higher nibbles
-                let mask = _mm256_set1_epi8(0x0f);
-                let rank_lookup = _mm256_set_epi8(
-                    4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0, 4, 3, 3, 2, 3, 2, 2, 1, 3, 2,
-                    2, 1, 2, 1, 1, 0,
-                );
-
-                // calculate popcount for lower and higher nibbles by using lookup table
-                let low = _mm256_shuffle_epi8(rank_lookup, _mm256_and_si256(masked_block, mask));
-                let high = _mm256_shuffle_epi8(
-                    rank_lookup,
-                    _mm256_and_si256(_mm256_srli_epi64::<4>(masked_block), mask),
-                );
-                (Self::hsum(low) + Self::hsum(high)) as usize
-            };
-        }
+        rank += if zero {
+            (!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
+        } else {
+            (self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
+        };
 
         rank
     }
@@ -312,7 +222,9 @@ impl BitVectorBuilder {
                     super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
                 }
 
-                blocks.push(BlockDescriptor { zeros: current_zeros as u16, });
+                blocks.push(BlockDescriptor {
+                    zeros: current_zeros as u16,
+                });
             }
 
             // count the zeros in the current word and add them to the counter
