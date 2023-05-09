@@ -118,24 +118,6 @@ impl BitVector {
         rank
     }
 
-    /// Horizontal sum (popcount) of a 256 bit vector.
-    #[inline(always)]
-    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
-    unsafe fn hsum(v: __m256i) -> u64 {
-        let vlow = _mm256_castsi256_si128(v);
-        let vhigh = _mm256_extracti128_si256::<1>(v);
-        let vlow = _mm_add_epi64(vlow, vhigh);
-        let conv = _mm_cvtsi128_si64(_mm_add_epi64(vlow, _mm_unpackhi_epi64(vlow, vlow))) as u64;
-        (conv & 0xFF)
-            + (conv >> 8 & 0xFF)
-            + (conv >> 16 & 0xFF)
-            + (conv >> 24 & 0xFF)
-            + (conv >> 32 & 0xFF)
-            + (conv >> 40 & 0xFF)
-            + (conv >> 48 & 0xFF)
-            + (conv >> 56 & 0xFF)
-    }
-
     /// Return the length of the vector, i.e. the number of bits it contains.
     pub fn len(&self) -> usize {
         self.len
