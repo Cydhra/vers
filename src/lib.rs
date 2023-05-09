@@ -215,14 +215,14 @@ impl BitVector {
         let vhigh = _mm256_extracti128_si256::<1>(v);
         let vlow = _mm_add_epi64(vlow, vhigh);
         let conv = _mm_cvtsi128_si64(_mm_add_epi64(vlow, _mm_unpackhi_epi64(vlow, vlow))) as u64;
-        (conv & 0x0F)
-            + (conv >> 8 & 0x0F)
-            + (conv >> 16 & 0x0F)
-            + (conv >> 24 & 0x0F)
-            + (conv >> 32 & 0x0F)
-            + (conv >> 40 & 0x0F)
-            + (conv >> 48 & 0x0F)
-            + (conv >> 56 & 0x0F)
+        (conv & 0xFF)
+            + (conv >> 8 & 0xFF)
+            + (conv >> 16 & 0xFF)
+            + (conv >> 24 & 0xFF)
+            + (conv >> 32 & 0xFF)
+            + (conv >> 40 & 0xFF)
+            + (conv >> 48 & 0xFF)
+            + (conv >> 56 & 0xFF)
     }
 
     /// Return the length of the vector, i.e. the number of bits it contains.
