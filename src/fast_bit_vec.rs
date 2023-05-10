@@ -14,6 +14,8 @@ const BLOCK_SIZE: usize = 512;
 /// zeros.
 const SUPER_BLOCK_SIZE: usize = 1 << 16;
 
+const SELECT_BLOCK_SIZE: usize = 4096;
+
 /// Meta-data for a block. The `zeros` field stores the number of zeros up to the block,
 /// beginning from the last super-block boundary. This means the first block in a super-block
 /// always stores the number zero, which serves as a sentinel value to avoid special-casing the
@@ -31,6 +33,12 @@ struct SuperBlockDescriptor {
     zeros: usize,
 }
 
+/// Meta-data for the select query.
+#[derive(Clone, Copy, Debug)]
+struct SelectSuperBlockDescriptor {
+    index: usize,
+}
+
 /// A bitvector that supports constant-time rank and select queries and is optimized for fast queries.
 /// The bitvector is stored as a vector of `u64`s. The bit-vector stores meta-data for constant-time
 /// rank and select queries, which takes sub-linear additional space. The overhead is
@@ -42,6 +50,7 @@ pub struct FastBitVector {
     len: usize,
     blocks: Vec<BlockDescriptor>,
     super_blocks: Vec<SuperBlockDescriptor>,
+    select_blocks: Vec<SelectSuperBlockDescriptor>,
 }
 
 impl FastBitVector {
@@ -98,6 +107,12 @@ impl FastBitVector {
 
         rank
     }
+
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
+    fn select(&self, zero: bool, rank: usize) -> usize {
+        todo!("select not implemented yet")
+    }
 }
 
 impl BitVector for FastBitVector {
@@ -107,6 +122,14 @@ impl BitVector for FastBitVector {
 
     fn rank1(&self, pos: usize) -> usize {
         unsafe { self.naive_rank1(pos) }
+    }
+
+    fn select0(&self, rank: usize) -> usize {
+        self.select(true, rank)
+    }
+
+    fn select1(&self, rank: usize) -> usize {
+        self.select(false, rank)
     }
 
     fn len(&self) -> usize {
@@ -122,6 +145,7 @@ impl BuildingStrategy for FastBitVector {
         // zeros in the super-block, up to but excluding the block.
         let mut blocks = Vec::with_capacity(builder.len / BLOCK_SIZE + 1);
         let mut super_blocks = Vec::with_capacity(builder.len / SUPER_BLOCK_SIZE + 1);
+        let mut select_blocks = Vec::new();
 
         let mut total_zeros: usize = 0;
         let mut current_zeros: u32 = 0;
@@ -146,7 +170,14 @@ impl BuildingStrategy for FastBitVector {
             // count the zeros in the current word and add them to the counter
             // the last word may contain padding zeros, which should not be counted,
             // but since we do not append the last block descriptor, this is not a problem
-            current_zeros += word.count_zeros();
+            let zeros = word.count_zeros();
+            if total_zeros + zeros as usize / SELECT_BLOCK_SIZE > total_zeros / SELECT_BLOCK_SIZE {
+                select_blocks.push(SelectSuperBlockDescriptor {
+                    index: super_blocks.len(),
+                });
+            }
+
+            current_zeros += zeros;
         }
 
         // pad the internal vector to be block-aligned, so SIMD operations don't try to read
@@ -161,6 +192,7 @@ impl BuildingStrategy for FastBitVector {
             len: builder.len,
             blocks,
             super_blocks,
+            select_blocks,
         }
     }
 }

@@ -25,6 +25,12 @@ pub trait BitVector {
     /// - `pos`: The position of the bit to return the rank of.
     fn rank1(&self, pos: usize) -> usize;
 
+    /// Return the position of the 0-bit with the given rank. See `rank0`.
+    fn select0(&self, rank: usize) -> usize;
+
+    /// Return the position of the 1-bit with the given rank. See `rank1`.
+    fn select1(&self, rank: usize) -> usize;
+
     /// Return the length of the vector, i.e. the number of bits it contains.
     fn len(&self) -> usize;
 
