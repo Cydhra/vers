@@ -144,9 +144,10 @@ impl FastBitVector {
         }
 
         let block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset;
+        rank -= self.blocks[block].zeros as usize;
 
         // todo non-bmi2 implementation as opt-in feature
-        for &word in &self.data[block * BLOCK_SIZE / WORD_SIZE..block * (BLOCK_SIZE + 1) / WORD_SIZE] {
+        for &word in &self.data[block * BLOCK_SIZE / WORD_SIZE..(block + 1) * BLOCK_SIZE / WORD_SIZE] {
             if (word.count_zeros() as usize) < rank {
                 rank -= word.count_zeros() as usize;
             } else {
