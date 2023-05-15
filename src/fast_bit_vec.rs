@@ -1,5 +1,6 @@
 use crate::{BitVector, BitVectorBuilder, BuildingStrategy, WORD_SIZE};
 use core::arch::x86_64::_pdep_u64;
+use std::cmp::min;
 
 /// Size of a block in the bitvector. The size is deliberately chosen to fit one block into a
 /// AVX256 register, so that we can use SIMD instructions to speed up rank and select queries.
@@ -131,27 +132,15 @@ impl FastBitVector {
 
         // full binary search for block that contains the rank
         // todo: edge case for non-full super blocks
+        let mut boundary = min(64, (self.blocks.len() - (super_block * SUPER_BLOCK_SIZE / BLOCK_SIZE)) >> 1);
         let mut offset = 0;
-        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + 64].zeros as usize {
-            offset += 64;
-        }
-        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + 32].zeros as usize {
-            offset += 32;
-        }
-        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + 16].zeros as usize {
-            offset += 16;
-        }
-        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + 8].zeros as usize {
-            offset += 8;
-        }
-        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + 4].zeros as usize {
-            offset += 4;
-        }
-        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + 2].zeros as usize {
-            offset += 2;
-        }
-        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + 1].zeros as usize {
-            offset += 1;
+        while boundary > 0 {
+            if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + boundary].zeros as usize {
+                offset += boundary;
+                boundary = min(boundary >> 1, self.blocks.len() - (boundary >> 1))
+            } else {
+                boundary >>= 1;
+            }
         }
 
         let block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset;
@@ -377,9 +366,6 @@ mod tests {
     fn simple_select() {
         let mut bv = BitVectorBuilder::<FastBitVector>::new();
         bv.append_word(0b10110);
-        for _ in 0..1024 {
-            bv.append_word(0);
-        }
         let bv = bv.build();
         assert_eq!(bv.select0(0), 0);
         assert_eq!(bv.select0(1), 1);
