@@ -217,4 +217,27 @@ mod common_tests {
             assert_eq!(bv.rank1(i), i);
         }
     }
+
+    pub(crate) fn test_simple_select<B: BuildingStrategy>(
+        mut bv: BitVectorBuilder<B>,
+    ) {
+        bv.append_word(0b10110);
+        let bv = bv.build();
+        assert_eq!(bv.select0(0), 0);
+        assert_eq!(bv.select0(1), 1);
+        assert_eq!(bv.select0(2), 4);
+    }
+
+    pub(crate) fn test_multi_words_select<B: BuildingStrategy>(
+        mut bv: BitVectorBuilder<B>,
+    ) {
+        bv.append_word(0);
+        bv.append_word(0);
+        bv.append_word(0b10110);
+        let bv = bv.build();
+        assert_eq!(bv.select0(32), 32);
+        assert_eq!(bv.select0(128), 128);
+        assert_eq!(bv.select0(129), 129);
+        assert_eq!(bv.select0(130), 132);
+    }
 }
