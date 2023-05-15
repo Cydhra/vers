@@ -373,4 +373,59 @@ mod tests {
         assert_eq!(bv.select0(1), 1);
         assert_eq!(bv.select0(2), 4);
     }
+
+    #[test]
+    fn random_data_select() {
+        let mut bv = BitVectorBuilder::<FastBitVector>::with_capacity(LENGTH);
+        let mut rng = StdRng::from_seed([
+            0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4,
+            5, 6, 7,
+        ]);
+        let sample = Uniform::new(0, 2);
+        static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
+
+        for _ in 0..LENGTH {
+            bv.append_bit(sample.sample(&mut rng) as u8);
+        }
+
+        let bv = bv.build();
+
+        assert_eq!(bv.len(), LENGTH);
+
+        for _ in 0..100 {
+            let rnd_rank = rng.gen_range(0..LENGTH);
+            let actual_index0 = bv.select0(rnd_rank);
+
+            let data = &bv.data;
+            let mut rank_counter = 0;
+            let mut expected_index0 = 0;
+
+            let mut index = 0;
+            loop {
+                let zeros = data[index].count_zeros() as usize;
+                if rank_counter + zeros >= rnd_rank {
+                    break;
+                } else {
+                    rank_counter += zeros;
+                    expected_index0 += WORD_SIZE;
+                    index += 1;
+                }
+            }
+
+            let mut bit_index = 0;
+            loop {
+                if rank_counter == rnd_rank {
+                    break;
+                } else {
+                    if data[index] & (1 << bit_index) == 0 {
+                        rank_counter += 1;
+                    }
+                    expected_index0 += 1;
+                    bit_index += 1;
+                }
+            }
+
+            assert_eq!(actual_index0, expected_index0);
+        }
+    }
 }
