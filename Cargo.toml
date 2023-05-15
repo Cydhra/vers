@@ -17,3 +17,7 @@ harness = false
 [[bench]]
 name = "comparison_benchmark"
 harness = false
+
+[[bench]]
+name = "select_benchmark"
+harness = false

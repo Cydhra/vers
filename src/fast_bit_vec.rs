@@ -1,4 +1,5 @@
 use crate::{BitVector, BitVectorBuilder, BuildingStrategy, WORD_SIZE};
+use core::arch::x86_64::_pdep_u64;
 
 /// Size of a block in the bitvector. The size is deliberately chosen to fit one block into a
 /// AVX256 register, so that we can use SIMD instructions to speed up rank and select queries.
@@ -33,10 +34,12 @@ struct SuperBlockDescriptor {
     zeros: usize,
 }
 
-/// Meta-data for the select query.
+/// Meta-data for the select query. Each entry i in the select vector contains the indices to find
+/// the i * SELECT_BLOCK_SIZE'th 0- and 1-bit in the bitvector. Those indices may be very far apart.
 #[derive(Clone, Copy, Debug)]
 struct SelectSuperBlockDescriptor {
-    index: usize,
+    index_0: usize,
+    index_1: usize,
 }
 
 /// A bitvector that supports constant-time rank and select queries and is optimized for fast queries.
@@ -54,6 +57,7 @@ pub struct FastBitVector {
 }
 
 impl FastBitVector {
+    // todo non-popcount implementation as opt-in feature
     #[target_feature(enable = "popcnt")]
     unsafe fn naive_rank0(&self, pos: usize) -> usize {
         self.rank(true, pos)
@@ -64,13 +68,18 @@ impl FastBitVector {
         self.rank(false, pos)
     }
 
+    #[target_feature(enable = "bmi2")]
+    unsafe fn bmi_select0(&self, rank: usize) -> usize {
+        self.impl_select0(rank)
+    }
+
     // I measured 5-10% improvement with this. I don't know why it's not inlined by default, the
     // branch elimination profits alone should make it worth it.
     #[allow(clippy::inline_always)]
     #[inline(always)]
     fn rank(&self, zero: bool, pos: usize) -> usize {
         #[allow(unused_variables)]
-        let index = pos / WORD_SIZE;
+            let index = pos / WORD_SIZE;
         let block_index = pos / BLOCK_SIZE;
         let super_block_index = pos / SUPER_BLOCK_SIZE;
         let mut rank = 0;
@@ -110,8 +119,57 @@ impl FastBitVector {
 
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    fn select(&self, zero: bool, rank: usize) -> usize {
-        todo!("select not implemented yet")
+    unsafe fn impl_select0(&self, mut rank: usize) -> usize {
+        let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_0;
+
+        // linear search for super block that contains the rank
+        while self.super_blocks.len() > (super_block + 1) && self.super_blocks[super_block + 1].zeros < rank {
+            super_block += 1;
+        }
+
+        rank = rank - self.super_blocks[super_block].zeros;
+
+        // full binary search for block that contains the rank
+        // todo: edge case for non-full super blocks
+        let mut offset = 0;
+        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + 64].zeros as usize {
+            offset += 64;
+        }
+        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + 32].zeros as usize {
+            offset += 32;
+        }
+        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + 16].zeros as usize {
+            offset += 16;
+        }
+        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + 8].zeros as usize {
+            offset += 8;
+        }
+        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + 4].zeros as usize {
+            offset += 4;
+        }
+        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + 2].zeros as usize {
+            offset += 2;
+        }
+        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + 1].zeros as usize {
+            offset += 1;
+        }
+
+        let block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset;
+
+        // todo non-bmi2 implementation as opt-in feature
+        for &word in &self.data[block * BLOCK_SIZE / WORD_SIZE..block * (BLOCK_SIZE + 1) / WORD_SIZE] {
+            if (word.count_zeros() as usize) < rank {
+                rank -= word.count_zeros() as usize;
+            } else {
+                return if rank == 0 {
+                    // edge case, since the below method assumes rank is inclusive
+                    super_block * SUPER_BLOCK_SIZE + block * BLOCK_SIZE
+                } else {
+                    super_block * SUPER_BLOCK_SIZE + block * BLOCK_SIZE + _pdep_u64(1 << (rank - 1), !word).trailing_zeros() as usize + 1
+                };
+            }
+        }
+        unreachable!()
     }
 }
 
@@ -125,11 +183,11 @@ impl BitVector for FastBitVector {
     }
 
     fn select0(&self, rank: usize) -> usize {
-        self.select(true, rank)
+        unsafe { self.bmi_select0(rank) }
     }
 
     fn select1(&self, rank: usize) -> usize {
-        self.select(false, rank)
+        unsafe { todo!() }
     }
 
     fn len(&self) -> usize {
@@ -147,8 +205,14 @@ impl BuildingStrategy for FastBitVector {
         let mut super_blocks = Vec::with_capacity(builder.len / SUPER_BLOCK_SIZE + 1);
         let mut select_blocks = Vec::new();
 
+        // sentinel value
+        select_blocks.push(SelectSuperBlockDescriptor {
+            index_0: 0,
+            index_1: 0,
+        });
+
         let mut total_zeros: usize = 0;
-        let mut current_zeros: u32 = 0;
+        let mut current_zeros: usize = 0;
         for (idx, &word) in builder.words.iter().enumerate() {
             // if we moved past a block boundary, append the block information for the previous
             // block and reset the counter if we moved past a super-block boundary.
@@ -170,14 +234,33 @@ impl BuildingStrategy for FastBitVector {
             // count the zeros in the current word and add them to the counter
             // the last word may contain padding zeros, which should not be counted,
             // but since we do not append the last block descriptor, this is not a problem
-            let zeros = word.count_zeros();
-            if total_zeros + zeros as usize / SELECT_BLOCK_SIZE > total_zeros / SELECT_BLOCK_SIZE {
-                select_blocks.push(SelectSuperBlockDescriptor {
-                    index: super_blocks.len(),
-                });
+            let new_zeros = word.count_zeros() as usize;
+            let all_zeros = total_zeros + current_zeros + new_zeros;
+            if all_zeros / SELECT_BLOCK_SIZE > (total_zeros + current_zeros) / SELECT_BLOCK_SIZE {
+                if all_zeros / SELECT_BLOCK_SIZE == select_blocks.len() {
+                    select_blocks.push(SelectSuperBlockDescriptor {
+                        index_0: super_blocks.len() - 1,
+                        index_1: 0,
+                    });
+                } else {
+                    select_blocks[all_zeros / SELECT_BLOCK_SIZE].index_0 = super_blocks.len() - 1;
+                }
             }
 
-            current_zeros += zeros;
+            let total_bits = (idx + 1) * WORD_SIZE;
+            let all_ones = total_bits - all_zeros;
+            if all_ones / SELECT_BLOCK_SIZE > (total_bits - total_zeros - current_zeros) / SELECT_BLOCK_SIZE {
+                if all_ones / SELECT_BLOCK_SIZE == select_blocks.len() {
+                    select_blocks.push(SelectSuperBlockDescriptor {
+                        index_0: 0,
+                        index_1: super_blocks.len() - 1,
+                    });
+                } else {
+                    select_blocks[all_ones / SELECT_BLOCK_SIZE].index_1 = super_blocks.len() - 1;
+                }
+            }
+
+            current_zeros += new_zeros;
         }
 
         // pad the internal vector to be block-aligned, so SIMD operations don't try to read
@@ -288,5 +371,18 @@ mod tests {
     fn test_only_ones() {
         let bv = BitVectorBuilder::<FastBitVector>::new();
         crate::common_tests::test_only_ones(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+    }
+
+    #[test]
+    fn simple_select() {
+        let mut bv = BitVectorBuilder::<FastBitVector>::new();
+        bv.append_word(0b10110);
+        for _ in 0..1024 {
+            bv.append_word(0);
+        }
+        let bv = bv.build();
+        assert_eq!(bv.select0(0), 0);
+        assert_eq!(bv.select0(1), 1);
+        assert_eq!(bv.select0(2), 4);
     }
 }
