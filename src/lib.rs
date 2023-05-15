@@ -167,7 +167,7 @@ mod common_tests {
         assert_eq!(bv.rank0(3), 1);
     }
 
-    pub(crate) fn test_multi_words<B: BuildingStrategy>(mut bv: BitVectorBuilder<B>) {
+    pub(crate) fn test_multi_words_rank<B: BuildingStrategy>(mut bv: BitVectorBuilder<B>) {
         bv.append_word(0);
         bv.append_bit(0u8);
         bv.append_bit(1u8);
@@ -180,7 +180,7 @@ mod common_tests {
         assert_eq!(bv.rank0(66), 65);
     }
 
-    pub(crate) fn test_only_zeros<B: BuildingStrategy>(
+    pub(crate) fn test_only_zeros_rank<B: BuildingStrategy>(
         mut bv: BitVectorBuilder<B>,
         super_block_size: usize,
         word_size: usize,
@@ -199,7 +199,7 @@ mod common_tests {
         }
     }
 
-    pub(crate) fn test_only_ones<B: BuildingStrategy>(
+    pub(crate) fn test_only_ones_rank<B: BuildingStrategy>(
         mut bv: BitVectorBuilder<B>,
         super_block_size: usize,
         word_size: usize,

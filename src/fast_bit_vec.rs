@@ -131,7 +131,8 @@ impl FastBitVector {
         rank = rank - self.super_blocks[super_block].zeros;
 
         // full binary search for block that contains the rank
-        // todo: edge case for non-full super blocks
+        // todo this fails for example for three blocks and a rank that is in the third, because
+        //  the boundary calculation in if-case 1 is wrong
         let mut boundary = min(64, (self.blocks.len() - (super_block * SUPER_BLOCK_SIZE / BLOCK_SIZE)) >> 1);
         let mut offset = 0;
         while boundary > 0 {
@@ -289,7 +290,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sample_data() {
+    fn test_random_data_rank() {
         let mut bv = BitVectorBuilder::<FastBitVector>::with_capacity(LENGTH);
         let mut rng = StdRng::from_seed([
             0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4,
@@ -346,21 +347,21 @@ mod tests {
     }
 
     #[test]
-    fn test_multi_words() {
+    fn test_multi_words_rank() {
         let bv = BitVectorBuilder::<FastBitVector>::new();
-        crate::common_tests::test_multi_words(bv);
+        crate::common_tests::test_multi_words_rank(bv);
     }
 
     #[test]
-    fn test_only_zeros() {
+    fn test_only_zeros_rank() {
         let bv = BitVectorBuilder::<FastBitVector>::new();
-        crate::common_tests::test_only_zeros(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+        crate::common_tests::test_only_zeros_rank(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
     }
 
     #[test]
-    fn test_only_ones() {
+    fn test_only_ones_rank() {
         let bv = BitVectorBuilder::<FastBitVector>::new();
-        crate::common_tests::test_only_ones(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+        crate::common_tests::test_only_ones_rank(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
     }
 
     #[test]
