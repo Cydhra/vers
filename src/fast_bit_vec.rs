@@ -130,6 +130,12 @@ impl FastBitVector {
 
         rank = rank - self.super_blocks[super_block].zeros;
 
+        // edge case for later: if rank is 0, we are done already and we don't want to avoid a
+        // subtraction-overflow in the block-count later during the pdep operation
+        if rank == 0 {
+            return super_block * SUPER_BLOCK_SIZE;
+        }
+
         // full binary search for block that contains the rank
         // todo this fails for example for three blocks and a rank that is in the third, because
         //  the boundary calculation in if-case 1 is wrong
@@ -148,16 +154,13 @@ impl FastBitVector {
         rank -= self.blocks[block].zeros as usize;
 
         // todo non-bmi2 implementation as opt-in feature
+        let mut index_counter = 0;
         for &word in &self.data[block * BLOCK_SIZE / WORD_SIZE..(block + 1) * BLOCK_SIZE / WORD_SIZE] {
             if (word.count_zeros() as usize) < rank {
                 rank -= word.count_zeros() as usize;
+                index_counter += WORD_SIZE;
             } else {
-                return if rank == 0 {
-                    // edge case, since the below method assumes rank is inclusive
-                    super_block * SUPER_BLOCK_SIZE + block * BLOCK_SIZE
-                } else {
-                    super_block * SUPER_BLOCK_SIZE + block * BLOCK_SIZE + _pdep_u64(1 << (rank - 1), !word).trailing_zeros() as usize + 1
-                };
+                return super_block * SUPER_BLOCK_SIZE + block * BLOCK_SIZE + index_counter + _pdep_u64(1 << (rank - 1), !word).trailing_zeros() as usize + 1;
             }
         }
         unreachable!()
@@ -365,7 +368,7 @@ mod tests {
     }
 
     #[test]
-    fn simple_select() {
+    fn test_simple_select() {
         let mut bv = BitVectorBuilder::<FastBitVector>::new();
         bv.append_word(0b10110);
         let bv = bv.build();
@@ -373,6 +376,20 @@ mod tests {
         assert_eq!(bv.select0(1), 1);
         assert_eq!(bv.select0(2), 4);
     }
+
+    #[test]
+    fn test_multi_words_select() {
+        let mut bv = BitVectorBuilder::<FastBitVector>::new();
+        bv.append_word(0);
+        bv.append_word(0);
+        bv.append_word(0b10110);
+        let bv = bv.build();
+        assert_eq!(bv.select0(32), 32);
+        assert_eq!(bv.select0(128), 128);
+        assert_eq!(bv.select0(129), 129);
+        assert_eq!(bv.select0(130), 132);
+    }
+
 
     #[test]
     fn random_data_select() {
