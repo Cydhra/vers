@@ -240,4 +240,22 @@ mod common_tests {
         assert_eq!(bv.select0(129), 129);
         assert_eq!(bv.select0(130), 132);
     }
+
+    pub(crate) fn test_only_zeros_select<B: BuildingStrategy>(
+        mut bv: BitVectorBuilder<B>,
+        super_block_size: usize,
+        word_size: usize,
+    ) {
+        for _ in 0..2 * (super_block_size / word_size) {
+            bv.append_word(0);
+        }
+        bv.append_bit(0u8);
+        let bv = bv.build();
+
+        assert_eq!(bv.len(), 2 * super_block_size + 1);
+
+        for i in 0..bv.len() {
+            assert_eq!(bv.select0(i), i);
+        }
+    }
 }

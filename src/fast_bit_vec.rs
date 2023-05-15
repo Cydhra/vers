@@ -380,6 +380,12 @@ mod tests {
     }
 
     #[test]
+    fn test_only_zeros_select() {
+        let bv = BitVectorBuilder::<FastBitVector>::new();
+        crate::common_tests::test_only_zeros_select(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+    }
+
+    #[test]
     fn random_data_select() {
         let mut bv = BitVectorBuilder::<FastBitVector>::with_capacity(LENGTH);
         let mut rng = StdRng::from_seed([
