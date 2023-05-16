@@ -10,14 +10,9 @@ pub struct EliasFanoVec<B: RsVector> {
 impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
     /// Create a new Elias-Fano vector by compressing the given data.
     #[must_use]
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        clippy::cast_precision_loss
-    )]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn new(data: &Vec<u64>) -> Self {
-        let upper_width = (data.len() as f64).log2().ceil() as usize;
-        let lower_width = 64 - upper_width;
+        let lower_width = data.len().leading_zeros() as usize;
 
         let mut upper_vec = BitVec::from_zeros(data.len() * 2 + 1);
         let mut lower_vec = BitVec::with_capacity(data.len() * lower_width);
