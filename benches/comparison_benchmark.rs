@@ -3,6 +3,7 @@ use rand::distributions::{Distribution, Uniform};
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use rsdict::RsDict;
+use vers::BitVector;
 
 mod common;
 
@@ -24,7 +25,7 @@ fn compare_ranks(b: &mut Criterion) {
         let rsdict = construct_rsdict_vec(&mut rng, l);
         let sample = Uniform::new(0, l);
 
-        group.bench_with_input(BenchmarkId::new("vers", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("vers-rank", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng),
                 |e| black_box(vers_vec.rank0(e)),
@@ -32,10 +33,28 @@ fn compare_ranks(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("rsdict", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("rsdict-rank", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(rsdict.rank(e, false)),
+                BatchSize::SmallInput,
+            )
+        });
+
+        let sample = Uniform::new(0, l / 3);
+
+        group.bench_with_input(BenchmarkId::new("vers-select", l), &l, |b, _| {
+            b.iter_batched(
+                || sample.sample(&mut rng),
+                |e| black_box(vers_vec.select0(e)),
+                BatchSize::SmallInput,
+            )
+        });
+
+        group.bench_with_input(BenchmarkId::new("rsdict-select", l), &l, |b, _| {
+            b.iter_batched(
+                || sample.sample(&mut rng) as u64,
+                |e| black_box(rsdict.select(e, false)),
                 BatchSize::SmallInput,
             )
         });
