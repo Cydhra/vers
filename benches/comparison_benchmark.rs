@@ -3,7 +3,7 @@ use rand::distributions::{Distribution, Uniform};
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use rsdict::RsDict;
-use vers::BitVector;
+use vers::RsVector;
 
 mod common;
 

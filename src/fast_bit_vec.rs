@@ -1,5 +1,5 @@
 use crate::util::unroll;
-use crate::{BitVector, BitVectorBuilder, BuildingStrategy, WORD_SIZE};
+use crate::{BitVectorBuilder, BuildingStrategy, RsVector, WORD_SIZE};
 use core::arch::x86_64::_pdep_u64;
 use std::cmp::min;
 
@@ -262,7 +262,7 @@ impl FastBitVector {
     }
 }
 
-impl BitVector for FastBitVector {
+impl RsVector for FastBitVector {
     fn rank0(&self, pos: usize) -> usize {
         unsafe { self.naive_rank0(pos) }
     }

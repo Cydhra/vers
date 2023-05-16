@@ -12,7 +12,7 @@ const WORD_SIZE: usize = 64;
 
 /// A common trait for all bit vectors for applications that want to use them
 /// interchangeably. Offers all common functionality like rank, select, and collection accessors.
-pub trait BitVector {
+pub trait RsVector {
     /// Return the 0-rank of the bit at the given position. The 0-rank is the number of
     /// 0-bits in the vector up to but excluding the bit at the given position.
     ///
@@ -124,7 +124,7 @@ impl<S: BuildingStrategy> BitVectorBuilder<S> {
 /// `BitVectorBuilder`.
 pub trait BuildingStrategy {
     /// The type of the bit vector that is built.
-    type Vector: BitVector;
+    type Vector: RsVector;
 
     /// Build the `BitVector` from all bits that have been appended so far. This will consume the
     /// `BitVectorBuilder`.
@@ -135,7 +135,7 @@ pub trait BuildingStrategy {
 
 #[cfg(test)]
 mod common_tests {
-    use crate::{BitVector, BitVectorBuilder, BuildingStrategy};
+    use crate::{BitVectorBuilder, BuildingStrategy, RsVector};
 
     pub(crate) fn test_append_bit_long<B: BuildingStrategy>(
         mut bv: BitVectorBuilder<B>,
