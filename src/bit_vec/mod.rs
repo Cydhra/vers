@@ -32,6 +32,22 @@ impl BitVec {
         }
     }
 
+    /// Create a new bit vector with all zeros and the given length. The length is measured in bits.
+    #[must_use]
+    pub fn from_zeros(len: usize) -> Self {
+        let mut data = Vec::with_capacity(len / WORD_SIZE + 1);
+        for _ in 0..len / WORD_SIZE {
+            data.push(0);
+        }
+        if len % WORD_SIZE != 0 {
+            data.push(0);
+        }
+        Self {
+            data,
+            len,
+        }
+    }
+
     /// Append a bit to the bit vector.
     pub fn append(&mut self, bit: bool) {
         if self.len % WORD_SIZE == 0 {
@@ -62,6 +78,11 @@ impl BitVec {
             self.data.push(word >> (WORD_SIZE - self.len % WORD_SIZE));
         }
         self.len += WORD_SIZE;
+    }
+
+    /// Flip the bit at the given position.
+    pub fn flip_bit(&mut self, pos: usize) {
+        self.data[pos / WORD_SIZE] ^= 1 << (pos % WORD_SIZE);
     }
 
     /// Return the bit at the given position.
