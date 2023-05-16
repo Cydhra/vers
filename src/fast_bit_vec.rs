@@ -257,7 +257,7 @@ impl BuildingStrategy for FastBitVector {
             let total_bits = (idx + 1) * WORD_SIZE;
             let all_ones = total_bits - all_zeros;
             if all_ones / SELECT_BLOCK_SIZE
-                > (total_bits - total_zeros - current_zeros) / SELECT_BLOCK_SIZE
+                > (idx * WORD_SIZE - total_zeros - current_zeros) / SELECT_BLOCK_SIZE
             {
                 if all_ones / SELECT_BLOCK_SIZE == select_blocks.len() {
                     select_blocks.push(SelectSuperBlockDescriptor {
