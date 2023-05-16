@@ -1,5 +1,5 @@
 use crate::util::unroll;
-use crate::{BitVectorBuilder, BuildingStrategy, RsVector, WORD_SIZE};
+use super::{RsVectorBuilder, BuildingStrategy, RsVector, WORD_SIZE};
 use core::arch::x86_64::_pdep_u64;
 use std::cmp::min;
 
@@ -291,7 +291,7 @@ impl RsVector for FastBitVector {
 impl BuildingStrategy for FastBitVector {
     type Vector = FastBitVector;
 
-    fn build(mut builder: BitVectorBuilder<Self>) -> FastBitVector {
+    fn build(mut builder: RsVectorBuilder<Self>) -> FastBitVector {
         // Construct the block descriptor meta data. Each block descriptor contains the number of
         // zeros in the super-block, up to but excluding the block.
         let mut blocks = Vec::with_capacity(builder.len / BLOCK_SIZE + 1);
@@ -384,7 +384,7 @@ mod tests {
 
     #[test]
     fn test_append_bit() {
-        let mut bv = BitVectorBuilder::<FastBitVector>::new();
+        let mut bv = RsVectorBuilder::<FastBitVector>::new();
         bv.append_bit(0u8);
         bv.append_bit(1u8);
         bv.append_bit(1u8);
@@ -395,7 +395,7 @@ mod tests {
 
     #[test]
     fn test_random_data_rank() {
-        let mut bv = BitVectorBuilder::<FastBitVector>::with_capacity(LENGTH);
+        let mut bv = RsVectorBuilder::<FastBitVector>::with_capacity(LENGTH);
         let mut rng = StdRng::from_seed([
             0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4,
             5, 6, 7,
@@ -440,61 +440,61 @@ mod tests {
 
     #[test]
     fn test_append_bit_long() {
-        let bv = BitVectorBuilder::<FastBitVector>::new();
-        crate::common_tests::test_append_bit_long(bv, SUPER_BLOCK_SIZE);
+        let bv = RsVectorBuilder::<FastBitVector>::new();
+        crate::bit_vec::common_tests::test_append_bit_long(bv, SUPER_BLOCK_SIZE);
     }
 
     #[test]
     fn test_rank() {
-        let bv = BitVectorBuilder::<FastBitVector>::new();
-        crate::common_tests::test_rank(bv);
+        let bv = RsVectorBuilder::<FastBitVector>::new();
+        crate::bit_vec::common_tests::test_rank(bv);
     }
 
     #[test]
     fn test_multi_words_rank() {
-        let bv = BitVectorBuilder::<FastBitVector>::new();
-        crate::common_tests::test_multi_words_rank(bv);
+        let bv = RsVectorBuilder::<FastBitVector>::new();
+        crate::bit_vec::common_tests::test_multi_words_rank(bv);
     }
 
     #[test]
     fn test_only_zeros_rank() {
-        let bv = BitVectorBuilder::<FastBitVector>::new();
-        crate::common_tests::test_only_zeros_rank(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+        let bv = RsVectorBuilder::<FastBitVector>::new();
+        crate::bit_vec::common_tests::test_only_zeros_rank(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
     }
 
     #[test]
     fn test_only_ones_rank() {
-        let bv = BitVectorBuilder::<FastBitVector>::new();
-        crate::common_tests::test_only_ones_rank(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+        let bv = RsVectorBuilder::<FastBitVector>::new();
+        crate::bit_vec::common_tests::test_only_ones_rank(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
     }
 
     #[test]
     fn test_simple_select() {
-        let bv = BitVectorBuilder::<FastBitVector>::new();
-        crate::common_tests::test_simple_select(bv);
+        let bv = RsVectorBuilder::<FastBitVector>::new();
+        crate::bit_vec::common_tests::test_simple_select(bv);
     }
 
     #[test]
     fn test_multi_words_select() {
-        let bv = BitVectorBuilder::<FastBitVector>::new();
-        crate::common_tests::test_multi_words_select(bv);
+        let bv = RsVectorBuilder::<FastBitVector>::new();
+        crate::bit_vec::common_tests::test_multi_words_select(bv);
     }
 
     #[test]
     fn test_only_zeros_select() {
-        let bv = BitVectorBuilder::<FastBitVector>::new();
-        crate::common_tests::test_only_zeros_select(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+        let bv = RsVectorBuilder::<FastBitVector>::new();
+        crate::bit_vec::common_tests::test_only_zeros_select(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
     }
 
     #[test]
     fn test_only_ones_select() {
-        let bv = BitVectorBuilder::<FastBitVector>::new();
-        crate::common_tests::test_only_ones_select(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+        let bv = RsVectorBuilder::<FastBitVector>::new();
+        crate::bit_vec::common_tests::test_only_ones_select(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
     }
 
     #[test]
     fn random_data_select() {
-        let mut bv = BitVectorBuilder::<FastBitVector>::with_capacity(LENGTH);
+        let mut bv = RsVectorBuilder::<FastBitVector>::with_capacity(LENGTH);
         let mut rng = StdRng::from_seed([
             0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4,
             5, 6, 7,
