@@ -77,6 +77,24 @@ impl BitVec {
         self.len += WORD_SIZE;
     }
 
+    /// Append multiple bits to the bit vector. The least significant bit is appended first.
+    /// The number of bits to append is given by `len`. The bits are taken from the least
+    /// significant bits of `bits`. All other bits are ignored.
+    pub fn append_bits(&mut self, mut bits: u64, len: usize) {
+        bits &= (1 << len) - 1;
+
+        if self.len % WORD_SIZE == 0 {
+            self.data.push(bits);
+        } else {
+            self.data[self.len / WORD_SIZE] |= bits << (self.len % WORD_SIZE);
+
+            if self.len % WORD_SIZE + len > WORD_SIZE {
+                self.data.push(bits >> (WORD_SIZE - self.len % WORD_SIZE));
+            }
+        }
+        self.len += len;
+    }
+
     /// Flip the bit at the given position.
     pub fn flip_bit(&mut self, pos: usize) {
         self.data[pos / WORD_SIZE] ^= 1 << (pos % WORD_SIZE);
@@ -85,6 +103,18 @@ impl BitVec {
     /// Return the bit at the given position.
     pub fn get(&self, pos: usize) -> bool {
         self.data[pos / WORD_SIZE] & (1 << (pos % WORD_SIZE)) != 0
+    }
+
+    /// Return multiple bits at the given position. The number of bits to return is given by `len`.
+    /// At most 64 bits can be returned.
+    pub fn get_bits(&self, pos: usize, len: usize) -> u64 {
+        debug_assert!(len <= WORD_SIZE);
+        let partial_word = self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE) & ((1 << len) - 1);
+        if pos % WORD_SIZE + len <= WORD_SIZE {
+            partial_word
+        } else {
+            (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE))) & ((1 << len) - 1)
+        }
     }
 }
 
@@ -163,8 +193,8 @@ impl<S: BuildingStrategy> RsVectorBuilder<S> {
 
     /// Append a bit to the vector.
     pub fn append_bit<T>(&mut self, bit: T)
-    where
-        T: Into<u64>,
+        where
+            T: Into<u64>,
     {
         self.vec.append_bit(bit.into())
     }
@@ -192,16 +222,16 @@ pub trait BuildingStrategy {
     /// Build the `BitVector` from all bits that have been appended so far. This will consume the
     /// `BitVectorBuilder`.
     fn build(builder: RsVectorBuilder<Self>) -> Self::Vector
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         Self::from_bit_vec(builder.vec)
     }
 
     /// Build a `BitVector` from a `BitVec`. This will consume the `BitVec`.
     fn from_bit_vec(vec: BitVec) -> Self::Vector
-    where
-        Self: Sized;
+        where
+            Self: Sized;
 }
 
 #[cfg(test)]
