@@ -9,15 +9,18 @@ const BLOCK_SIZE: usize = 512;
 
 /// Size of a super block in the bitvector. Super-blocks exist to decrease the memory overhead
 /// of block descriptors.
-/// Increasing or decreasing the super block size has negligible effect on performance. This
-/// means we want to make the super block size as large as possible, as long as the zero-counter
-/// in normal blocks still fits in a reasonable amount of bits. So we chose the super block size
-/// to be the largest power of two that still fits into a `u16`. Note that blocks store the number
-/// of zeros up to the block, so they will never overflow even if the entire vector contains only
-/// zeros.
-const SUPER_BLOCK_SIZE: usize = 4096;
+/// Increasing or decreasing the super block size has negligible effect on performance of rank
+/// instruction. This means we want to make the super block size as large as possible, as long as
+/// the zero-counter in normal blocks still fits in a reasonable amount of bits. However, this has
+/// impact on the performance of select queries. The larger the super block size, the deeper will
+/// a binary search be. We found 4096 to be a good compromise between memory overhead and
+/// performance.
+const SUPER_BLOCK_SIZE: usize = 1 << 12;
 
-const SELECT_BLOCK_SIZE: usize = 2048;
+/// Size of a select block. The select block is used to speed up select queries. The select block
+/// contains the indices of every SELECT_BLOCK_SIZE'th 1-bit and 0-bit in the bitvector.
+/// The smaller this block-size, the faster are select queries, but the more memory is used.
+const SELECT_BLOCK_SIZE: usize = 1 << 13;
 
 /// Meta-data for a block. The `zeros` field stores the number of zeros up to the block,
 /// beginning from the last super-block boundary. This means the first block in a super-block
@@ -46,9 +49,8 @@ struct SelectSuperBlockDescriptor {
 
 /// A bitvector that supports constant-time rank and select queries and is optimized for fast queries.
 /// The bitvector is stored as a vector of `u64`s. The bit-vector stores meta-data for constant-time
-/// rank and select queries, which takes sub-linear additional space. The overhead is
-/// 2KiB + 4 bytes per 65KiB of user data (3.083%), plus 12 bytes constant overhead.
-// TODO update once select-overhead is implemented
+/// rank and select queries, which takes sub-linear additional space. The space overhead is
+/// 32 bytes per 512 bytes of user data (6.25%), plus 36 bytes constant overhead.
 #[derive(Clone, Debug)]
 pub struct FastBitVector {
     data: Vec<u64>,
