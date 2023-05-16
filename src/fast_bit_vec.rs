@@ -142,6 +142,7 @@ impl FastBitVector {
         // full binary search for block that contains the rank, manually loop-unrolled, because
         // LLVM doesn't do it for us, but it gains just under 20% performance
         let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+        debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 8, "change unroll constant");
         unroll!(3, |boundary = { min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - block_index) / 2)}| {
             if rank > self.blocks[block_index + boundary].zeros as usize {
                 block_index += boundary;
@@ -152,6 +153,8 @@ impl FastBitVector {
 
         // todo non-bmi2 implementation as opt-in feature
         let mut index_counter = 0;
+
+        debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
         unroll!(8, |n = {0}| {
             let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
             if (word.count_zeros() as usize) < rank {
