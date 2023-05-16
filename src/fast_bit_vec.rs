@@ -14,7 +14,7 @@ const BLOCK_SIZE: usize = 512;
 /// to be the largest power of two that still fits into a `u16`. Note that blocks store the number
 /// of zeros up to the block, so they will never overflow even if the entire vector contains only
 /// zeros.
-const SUPER_BLOCK_SIZE: usize = 1 << 16;
+const SUPER_BLOCK_SIZE: usize = 4096;
 
 const SELECT_BLOCK_SIZE: usize = 4096;
 
@@ -136,18 +136,23 @@ impl FastBitVector {
             return super_block * SUPER_BLOCK_SIZE;
         }
 
-        // full binary search for block that contains the rank
-        // todo this fails for example for three blocks and a rank that is in the third, because
-        //  the boundary calculation in if-case 1 is wrong
-        let mut boundary = min(64, (self.blocks.len() - (super_block * SUPER_BLOCK_SIZE / BLOCK_SIZE)) >> 1);
+        // full binary search for block that contains the rank, manually loop-unrolled, because
+        // LLVM doesn't do it for us, but it gains just under 20% performance
         let mut offset = 0;
-        while boundary > 0 {
-            if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + boundary].zeros as usize {
-                offset += boundary;
-                boundary = min(boundary >> 1, self.blocks.len() - (boundary >> 1))
-            } else {
-                boundary >>= 1;
-            }
+        let mut boundary = min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - (super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE))) / 2);
+
+        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + boundary].zeros as usize {
+            offset += boundary;
+        }
+        boundary /= 2;
+
+        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + boundary].zeros as usize {
+            offset += boundary;
+        }
+        boundary /= 2;
+
+        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + boundary].zeros as usize {
+            offset += boundary;
         }
 
         let block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset;
