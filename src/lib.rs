@@ -224,6 +224,7 @@ mod common_tests {
         bv.append_word(0b10110);
         let bv = bv.build();
         assert_eq!(bv.select0(0), 0);
+        assert_eq!(bv.select1(1), 2);
         assert_eq!(bv.select0(1), 1);
         assert_eq!(bv.select0(2), 4);
     }
@@ -233,6 +234,8 @@ mod common_tests {
         bv.append_word(0);
         bv.append_word(0b10110);
         let bv = bv.build();
+        assert_eq!(bv.select1(0), 0);
+        assert_eq!(bv.select1(1), 130);
         assert_eq!(bv.select0(32), 32);
         assert_eq!(bv.select0(128), 128);
         assert_eq!(bv.select0(129), 129);
@@ -255,5 +258,27 @@ mod common_tests {
         for i in 0..bv.len() {
             assert_eq!(bv.select0(i), i);
         }
+
+        assert_eq!(bv.select1(0), 0);
+    }
+
+    pub(crate) fn test_only_ones_select<B: BuildingStrategy>(
+        mut bv: BitVectorBuilder<B>,
+        super_block_size: usize,
+        word_size: usize,
+    ) {
+        for _ in 0..2 * (super_block_size / word_size) {
+            bv.append_word(u64::MAX);
+        }
+        bv.append_bit(1u8);
+        let bv = bv.build();
+
+        assert_eq!(bv.len(), 2 * super_block_size + 1);
+
+        for i in 0..bv.len() {
+            assert_eq!(bv.select1(i), i);
+        }
+
+        assert_eq!(bv.select0(0), 0);
     }
 }

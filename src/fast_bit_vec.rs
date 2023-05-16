@@ -75,6 +75,11 @@ impl FastBitVector {
         self.impl_select0(rank)
     }
 
+    #[target_feature(enable = "bmi2")]
+    unsafe fn bmi_select1(&self, rank: usize) -> usize {
+        self.impl_select1(rank)
+    }
+
     // I measured 5-10% improvement with this. I don't know why it's not inlined by default, the
     // branch elimination profits alone should make it worth it.
     #[allow(clippy::inline_always)]
@@ -178,6 +183,67 @@ impl FastBitVector {
             + _pdep_u64(1 << (rank - 1), !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7]).trailing_zeros() as usize
             + 1;
     }
+
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
+    unsafe fn impl_select1(&self, mut rank: usize) -> usize {
+        let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
+
+        // linear search for super block that contains the rank
+        while self.super_blocks.len() > (super_block + 1)
+            && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros) < rank
+        {
+            super_block += 1;
+        }
+
+        rank = rank - ((super_block) * SUPER_BLOCK_SIZE - self.super_blocks[super_block].zeros);
+
+        // edge case for later: if rank is 0, we are done already and we want to avoid a
+        // subtraction-overflow in the block-count later during the pdep operation
+        if rank == 0 {
+            return super_block * SUPER_BLOCK_SIZE;
+        }
+
+        // full binary search for block that contains the rank, manually loop-unrolled, because
+        // LLVM doesn't do it for us, but it gains just under 20% performance
+        let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+        let mut block_index = block_at_super_block;
+        debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 8, "change unroll constant");
+        unroll!(3, |boundary = { min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - block_index) / 2)}| {
+            if rank > (block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.blocks[block_index + boundary].zeros as usize {
+                block_index += boundary;
+            }
+        }, boundary /= 2);
+
+        rank -= (block_index - block_at_super_block) * BLOCK_SIZE - self.blocks[block_index].zeros as usize;
+
+        // todo non-bmi2 implementation as opt-in feature
+        // linear search for word that contains the rank. Binary search is not possible here,
+        // because we don't have accumulated popcounts for the words. We use pdep to find the
+        // position of the rank-th zero bit in the word, if the word contains enough zeros, otherwise
+        // we subtract the number of ones in the word from the rank and continue with the next word.
+        let mut index_counter = 0;
+        debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
+        unroll!(7, |n = {0}| {
+            let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
+            if (word.count_ones() as usize) < rank {
+                rank -= word.count_ones() as usize;
+                index_counter += WORD_SIZE;
+            } else {
+                return block_index * BLOCK_SIZE
+                    + index_counter
+                    + _pdep_u64(1 << (rank - 1), word).trailing_zeros() as usize
+                    + 1;
+            }
+        }, n += 1);
+
+        // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
+        // block, and thus outside of the bitvector
+        return block_index * BLOCK_SIZE
+            + index_counter
+            + _pdep_u64(1 << (rank - 1), self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7]).trailing_zeros() as usize
+            + 1;
+    }
 }
 
 impl BitVector for FastBitVector {
@@ -194,7 +260,7 @@ impl BitVector for FastBitVector {
     }
 
     fn select1(&self, rank: usize) -> usize {
-        unsafe { todo!() }
+        unsafe { self.bmi_select1(rank) }
     }
 
     fn len(&self) -> usize {
@@ -398,6 +464,12 @@ mod tests {
     fn test_only_zeros_select() {
         let bv = BitVectorBuilder::<FastBitVector>::new();
         crate::common_tests::test_only_zeros_select(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+    }
+
+    #[test]
+    fn test_only_ones_select() {
+        let bv = BitVectorBuilder::<FastBitVector>::new();
+        crate::common_tests::test_only_ones_select(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
     }
 
     #[test]
