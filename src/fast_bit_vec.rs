@@ -404,7 +404,9 @@ mod tests {
         assert_eq!(bv.len(), LENGTH);
 
         for _ in 0..100 {
-            let rnd_rank = rng.gen_range(0..LENGTH);
+            // since we need a random rank, do not generate a number within the full length of
+            // the vector, as only approximately half of the bits are set.
+            let rnd_rank = rng.gen_range(0..LENGTH / 2 - BLOCK_SIZE);
             let actual_index0 = bv.select0(rnd_rank);
 
             let data = &bv.data;
