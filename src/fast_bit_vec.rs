@@ -17,7 +17,7 @@ const BLOCK_SIZE: usize = 512;
 /// zeros.
 const SUPER_BLOCK_SIZE: usize = 4096;
 
-const SELECT_BLOCK_SIZE: usize = 4096;
+const SELECT_BLOCK_SIZE: usize = 2048;
 
 /// Meta-data for a block. The `zeros` field stores the number of zeros up to the block,
 /// beginning from the last super-block boundary. This means the first block in a super-block
@@ -152,8 +152,11 @@ impl FastBitVector {
         rank -= self.blocks[block_index].zeros as usize;
 
         // todo non-bmi2 implementation as opt-in feature
+        // linear search for word that contains the rank. Binary search is not possible here,
+        // because we don't have accumulated popcounts for the words. We use pdep to find the
+        // position of the rank-th zero bit in the word, if the word contains enough zeros, otherwise
+        // we subtract the number of ones in the word from the rank and continue with the next word.
         let mut index_counter = 0;
-
         debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
         unroll!(8, |n = {0}| {
             let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
@@ -168,6 +171,8 @@ impl FastBitVector {
             }
         }, n += 1);
 
+        // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
+        // block, and thus outside of the bitvector
         unreachable!()
     }
 }
