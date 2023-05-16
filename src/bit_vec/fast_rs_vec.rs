@@ -294,8 +294,8 @@ impl BuildingStrategy for FastBitVector {
     fn build(mut builder: RsVectorBuilder<Self>) -> FastBitVector {
         // Construct the block descriptor meta data. Each block descriptor contains the number of
         // zeros in the super-block, up to but excluding the block.
-        let mut blocks = Vec::with_capacity(builder.len / BLOCK_SIZE + 1);
-        let mut super_blocks = Vec::with_capacity(builder.len / SUPER_BLOCK_SIZE + 1);
+        let mut blocks = Vec::with_capacity(builder.vec.len / BLOCK_SIZE + 1);
+        let mut super_blocks = Vec::with_capacity(builder.vec.len / SUPER_BLOCK_SIZE + 1);
         let mut select_blocks = Vec::new();
 
         // sentinel value
@@ -306,7 +306,7 @@ impl BuildingStrategy for FastBitVector {
 
         let mut total_zeros: usize = 0;
         let mut current_zeros: usize = 0;
-        for (idx, &word) in builder.words.iter().enumerate() {
+        for (idx, &word) in builder.vec.data.iter().enumerate() {
             // if we moved past a block boundary, append the block information for the previous
             // block and reset the counter if we moved past a super-block boundary.
             if idx % (BLOCK_SIZE / WORD_SIZE) == 0 {
@@ -361,13 +361,13 @@ impl BuildingStrategy for FastBitVector {
         // pad the internal vector to be block-aligned, so SIMD operations don't try to read
         // past the end of the vector. Note that this does not affect the content of the vector,
         // because those bits are not considered part of the vector.
-        while builder.words.len() % (BLOCK_SIZE / WORD_SIZE) != 0 {
-            builder.words.push(0);
+        while builder.vec.data.len() % (BLOCK_SIZE / WORD_SIZE) != 0 {
+            builder.vec.data.push(0);
         }
 
         FastBitVector {
-            data: builder.words,
-            len: builder.len,
+            data: builder.vec.data,
+            len: builder.vec.len,
             blocks,
             super_blocks,
             select_blocks,

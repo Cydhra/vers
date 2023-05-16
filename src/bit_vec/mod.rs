@@ -1,10 +1,74 @@
 use std::marker::PhantomData;
-use std::ops::Rem;
 
 pub mod fast_rs_vec;
 
 /// Size of a word in bitvectors. All vectors operate on 64-bit words.
 const WORD_SIZE: usize = 64;
+
+/// A simple bit vector that does not support rank and select queries. It has a constant memory
+/// overhead of 32 bytes.
+#[derive(Clone, Debug)]
+pub struct BitVec {
+    data: Vec<u64>,
+    len: usize,
+}
+
+impl BitVec {
+    /// Create a new empty bit vector.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            data: Vec::new(),
+            len: 0,
+        }
+    }
+
+    /// Create a new empty bit vector with the given capacity. The capacity is measured in bits.
+    #[must_use]
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            data: Vec::with_capacity(capacity / WORD_SIZE + 1),
+            len: 0,
+        }
+    }
+
+    /// Append a bit to the bit vector.
+    pub fn append(&mut self, bit: bool) {
+        if self.len % WORD_SIZE == 0 {
+            self.data.push(0);
+        }
+        if bit {
+            self.data[self.len / WORD_SIZE] |= 1 << (self.len % WORD_SIZE);
+        }
+        self.len += 1;
+    }
+
+    /// Append a bit from a quad-word. The least significant bit is appended to the bit vector.
+    /// All other bits are ignored.
+    pub fn append_bit(&mut self, bit: u64) {
+        if self.len % WORD_SIZE == 0 {
+            self.data.push(0);
+        }
+        self.data[self.len / WORD_SIZE] |= (bit % 2) << (self.len % WORD_SIZE);
+        self.len += 1;
+    }
+
+    /// Append a word to the bit vector. The least significant bit is appended first.
+    pub fn append_word(&mut self, word: u64) {
+        if self.len % WORD_SIZE == 0 {
+            self.data.push(word);
+        } else {
+            self.data[self.len / WORD_SIZE] |= word << (self.len % WORD_SIZE);
+            self.data.push(word >> (WORD_SIZE - self.len % WORD_SIZE));
+        }
+        self.len += WORD_SIZE;
+    }
+
+    /// Return the bit at the given position.
+    pub fn get(&self, pos: usize) -> bool {
+        self.data[pos / WORD_SIZE] & (1 << (pos % WORD_SIZE)) != 0
+    }
+}
 
 /// A common trait for all bit vectors for applications that want to use them
 /// interchangeably. Offers all common functionality like rank, select, and collection accessors.
@@ -50,8 +114,7 @@ pub trait RsVector {
 #[derive(Clone, Debug)]
 pub struct RsVectorBuilder<S: BuildingStrategy> {
     phantom: PhantomData<S>,
-    words: Vec<u64>,
-    len: usize,
+    vec: BitVec,
 }
 
 impl<S: BuildingStrategy> Default for RsVectorBuilder<S> {
@@ -66,46 +129,32 @@ impl<S: BuildingStrategy> RsVectorBuilder<S> {
     pub fn new() -> RsVectorBuilder<S> {
         RsVectorBuilder {
             phantom: PhantomData,
-            words: Vec::new(),
-            len: 0,
+            vec: BitVec::new(),
         }
     }
 
     /// Create a new empty `BitVectorBuilder` with the specified initial capacity to avoid
-    /// re-allocations.
+    /// re-allocations. The capacity is measured in bits
     #[must_use]
     pub fn with_capacity(capacity: usize) -> RsVectorBuilder<S> {
         RsVectorBuilder {
             phantom: PhantomData,
-            words: Vec::with_capacity(capacity),
-            len: 0,
+            vec: BitVec::with_capacity(capacity),
         }
     }
 
     /// Append a bit to the vector.
-    pub fn append_bit<T: Rem + From<u8>>(&mut self, bit: T)
+    pub fn append_bit<T>(&mut self, bit: T)
         where
-            T::Output: Into<u64>,
+            T: Into<u64>,
     {
-        let bit: u64 = (bit % T::from(2u8)).into();
-
-        if self.len % WORD_SIZE == 0 {
-            self.words.push(0);
-        }
-
-        self.words[self.len / WORD_SIZE] |= bit << (self.len % WORD_SIZE);
-        self.len += 1;
+        self.vec.append_bit(bit.into())
     }
 
     /// Append a word to the vector. The word is assumed to be in little endian, i.e. the least
-    /// significant bit is the first bit. It is a logical error to append a word if the vector is
-    /// not 64-bit aligned (i.e. has not a length that is a multiple of 64). If the vector is not
-    /// 64-bit aligned, the last word already present will be padded with zeros,without
-    /// affecting the length, meaning the bit-vector is corrupted afterwards.
+    /// significant bit is the first bit.
     pub fn append_word(&mut self, word: u64) {
-        debug_assert!(self.len % WORD_SIZE == 0);
-        self.words.push(word);
-        self.len += WORD_SIZE;
+        self.vec.append_word(word)
     }
 
     /// Build the `BitVector` from all bits that have been appended so far. This will consume the
