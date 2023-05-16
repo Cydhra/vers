@@ -5,6 +5,8 @@ pub use fast_bit_vec::FastBitVector;
 
 mod fast_bit_vec;
 
+pub(crate) mod util;
+
 /// Size of a word in bitvectors. All vectors operate on 64-bit words.
 const WORD_SIZE: usize = 64;
 

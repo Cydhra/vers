@@ -1,3 +1,4 @@
+use crate::util::unroll;
 use crate::{BitVector, BitVectorBuilder, BuildingStrategy, WORD_SIZE};
 use core::arch::x86_64::_pdep_u64;
 use std::cmp::min;
@@ -132,7 +133,7 @@ impl FastBitVector {
 
         rank = rank - self.super_blocks[super_block].zeros;
 
-        // edge case for later: if rank is 0, we are done already and we don't want to avoid a
+        // edge case for later: if rank is 0, we are done already and we want to avoid a
         // subtraction-overflow in the block-count later during the pdep operation
         if rank == 0 {
             return super_block * SUPER_BLOCK_SIZE;
@@ -141,32 +142,18 @@ impl FastBitVector {
         // full binary search for block that contains the rank, manually loop-unrolled, because
         // LLVM doesn't do it for us, but it gains just under 20% performance
         let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
-        let mut boundary = min(
-            (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2,
-            (self.blocks.len() - block_index) / 2,
-        );
-
-        if rank > self.blocks[block_index + boundary].zeros as usize {
-            block_index += boundary;
-        }
-        boundary /= 2;
-
-        if rank > self.blocks[block_index + boundary].zeros as usize {
-            block_index += boundary;
-        }
-        boundary /= 2;
-
-        if rank > self.blocks[block_index + boundary].zeros as usize {
-            block_index += boundary;
-        }
+        unroll!(3, |boundary = { min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - block_index) / 2)}| {
+            if rank > self.blocks[block_index + boundary].zeros as usize {
+                block_index += boundary;
+            }
+        }, boundary /= 2);
 
         rank -= self.blocks[block_index].zeros as usize;
 
         // todo non-bmi2 implementation as opt-in feature
         let mut index_counter = 0;
-        for &word in &self.data
-            [block_index * BLOCK_SIZE / WORD_SIZE..(block_index + 1) * BLOCK_SIZE / WORD_SIZE]
-        {
+        unroll!(8, |n = {0}| {
+            let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
             if (word.count_zeros() as usize) < rank {
                 rank -= word.count_zeros() as usize;
                 index_counter += WORD_SIZE;
@@ -176,7 +163,8 @@ impl FastBitVector {
                     + _pdep_u64(1 << (rank - 1), !word).trailing_zeros() as usize
                     + 1;
             }
-        }
+        }, n += 1);
+
         unreachable!()
     }
 }
