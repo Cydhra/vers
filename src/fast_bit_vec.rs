@@ -160,7 +160,7 @@ impl FastBitVector {
                 rank -= word.count_zeros() as usize;
                 index_counter += WORD_SIZE;
             } else {
-                return super_block * SUPER_BLOCK_SIZE + block * BLOCK_SIZE + index_counter + _pdep_u64(1 << (rank - 1), !word).trailing_zeros() as usize + 1;
+                return block * BLOCK_SIZE + index_counter + _pdep_u64(1 << (rank - 1), !word).trailing_zeros() as usize + 1;
             }
         }
         unreachable!()
