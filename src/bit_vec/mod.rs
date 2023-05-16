@@ -95,6 +95,11 @@ impl BitVec {
         self.len += len;
     }
 
+    /// Return the length of the bit vector. The length is measured in bits.
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
     /// Flip the bit at the given position.
     pub fn flip_bit(&mut self, pos: usize) {
         self.data[pos / WORD_SIZE] ^= 1 << (pos % WORD_SIZE);
