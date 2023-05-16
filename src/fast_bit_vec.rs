@@ -18,7 +18,7 @@ const BLOCK_SIZE: usize = 512;
 const SUPER_BLOCK_SIZE: usize = 1 << 12;
 
 /// Size of a select block. The select block is used to speed up select queries. The select block
-/// contains the indices of every SELECT_BLOCK_SIZE'th 1-bit and 0-bit in the bitvector.
+/// contains the indices of every `SELECT_BLOCK_SIZE`'th 1-bit and 0-bit in the bitvector.
 /// The smaller this block-size, the faster are select queries, but the more memory is used.
 const SELECT_BLOCK_SIZE: usize = 1 << 13;
 
@@ -40,7 +40,7 @@ struct SuperBlockDescriptor {
 }
 
 /// Meta-data for the select query. Each entry i in the select vector contains the indices to find
-/// the i * SELECT_BLOCK_SIZE'th 0- and 1-bit in the bitvector. Those indices may be very far apart.
+/// the i * `SELECT_BLOCK_SIZE`'th 0- and 1-bit in the bitvector. Those indices may be very far apart.
 #[derive(Clone, Copy, Debug)]
 struct SelectSuperBlockDescriptor {
     index_0: usize,
@@ -127,6 +127,7 @@ impl FastBitVector {
     }
 
     #[allow(clippy::inline_always)]
+    #[allow(clippy::assertions_on_constants)]
     #[inline(always)]
     unsafe fn impl_select0(&self, mut rank: usize) -> usize {
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_0;
@@ -138,7 +139,7 @@ impl FastBitVector {
             super_block += 1;
         }
 
-        rank = rank - self.super_blocks[super_block].zeros;
+        rank -= self.super_blocks[super_block].zeros;
 
         // edge case for later: if rank is 0, we are done already and we want to avoid a
         // subtraction-overflow in the block-count later during the pdep operation
@@ -150,11 +151,12 @@ impl FastBitVector {
         // LLVM doesn't do it for us, but it gains just under 20% performance
         let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
         debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 8, "change unroll constant");
-        unroll!(3, |boundary = { min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - block_index) / 2)}| {
-            if rank > self.blocks[block_index + boundary].zeros as usize {
-                block_index += boundary;
-            }
-        }, boundary /= 2);
+        unroll!(3,
+            |boundary = { min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - block_index) / 2)}|
+                if rank > self.blocks[block_index + boundary].zeros as usize {
+                    block_index += boundary;
+                },
+            boundary /= 2);
 
         rank -= self.blocks[block_index].zeros as usize;
 
@@ -180,25 +182,31 @@ impl FastBitVector {
 
         // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
         // block, and thus outside of the bitvector
-        return block_index * BLOCK_SIZE
+        block_index * BLOCK_SIZE
             + index_counter
-            + _pdep_u64(1 << (rank - 1), !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7]).trailing_zeros() as usize
-            + 1;
+            + _pdep_u64(
+                1 << (rank - 1),
+                !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+            )
+            .trailing_zeros() as usize
+            + 1
     }
 
     #[allow(clippy::inline_always)]
+    #[allow(clippy::assertions_on_constants)]
     #[inline(always)]
     unsafe fn impl_select1(&self, mut rank: usize) -> usize {
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
 
         // linear search for super block that contains the rank
         while self.super_blocks.len() > (super_block + 1)
-            && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros) < rank
+            && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
+                < rank
         {
             super_block += 1;
         }
 
-        rank = rank - ((super_block) * SUPER_BLOCK_SIZE - self.super_blocks[super_block].zeros);
+        rank -= (super_block) * SUPER_BLOCK_SIZE - self.super_blocks[super_block].zeros;
 
         // edge case for later: if rank is 0, we are done already and we want to avoid a
         // subtraction-overflow in the block-count later during the pdep operation
@@ -211,13 +219,15 @@ impl FastBitVector {
         let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
         let mut block_index = block_at_super_block;
         debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 8, "change unroll constant");
-        unroll!(3, |boundary = { min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - block_index) / 2)}| {
-            if rank > (block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.blocks[block_index + boundary].zeros as usize {
-                block_index += boundary;
-            }
-        }, boundary /= 2);
+        unroll!(3,
+            |boundary = { min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - block_index) / 2)}|
+                if rank > (block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.blocks[block_index + boundary].zeros as usize {
+                    block_index += boundary;
+                }
+            , boundary /= 2);
 
-        rank -= (block_index - block_at_super_block) * BLOCK_SIZE - self.blocks[block_index].zeros as usize;
+        rank -= (block_index - block_at_super_block) * BLOCK_SIZE
+            - self.blocks[block_index].zeros as usize;
 
         // todo non-bmi2 implementation as opt-in feature
         // linear search for word that contains the rank. Binary search is not possible here,
@@ -241,10 +251,14 @@ impl FastBitVector {
 
         // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
         // block, and thus outside of the bitvector
-        return block_index * BLOCK_SIZE
+        block_index * BLOCK_SIZE
             + index_counter
-            + _pdep_u64(1 << (rank - 1), self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7]).trailing_zeros() as usize
-            + 1;
+            + _pdep_u64(
+                1 << (rank - 1),
+                self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+            )
+            .trailing_zeros() as usize
+            + 1
     }
 }
 
@@ -267,6 +281,10 @@ impl BitVector for FastBitVector {
 
     fn len(&self) -> usize {
         self.len
+    }
+
+    fn get(&self, pos: usize) -> u64 {
+        (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
     }
 }
 
@@ -293,7 +311,7 @@ impl BuildingStrategy for FastBitVector {
             // block and reset the counter if we moved past a super-block boundary.
             if idx % (BLOCK_SIZE / WORD_SIZE) == 0 {
                 if idx % (SUPER_BLOCK_SIZE / WORD_SIZE) == 0 {
-                    total_zeros += current_zeros as usize;
+                    total_zeros += current_zeros;
                     current_zeros = 0;
                     super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
                 }

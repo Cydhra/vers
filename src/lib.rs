@@ -40,6 +40,10 @@ pub trait BitVector {
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    /// Return the bit at the given position within a u64 word. The bit takes the least significant
+    /// bit of the returned u64 word.
+    fn get(&self, pos: usize) -> u64;
 }
 
 /// A builder for `BitVector`s. This is used to efficiently construct a `BitVector` by appending
