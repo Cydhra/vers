@@ -1,6 +1,6 @@
 use rand::distributions::{Distribution, Uniform};
 use rand::prelude::ThreadRng;
-use vers::{RsVectorBuilder, FastBitVector};
+use vers::{FastBitVector, RsVectorBuilder};
 
 pub fn construct_vers_vec(rng: &mut ThreadRng, len: usize) -> FastBitVector {
     let sample = Uniform::new(0, u64::MAX);

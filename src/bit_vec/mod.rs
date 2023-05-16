@@ -42,10 +42,7 @@ impl BitVec {
         if len % WORD_SIZE != 0 {
             data.push(0);
         }
-        Self {
-            data,
-            len,
-        }
+        Self { data, len }
     }
 
     /// Append a bit to the bit vector.
@@ -166,8 +163,8 @@ impl<S: BuildingStrategy> RsVectorBuilder<S> {
 
     /// Append a bit to the vector.
     pub fn append_bit<T>(&mut self, bit: T)
-        where
-            T: Into<u64>,
+    where
+        T: Into<u64>,
     {
         self.vec.append_bit(bit.into())
     }
@@ -195,13 +192,21 @@ pub trait BuildingStrategy {
     /// Build the `BitVector` from all bits that have been appended so far. This will consume the
     /// `BitVectorBuilder`.
     fn build(builder: RsVectorBuilder<Self>) -> Self::Vector
-        where
-            Self: Sized;
+    where
+        Self: Sized,
+    {
+        Self::from_bit_vec(builder.vec)
+    }
+
+    /// Build a `BitVector` from a `BitVec`. This will consume the `BitVec`.
+    fn from_bit_vec(vec: BitVec) -> Self::Vector
+    where
+        Self: Sized;
 }
 
 #[cfg(test)]
 mod common_tests {
-    use super::{RsVectorBuilder, BuildingStrategy, RsVector};
+    use super::{BuildingStrategy, RsVector, RsVectorBuilder};
 
     pub(crate) fn test_append_bit_long<B: BuildingStrategy>(
         mut bv: RsVectorBuilder<B>,
