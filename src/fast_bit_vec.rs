@@ -158,7 +158,7 @@ impl FastBitVector {
         // we subtract the number of ones in the word from the rank and continue with the next word.
         let mut index_counter = 0;
         debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
-        unroll!(8, |n = {0}| {
+        unroll!(7, |n = {0}| {
             let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
             if (word.count_zeros() as usize) < rank {
                 rank -= word.count_zeros() as usize;
@@ -173,7 +173,10 @@ impl FastBitVector {
 
         // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
         // block, and thus outside of the bitvector
-        unreachable!()
+        return block_index * BLOCK_SIZE
+            + index_counter
+            + _pdep_u64(1 << (rank - 1), !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7]).trailing_zeros() as usize
+            + 1;
     }
 }
 
