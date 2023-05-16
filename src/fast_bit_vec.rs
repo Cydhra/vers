@@ -80,7 +80,7 @@ impl FastBitVector {
     #[inline(always)]
     fn rank(&self, zero: bool, pos: usize) -> usize {
         #[allow(unused_variables)]
-            let index = pos / WORD_SIZE;
+        let index = pos / WORD_SIZE;
         let block_index = pos / BLOCK_SIZE;
         let super_block_index = pos / SUPER_BLOCK_SIZE;
         let mut rank = 0;
@@ -124,7 +124,9 @@ impl FastBitVector {
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_0;
 
         // linear search for super block that contains the rank
-        while self.super_blocks.len() > (super_block + 1) && self.super_blocks[super_block + 1].zeros < rank {
+        while self.super_blocks.len() > (super_block + 1)
+            && self.super_blocks[super_block + 1].zeros < rank
+        {
             super_block += 1;
         }
 
@@ -138,34 +140,41 @@ impl FastBitVector {
 
         // full binary search for block that contains the rank, manually loop-unrolled, because
         // LLVM doesn't do it for us, but it gains just under 20% performance
-        let mut offset = 0;
-        let mut boundary = min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - (super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE))) / 2);
+        let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+        let mut boundary = min(
+            (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2,
+            (self.blocks.len() - block_index) / 2,
+        );
 
-        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + boundary].zeros as usize {
-            offset += boundary;
+        if rank > self.blocks[block_index + boundary].zeros as usize {
+            block_index += boundary;
         }
         boundary /= 2;
 
-        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + boundary].zeros as usize {
-            offset += boundary;
+        if rank > self.blocks[block_index + boundary].zeros as usize {
+            block_index += boundary;
         }
         boundary /= 2;
 
-        if rank > self.blocks[super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset + boundary].zeros as usize {
-            offset += boundary;
+        if rank > self.blocks[block_index + boundary].zeros as usize {
+            block_index += boundary;
         }
 
-        let block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) + offset;
-        rank -= self.blocks[block].zeros as usize;
+        rank -= self.blocks[block_index].zeros as usize;
 
         // todo non-bmi2 implementation as opt-in feature
         let mut index_counter = 0;
-        for &word in &self.data[block * BLOCK_SIZE / WORD_SIZE..(block + 1) * BLOCK_SIZE / WORD_SIZE] {
+        for &word in &self.data
+            [block_index * BLOCK_SIZE / WORD_SIZE..(block_index + 1) * BLOCK_SIZE / WORD_SIZE]
+        {
             if (word.count_zeros() as usize) < rank {
                 rank -= word.count_zeros() as usize;
                 index_counter += WORD_SIZE;
             } else {
-                return block * BLOCK_SIZE + index_counter + _pdep_u64(1 << (rank - 1), !word).trailing_zeros() as usize + 1;
+                return block_index * BLOCK_SIZE
+                    + index_counter
+                    + _pdep_u64(1 << (rank - 1), !word).trailing_zeros() as usize
+                    + 1;
             }
         }
         unreachable!()
@@ -248,7 +257,9 @@ impl BuildingStrategy for FastBitVector {
 
             let total_bits = (idx + 1) * WORD_SIZE;
             let all_ones = total_bits - all_zeros;
-            if all_ones / SELECT_BLOCK_SIZE > (total_bits - total_zeros - current_zeros) / SELECT_BLOCK_SIZE {
+            if all_ones / SELECT_BLOCK_SIZE
+                > (total_bits - total_zeros - current_zeros) / SELECT_BLOCK_SIZE
+            {
                 if all_ones / SELECT_BLOCK_SIZE == select_blocks.len() {
                     select_blocks.push(SelectSuperBlockDescriptor {
                         index_0: 0,
