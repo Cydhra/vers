@@ -35,10 +35,7 @@ impl BitVec {
     /// Create a new bit vector with all zeros and the given length. The length is measured in bits.
     #[must_use]
     pub fn from_zeros(len: usize) -> Self {
-        let mut data = Vec::with_capacity(len / WORD_SIZE + 1);
-        for _ in 0..len / WORD_SIZE {
-            data.push(0);
-        }
+        let mut data = vec![0; len / WORD_SIZE];
         if len % WORD_SIZE != 0 {
             data.push(0);
         }
@@ -96,8 +93,14 @@ impl BitVec {
     }
 
     /// Return the length of the bit vector. The length is measured in bits.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.len
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 
     /// Flip the bit at the given position.
@@ -106,20 +109,29 @@ impl BitVec {
     }
 
     /// Return the bit at the given position.
+    #[must_use]
     pub fn get(&self, pos: usize) -> bool {
         self.data[pos / WORD_SIZE] & (1 << (pos % WORD_SIZE)) != 0
     }
 
     /// Return multiple bits at the given position. The number of bits to return is given by `len`.
     /// At most 64 bits can be returned.
+    #[must_use]
     pub fn get_bits(&self, pos: usize, len: usize) -> u64 {
         debug_assert!(len <= WORD_SIZE);
-        let partial_word = self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE) & ((1 << len) - 1);
+        let partial_word = (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & ((1 << len) - 1);
         if pos % WORD_SIZE + len <= WORD_SIZE {
             partial_word
         } else {
-            (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE))) & ((1 << len) - 1)
+            (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
+                & ((1 << len) - 1)
         }
+    }
+}
+
+impl Default for BitVec {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -198,16 +210,16 @@ impl<S: BuildingStrategy> RsVectorBuilder<S> {
 
     /// Append a bit to the vector.
     pub fn append_bit<T>(&mut self, bit: T)
-        where
-            T: Into<u64>,
+    where
+        T: Into<u64>,
     {
-        self.vec.append_bit(bit.into())
+        self.vec.append_bit(bit.into());
     }
 
     /// Append a word to the vector. The word is assumed to be in little endian, i.e. the least
     /// significant bit is the first bit.
     pub fn append_word(&mut self, word: u64) {
-        self.vec.append_word(word)
+        self.vec.append_word(word);
     }
 
     /// Build the `BitVector` from all bits that have been appended so far. This will consume the
@@ -226,17 +238,19 @@ pub trait BuildingStrategy {
 
     /// Build the `BitVector` from all bits that have been appended so far. This will consume the
     /// `BitVectorBuilder`.
+    #[must_use]
     fn build(builder: RsVectorBuilder<Self>) -> Self::Vector
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         Self::from_bit_vec(builder.vec)
     }
 
     /// Build a `BitVector` from a `BitVec`. This will consume the `BitVec`.
+    #[must_use]
     fn from_bit_vec(vec: BitVec) -> Self::Vector
-        where
-            Self: Sized;
+    where
+        Self: Sized;
 }
 
 #[cfg(test)]

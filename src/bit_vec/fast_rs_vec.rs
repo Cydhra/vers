@@ -1,4 +1,4 @@
-use super::{BuildingStrategy, RsVector, RsVectorBuilder, WORD_SIZE};
+use super::{BuildingStrategy, RsVector, WORD_SIZE};
 use crate::util::unroll;
 use crate::BitVec;
 use core::arch::x86_64::_pdep_u64;
@@ -382,6 +382,7 @@ mod tests {
     use rand::distributions::{Distribution, Uniform};
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
+    use crate::RsVectorBuilder;
 
     #[test]
     fn test_append_bit() {
