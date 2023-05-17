@@ -12,7 +12,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub fn new(data: &Vec<u64>) -> Self {
-        let lower_width = data.len().leading_zeros() as usize;
+        let lower_width = data.len().leading_zeros() as usize + 1;
 
         let mut upper_vec = BitVec::from_zeros(data.len() * 2 + 1);
         let mut lower_vec = BitVec::with_capacity(data.len() * lower_width);
