@@ -21,3 +21,7 @@ harness = false
 [[bench]]
 name = "select_benchmark"
 harness = false
+
+[[bench]]
+name = "elias_fano_benchmark"
+harness = false
