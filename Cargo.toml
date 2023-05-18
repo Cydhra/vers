@@ -14,6 +14,7 @@ bio = "1.1"
 bv = "0.11.1"
 fid = "0.1"
 indexed_bitvec = "4.0"
+succinct = "0.5"
 
 [[bench]]
 name = "rank_benchmark"
@@ -21,6 +22,10 @@ harness = false
 
 [[bench]]
 name = "comparison_benchmark"
+harness = false
+
+[[bench]]
+name = "comparison_succinct_benchmark"
 harness = false
 
 [[bench]]
