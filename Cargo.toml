@@ -8,7 +8,12 @@ edition = "2021"
 [dev-dependencies]
 criterion = { version = "0.4", features = ["html_reports"] }
 rand = "0.8"
+# comparison benchmarks
 rsdict = { version = "0.0.6", features = ["simd"] }
+bio = "1.1"
+bv = "0.11.1"
+fid = "0.1"
+indexed_bitvec = "4.0"
 
 [[bench]]
 name = "rank_benchmark"
