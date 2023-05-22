@@ -349,8 +349,7 @@ mod common_tests {
         let bv = bv.build();
         assert_eq!(bv.select0(0), 0);
         assert_eq!(bv.select1(1), 2);
-        assert_eq!(bv.select0(1), 1);
-        assert_eq!(bv.select0(2), 4);
+        assert_eq!(bv.select0(1), 3);
     }
 
     pub(crate) fn test_multi_words_select<B: BuildingStrategy>(mut bv: RsVectorBuilder<B>) {
@@ -358,12 +357,11 @@ mod common_tests {
         bv.append_word(0);
         bv.append_word(0b10110);
         let bv = bv.build();
-        assert_eq!(bv.select1(0), 0);
+        assert_eq!(bv.select1(0), 129);
         assert_eq!(bv.select1(1), 130);
         assert_eq!(bv.select0(32), 32);
         assert_eq!(bv.select0(128), 128);
-        assert_eq!(bv.select0(129), 129);
-        assert_eq!(bv.select0(130), 132);
+        assert_eq!(bv.select0(129), 131);
     }
 
     pub(crate) fn test_only_zeros_select<B: BuildingStrategy>(
@@ -382,8 +380,6 @@ mod common_tests {
         for i in 0..bv.len() {
             assert_eq!(bv.select0(i), i);
         }
-
-        assert_eq!(bv.select1(0), 0);
     }
 
     pub(crate) fn test_only_ones_select<B: BuildingStrategy>(
@@ -402,7 +398,5 @@ mod common_tests {
         for i in 0..bv.len() {
             assert_eq!(bv.select1(i), i);
         }
-
-        assert_eq!(bv.select0(0), 0);
     }
 }

@@ -135,18 +135,12 @@ impl FastBitVector {
 
         // linear search for super block that contains the rank
         while self.super_blocks.len() > (super_block + 1)
-            && self.super_blocks[super_block + 1].zeros < rank
+            && self.super_blocks[super_block + 1].zeros <= rank
         {
             super_block += 1;
         }
 
         rank -= self.super_blocks[super_block].zeros;
-
-        // edge case for later: if rank is 0, we are done already and we want to avoid a
-        // subtraction-overflow in the block-count later during the pdep operation
-        if rank == 0 {
-            return super_block * SUPER_BLOCK_SIZE;
-        }
 
         // full binary search for block that contains the rank, manually loop-unrolled, because
         // LLVM doesn't do it for us, but it gains just under 20% performance
@@ -154,7 +148,7 @@ impl FastBitVector {
         debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 8, "change unroll constant");
         unroll!(3,
             |boundary = { min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - block_index) / 2)}|
-                if rank > self.blocks[block_index + boundary].zeros as usize {
+                if rank >= self.blocks[block_index + boundary].zeros as usize {
                     block_index += boundary;
                 },
             boundary /= 2);
@@ -170,14 +164,13 @@ impl FastBitVector {
         debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
         unroll!(7, |n = {0}| {
             let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
-            if (word.count_zeros() as usize) < rank {
+            if (word.count_zeros() as usize) <= rank {
                 rank -= word.count_zeros() as usize;
                 index_counter += WORD_SIZE;
             } else {
                 return block_index * BLOCK_SIZE
                     + index_counter
-                    + _pdep_u64(1 << (rank - 1), !word).trailing_zeros() as usize
-                    + 1;
+                    + _pdep_u64(1 << rank, !word).trailing_zeros() as usize;
             }
         }, n += 1);
 
@@ -186,11 +179,10 @@ impl FastBitVector {
         block_index * BLOCK_SIZE
             + index_counter
             + _pdep_u64(
-                1 << (rank - 1),
-                !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-            )
+            1 << rank,
+            !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+        )
             .trailing_zeros() as usize
-            + 1
     }
 
     #[allow(clippy::inline_always)]
@@ -202,18 +194,12 @@ impl FastBitVector {
         // linear search for super block that contains the rank
         while self.super_blocks.len() > (super_block + 1)
             && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
-                < rank
+            <= rank
         {
             super_block += 1;
         }
 
         rank -= (super_block) * SUPER_BLOCK_SIZE - self.super_blocks[super_block].zeros;
-
-        // edge case for later: if rank is 0, we are done already and we want to avoid a
-        // subtraction-overflow in the block-count later during the pdep operation
-        if rank == 0 {
-            return super_block * SUPER_BLOCK_SIZE;
-        }
 
         // full binary search for block that contains the rank, manually loop-unrolled, because
         // LLVM doesn't do it for us, but it gains just under 20% performance
@@ -222,7 +208,7 @@ impl FastBitVector {
         debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 8, "change unroll constant");
         unroll!(3,
             |boundary = { min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - block_index) / 2)}|
-                if rank > (block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.blocks[block_index + boundary].zeros as usize {
+                if rank >= (block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.blocks[block_index + boundary].zeros as usize {
                     block_index += boundary;
                 }
             , boundary /= 2);
@@ -239,14 +225,13 @@ impl FastBitVector {
         debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
         unroll!(7, |n = {0}| {
             let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
-            if (word.count_ones() as usize) < rank {
+            if (word.count_ones() as usize) <= rank {
                 rank -= word.count_ones() as usize;
                 index_counter += WORD_SIZE;
             } else {
                 return block_index * BLOCK_SIZE
                     + index_counter
-                    + _pdep_u64(1 << (rank - 1), word).trailing_zeros() as usize
-                    + 1;
+                    + _pdep_u64(1 << rank, word).trailing_zeros() as usize;
             }
         }, n += 1);
 
@@ -255,11 +240,10 @@ impl FastBitVector {
         block_index * BLOCK_SIZE
             + index_counter
             + _pdep_u64(
-                1 << (rank - 1),
-                self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-            )
+            1 << rank,
+            self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+        )
             .trailing_zeros() as usize
-            + 1
     }
 }
 
@@ -525,7 +509,7 @@ mod tests {
             let mut index = 0;
             loop {
                 let zeros = data[index].count_zeros() as usize;
-                if rank_counter + zeros >= rnd_rank {
+                if rank_counter + zeros > rnd_rank {
                     break;
                 } else {
                     rank_counter += zeros;
@@ -536,15 +520,15 @@ mod tests {
 
             let mut bit_index = 0;
             loop {
-                if rank_counter == rnd_rank {
-                    break;
-                } else {
-                    if data[index] & (1 << bit_index) == 0 {
+                if data[index] & (1 << bit_index) == 0 {
+                    if rank_counter == rnd_rank {
+                        break;
+                    } else {
                         rank_counter += 1;
                     }
-                    expected_index0 += 1;
-                    bit_index += 1;
                 }
+                expected_index0 += 1;
+                bit_index += 1;
             }
 
             assert_eq!(actual_index0, expected_index0);
