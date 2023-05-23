@@ -15,6 +15,7 @@ bv = "0.11.1"
 fid = "0.1"
 indexed_bitvec = "4.0"
 succinct = "0.5"
+elias-fano = "1.1"
 
 [[bench]]
 name = "rank_benchmark"
@@ -34,6 +35,10 @@ harness = false
 
 [[bench]]
 name = "elias_fano_benchmark"
+harness = false
+
+[[bench]]
+name = "ef_comparison_benchmark"
 harness = false
 
 [profile.bench]
