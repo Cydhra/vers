@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
-use rand::distributions::{Distribution, Standard};
+use rand::distributions::{Distribution, Standard, Uniform};
 use rand::{thread_rng, Rng};
 use vers::{EliasFanoVec, FastBitVector};
 
@@ -15,9 +15,11 @@ fn bench_ef(b: &mut Criterion) {
                 .collect::<Vec<u64>>(),
         );
 
+        let sample = Uniform::new(ef_vec.get(0), u64::MAX);
+
         group.bench_with_input(format!("{} elements", l), &l, |b, _| {
             b.iter_batched(
-                || Standard.sample(&mut rng),
+                || sample.sample(&mut rng),
                 |e| black_box(ef_vec.pred(e)),
                 BatchSize::SmallInput,
             )
