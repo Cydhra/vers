@@ -1,18 +1,40 @@
 use crate::bit_vec::{BitVec, BuildingStrategy};
 use crate::RsVector;
+use std::cmp::{max, min};
 
 pub struct EliasFanoVec<B: RsVector> {
     upper_vec: B,
     lower_vec: BitVec,
+    universe_mask: u64,
     lower_len: usize,
 }
 
 impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
-    /// Create a new Elias-Fano vector by compressing the given data.
+    /// Create a new Elias-Fano vector by compressing the given data. The data must be sorted in
+    /// ascending order. The resulting vector is immutable, which will be exploited by limiting the
+    /// word length of elements to the minimum required to represent the universe bound.
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub fn new(data: &Vec<u64>) -> Self {
-        let lower_width = data.len().leading_zeros() as usize + 1;
+        // calculate the largest element the vector needs to represent. If there are more elements
+        // in the vector than the largest element is able to represent, the length of the vector
+        // will be used instead. By limiting the universe size, we can limit the number of bits
+        // required to represent each element, and also spread the elements out more evenly through
+        // the upper vector.
+        let universe_bound = max(data.len() as u64, data[data.len() - 1]);
+        let universe_width = (u64::BITS - universe_bound.leading_zeros()) as usize;
+
+        // Calculate the largest possible element that can be represented with the chosen universe
+        // size. This is used to mask the queries later.
+        let universe_mask = u64::checked_shl(1, universe_width as u32)
+            .unwrap_or(0)
+            .wrapping_sub(1);
+
+        // Calculate the number of bits that will be stored in the lower vector per element. This
+        // is the log2 of the universe size rounded up (Rounding up is forced by adding one, so if
+        // the log is even, it will be rounded up regardless).
+        let lower_width =
+            (data.len().leading_zeros() + 1 - universe_bound.leading_zeros()) as usize;
 
         let mut upper_vec = BitVec::from_zeros(data.len() * 2 + 1);
         let mut lower_vec = BitVec::with_capacity(data.len() * lower_width);
@@ -28,6 +50,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         Self {
             upper_vec: B::from_bit_vec(upper_vec),
             lower_vec,
+            universe_mask,
             lower_len: lower_width,
         }
     }
@@ -52,8 +75,15 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         (upper << self.lower_len) as u64 | lower
     }
 
+    /// Returns the largest element that is smaller than the given element. If the given element is
+    /// smaller than the smallest element in the vector, the code will panic or produce a logical
+    /// error.
     #[allow(clippy::cast_possible_truncation)]
     pub fn pred(&self, n: u64) -> u64 {
+        // bound the query to the universe size
+        let n = min(n, self.universe_mask);
+
+        // calculate the bounds whithin the lower vector where our predecessor can be found
         let upper = n >> self.lower_len;
         let lower_bound = self.upper_vec.rank1(self.upper_vec.select0(upper as usize));
         let upper_bound = self
@@ -74,6 +104,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
             ((self.upper_vec.select1(lower_bound) - lower_bound - 1) << self.lower_len) as u64;
 
         if lower_bound < upper_bound && (result_upper | lower_candidate) <= n {
+            // search for the largest element in the lower vector that is smaller than the query
             for i in ((lower_bound + 1) * self.lower_len..upper_bound * self.lower_len)
                 .step_by(self.lower_len)
             {
@@ -85,6 +116,10 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
                 }
             }
         } else {
+            // return the largest element directly in front of the calculated bounds. This is
+            // done when the bounds are equal (i.e. the vector does not contain an element with the
+            // query's most significant bit prefix), or when the bounds aren't equal but the element
+            // at the lower bound is larger than the query.
             result_upper =
                 ((self.upper_vec.select1(lower_bound - 1) - lower_bound) << self.lower_len) as u64;
             lower_candidate = self
