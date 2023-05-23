@@ -126,12 +126,29 @@ mod tests {
         assert_eq!(ef.pred(u64::MAX - 11), 1);
     }
 
+    // test a query that is way larger than any element in the vector
     #[test]
     fn test_large_query() {
         let ef = EliasFanoVec::<FastBitVector>::new(&vec![0, 1, 2, 3]);
         assert_eq!(ef.pred(u64::MAX), 3);
     }
 
+    // test whether duplicates are handled correctly by predecessor queries and reconstruction
+    #[test]
+    fn test_duplicates() {
+        let ef = EliasFanoVec::<FastBitVector>::new(&vec![0, 0, 0, 1, 1, 1, 2, 2, 2]);
+        assert_eq!(ef.pred(0), 0);
+        assert_eq!(ef.pred(1), 1);
+        assert_eq!(ef.pred(2), 2);
+
+        assert_eq!(ef.get(2), 0);
+        assert_eq!(ef.get(3), 1);
+        assert_eq!(ef.get(5), 1);
+        assert_eq!(ef.get(8), 2);
+    }
+
+    // a randomized test to catch edge cases. If the test fails, efforts should be made to
+    // reproduce the failing case and add it to the test suite.
     #[test]
     fn test_randomized_elias_fano() {
         let mut rng = thread_rng();
