@@ -179,9 +179,9 @@ impl FastBitVector {
         block_index * BLOCK_SIZE
             + index_counter
             + _pdep_u64(
-            1 << rank,
-            !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-        )
+                1 << rank,
+                !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+            )
             .trailing_zeros() as usize
     }
 
@@ -194,7 +194,7 @@ impl FastBitVector {
         // linear search for super block that contains the rank
         while self.super_blocks.len() > (super_block + 1)
             && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
-            <= rank
+                <= rank
         {
             super_block += 1;
         }
@@ -240,9 +240,9 @@ impl FastBitVector {
         block_index * BLOCK_SIZE
             + index_counter
             + _pdep_u64(
-            1 << rank,
-            self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-        )
+                1 << rank,
+                self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+            )
             .trailing_zeros() as usize
     }
 }
@@ -363,10 +363,10 @@ impl BuildingStrategy for FastBitVector {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::RsVectorBuilder;
     use rand::distributions::{Distribution, Uniform};
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
-    use crate::RsVectorBuilder;
 
     #[test]
     fn test_append_bit() {
