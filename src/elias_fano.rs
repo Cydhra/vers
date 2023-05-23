@@ -60,6 +60,13 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
             .upper_vec
             .rank1(self.upper_vec.select0(upper as usize + 1));
 
+        // if we selected zero after the last 1, the request is for an element that is larger than
+        // any element in the vector. This will lead to out of bounds indexing, so we just catch it
+        // and return the largest element in the vector.
+        if lower_bound * self.lower_len == self.lower_vec.len() {
+            return self.get(self.len() - 1);
+        }
+
         let mut lower_candidate = self
             .lower_vec
             .get_bits(lower_bound * self.lower_len, self.lower_len);
@@ -82,7 +89,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
                 ((self.upper_vec.select1(lower_bound - 1) - lower_bound) << self.lower_len) as u64;
             lower_candidate = self
                 .lower_vec
-                .get_bits(lower_bound * self.lower_len - 1, self.lower_len);
+                .get_bits((lower_bound - 1) * self.lower_len, self.lower_len);
         }
 
         result_upper | lower_candidate
@@ -111,6 +118,20 @@ mod tests {
         assert_eq!(ef.pred(8), 7);
     }
 
+    // test the edge case in which the predecessor query doesn't find bounds around the result,
+    // but the result is the last element before the bounds.
+    #[test]
+    fn test_edge_case() {
+        let ef = EliasFanoVec::<FastBitVector>::new(&vec![0, 1, u64::MAX - 10, u64::MAX - 1]);
+        assert_eq!(ef.pred(u64::MAX - 11), 1);
+    }
+
+    #[test]
+    fn test_large_query() {
+        let ef = EliasFanoVec::<FastBitVector>::new(&vec![0, 1, 2, 3]);
+        assert_eq!(ef.pred(u64::MAX), 3);
+    }
+
     #[test]
     fn test_randomized_elias_fano() {
         let mut rng = thread_rng();
@@ -129,9 +150,12 @@ mod tests {
         }
 
         for _ in 0..1000 {
-            let random_splitter: u64 = rng.gen();
-            let partition_point = seq.partition_point(|&x| x <= random_splitter);
-            let pred = ef.pred(random_splitter);
+            let mut random_splitter: u64 = rng.gen();
+
+            // make sure we don't generate erroneous queries
+            while random_splitter < seq[0] {
+                random_splitter = rng.gen();
+            }
 
             assert_eq!(
                 ef.pred(random_splitter),
