@@ -129,6 +129,12 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
 
         result_upper | lower_candidate
     }
+
+    /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
+    /// that isn't used.
+    pub fn heap_size(&self) -> usize {
+        self.upper_vec.heap_size() + self.lower_vec.heap_size()
+    }
 }
 
 #[cfg(test)]

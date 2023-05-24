@@ -3,6 +3,7 @@ use crate::util::unroll;
 use crate::BitVec;
 use core::arch::x86_64::_pdep_u64;
 use std::cmp::min;
+use std::mem::size_of;
 
 /// Size of a block in the bitvector. The size is deliberately chosen to fit one block into a
 /// AVX256 register, so that we can use SIMD instructions to speed up rank and select queries.
@@ -270,6 +271,13 @@ impl RsVector for FastBitVector {
 
     fn get(&self, pos: usize) -> u64 {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
+    }
+
+    fn heap_size(&self) -> usize {
+        self.data.len() * size_of::<u64>()
+            + self.blocks.len() * size_of::<BlockDescriptor>()
+            + self.super_blocks.len() * size_of::<SuperBlockDescriptor>()
+            + self.select_blocks.len() * size_of::<SelectSuperBlockDescriptor>()
     }
 }
 

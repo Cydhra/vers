@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::mem::size_of;
 
 pub mod fast_rs_vec;
 
@@ -127,6 +128,12 @@ impl BitVec {
                 & ((1 << len) - 1)
         }
     }
+
+    /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
+    /// that isn't used.
+    pub fn heap_size(&self) -> usize {
+        self.data.len() * size_of::<u64>()
+    }
 }
 
 impl Default for BitVec {
@@ -169,6 +176,10 @@ pub trait RsVector {
     /// Return the bit at the given position within a u64 word. The bit takes the least significant
     /// bit of the returned u64 word.
     fn get(&self, pos: usize) -> u64;
+
+    /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
+    /// that isn't used.
+    fn heap_size(&self) -> usize;
 }
 
 /// A builder for `BitVector`s. This is used to efficiently construct a `BitVector` by appending
