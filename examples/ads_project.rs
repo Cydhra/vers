@@ -63,7 +63,7 @@ fn handle_predecessor_benchmark(
         *req = elias_fano_vec.pred(*req);
     }
 
-    let time = start.elapsed().as_nanos();
+    let time = start.elapsed().as_millis();
 
     let mut output_file = File::create(output_file)?;
     let output = req_buffer
@@ -77,8 +77,8 @@ fn handle_predecessor_benchmark(
 }
 
 fn handle_rmq_benchmark(
-    input_file: String,
-    output_file: String,
+    _input_file: String,
+    _output_file: String,
 ) -> Result<(u128, usize), io::Error> {
     unimplemented!()
 }
