@@ -5,6 +5,7 @@ use std::cmp::{max, min};
 pub struct EliasFanoVec<B: RsVector> {
     upper_vec: B,
     lower_vec: BitVec,
+    universe_zero: u64,
     universe_mask: u64,
     lower_len: usize,
 }
@@ -21,7 +22,13 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         // will be used instead. By limiting the universe size, we can limit the number of bits
         // required to represent each element, and also spread the elements out more evenly through
         // the upper vector.
-        let universe_bound = max(data.len() as u64, data[data.len() - 1]);
+        let mut universe_zero = data[0];
+        let mut universe_bound = data[data.len() - 1] - universe_zero;
+        if data.len() > universe_bound as usize {
+            universe_zero = 0;
+            universe_bound = max(data.len() as u64, data[data.len() - 1]);
+        }
+
         let universe_width = (u64::BITS - universe_bound.leading_zeros()) as usize;
 
         // Calculate the largest possible element that can be represented with the chosen universe
@@ -40,6 +47,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         let mut lower_vec = BitVec::with_capacity(data.len() * lower_width);
 
         for (i, &word) in data.iter().enumerate() {
+            let word = word - universe_zero;
             let upper = (word >> lower_width) as usize;
             let lower = word & ((1 << lower_width) - 1);
 
@@ -50,6 +58,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         Self {
             upper_vec: B::from_bit_vec(upper_vec),
             lower_vec,
+            universe_zero,
             universe_mask,
             lower_len: lower_width,
         }
@@ -72,7 +81,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         let lower = self
             .lower_vec
             .get_bits(index * self.lower_len, self.lower_len);
-        (upper << self.lower_len) as u64 | lower
+        ((upper << self.lower_len) as u64 | lower) + self.universe_zero
     }
 
     /// Returns the largest element that is smaller than the given element. If the given element is
@@ -81,9 +90,9 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
     #[allow(clippy::cast_possible_truncation)]
     pub fn pred(&self, n: u64) -> u64 {
         // bound the query to the universe size
-        let n = min(n, self.universe_mask);
+        let n = min(n - self.universe_zero, self.universe_mask);
 
-        // calculate the bounds whithin the lower vector where our predecessor can be found
+        // calculate the bounds within the lower vector where our predecessor can be found
         let upper = n >> self.lower_len;
         let lower_bound = self.upper_vec.rank1(self.upper_vec.select0(upper as usize));
         let upper_bound = self
@@ -110,7 +119,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
             {
                 let next_candidate = self.lower_vec.get_bits(i, self.lower_len);
                 if result_upper | next_candidate > n {
-                    return result_upper | lower_candidate;
+                    return (result_upper | lower_candidate) + self.universe_zero;
                 } else {
                     lower_candidate = next_candidate;
                 }
@@ -127,7 +136,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
                 .get_bits((lower_bound - 1) * self.lower_len, self.lower_len);
         }
 
-        result_upper | lower_candidate
+        (result_upper | lower_candidate) + self.universe_zero
     }
 
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
