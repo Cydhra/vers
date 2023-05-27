@@ -21,7 +21,8 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         // in the vector than the largest element is able to represent, the length of the vector
         // will be used instead. By limiting the universe size, we can limit the number of bits
         // required to represent each element, and also spread the elements out more evenly through
-        // the upper vector.
+        // the upper vector. We also subtract the first element from all elements to make the
+        // universe start at zero and possibly save some bits for dense distributions.
         let mut universe_zero = data[0];
         let mut universe_bound = data[data.len() - 1] - universe_zero;
         if data.len() > universe_bound as usize {
@@ -93,11 +94,9 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         let n = min(n - self.universe_zero, self.universe_mask);
 
         // calculate the bounds within the lower vector where our predecessor can be found
-        let upper = n >> self.lower_len;
-        let lower_bound = self.upper_vec.rank1(self.upper_vec.select0(upper as usize));
-        let upper_bound = self
-            .upper_vec
-            .rank1(self.upper_vec.select0(upper as usize + 1));
+        let upper = (n >> self.lower_len) as usize;
+        let lower_bound = self.upper_vec.select0(upper) - upper;
+        let upper_bound = self.upper_vec.select0(upper + 1) - (upper + 1);
 
         // if we selected zero after the last 1, the request is for an element that is larger than
         // any element in the vector. This will lead to out of bounds indexing, so we just catch it
