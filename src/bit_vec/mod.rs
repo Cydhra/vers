@@ -118,11 +118,12 @@ impl BitVec {
     /// Return multiple bits at the given position. The number of bits to return is given by `len`.
     /// At most 64 bits can be returned.
     #[must_use]
+    #[inline(always)] // inline to gain loop optimization and pipeline advantages for elias fano
     pub fn get_bits(&self, pos: usize, len: usize) -> u64 {
         debug_assert!(len <= WORD_SIZE);
-        let partial_word = (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & ((1 << len) - 1);
+        let partial_word = self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE);
         if pos % WORD_SIZE + len <= WORD_SIZE {
-            partial_word
+            partial_word & ((1 << len) - 1)
         } else {
             (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
                 & ((1 << len) - 1)
