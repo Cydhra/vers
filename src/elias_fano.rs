@@ -96,25 +96,31 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         // calculate the bounds within the lower vector where our predecessor can be found
         let upper = (n >> self.lower_len) as usize;
         let lower = n & ((1 << self.lower_len) - 1);
-        let lower_bound = self.upper_vec.select0(upper) - upper;
-        let upper_bound = self.upper_vec.select0(upper + 1) - (upper + 1);
+        let lower_bound_upper_index = self.upper_vec.select0(upper);
+        let lower_bound_lower_index = lower_bound_upper_index - upper;
 
         // if we selected zero after the last 1, the request is for an element that is larger than
         // any element in the vector. This will lead to out of bounds indexing, so we just catch it
         // and return the largest element in the vector.
-        if lower_bound * self.lower_len == self.lower_vec.len() {
+        if lower_bound_lower_index * self.lower_len == self.lower_vec.len() {
             return self.get(self.len() - 1);
         }
 
         let mut lower_candidate = self
             .lower_vec
-            .get_bits(lower_bound * self.lower_len, self.lower_len);
+            .get_bits(lower_bound_lower_index * self.lower_len, self.lower_len);
         let mut result_upper =
-            ((self.upper_vec.select1(lower_bound) - lower_bound - 1) << self.lower_len) as u64;
+            ((self.upper_vec.select1(lower_bound_lower_index) - lower_bound_lower_index - 1) << self.lower_len) as u64;
 
-        if lower_bound < upper_bound && (result_upper | lower_candidate) <= n {
+        // if the next value in the upper vector is set, we need to search for the largest element
+        // in the lower vector that is smaller than the query starting at the lower bound index.
+        // If the next value is not set, we can just return the largest element from the previous
+        // block of elements in the lower vector
+        if self.upper_vec.get(lower_bound_upper_index + 1) > 0 && (result_upper | lower_candidate) <= n {
+            let upper_bound = self.upper_vec.select0(upper + 1) - (upper + 1);
+
             // search for the largest element in the lower vector that is smaller than the query
-            for i in ((lower_bound + 1) * self.lower_len..upper_bound * self.lower_len)
+            for i in ((lower_bound_lower_index + 1) * self.lower_len..upper_bound * self.lower_len)
                 .step_by(self.lower_len)
             {
                 let next_candidate = self.lower_vec.get_bits(i, self.lower_len);
@@ -130,10 +136,10 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
             // query's most significant bit prefix), or when the bounds aren't equal but the element
             // at the lower bound is larger than the query.
             result_upper =
-                ((self.upper_vec.select1(lower_bound - 1) - lower_bound) << self.lower_len) as u64;
+                ((self.upper_vec.select1(lower_bound_lower_index - 1) - lower_bound_lower_index) << self.lower_len) as u64;
             lower_candidate = self
                 .lower_vec
-                .get_bits((lower_bound - 1) * self.lower_len, self.lower_len);
+                .get_bits((lower_bound_lower_index - 1) * self.lower_len, self.lower_len);
         }
 
         (result_upper | lower_candidate) + self.universe_zero
