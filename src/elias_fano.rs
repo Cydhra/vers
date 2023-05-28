@@ -107,7 +107,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         // calculate the upper part of the result. This only works if the next value in the upper
         // vector is set, otherwise the there is no value in the entire vector with this bit-prefix,
         // and we need to search the largest prefix smaller than the query.
-        let mut result_upper = (upper << self.lower_len) as u64;
+        let result_upper = (upper << self.lower_len) as u64;
 
         // check if the next bit is set. If it is not, or if the result would be larger than the
         // query, we need to search for the block of values before the current prefix and return its
@@ -130,18 +130,14 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
                 }
                 cursor += 1;
             }
+
+            (result_upper | lower_candidate) + self.universe_zero
         } else {
             // return the largest element directly in front of the calculated bounds. This is
             // done when the vector does not contain an element with the query's most significant
-            // bit prefix), or when the element at the lower bound is larger than the query.
-            result_upper =
-                ((self.upper_vec.select1(lower_bound_lower_index - 1) - lower_bound_lower_index) << self.lower_len) as u64;
-            lower_candidate = self
-                .lower_vec
-                .get_bits((lower_bound_lower_index - 1) * self.lower_len, self.lower_len);
+            // bit prefix, or when the element at the lower bound is larger than the query.
+            self.get(lower_bound_lower_index - 1)
         }
-
-        (result_upper | lower_candidate) + self.universe_zero
     }
 
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
