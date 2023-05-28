@@ -89,34 +89,44 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
 
         let n = n - self.universe_zero;
 
-        // calculate the bounds within the lower vector where our predecessor can be found
+        // split the query into the upper and lower part
         let upper = (n >> self.lower_len) as usize;
         let lower = n & ((1 << self.lower_len) - 1);
+
+        // calculate the bounds within the lower vector where our predecessor can be found. Since
+        // each bit-prefix in the universe has exactly one corresponding zero in the upper vector,
+        // we can use select0 to find the start of the block of values with the same upper value.
         let lower_bound_upper_index = self.upper_vec.select0(upper);
         let lower_bound_lower_index = lower_bound_upper_index - upper;
 
+        // get the first value from the lower vector that corresponds to the query prefix
         let mut lower_candidate = self
             .lower_vec
             .get_bits(lower_bound_lower_index * self.lower_len, self.lower_len);
+
+        // calculate the upper part of the result. This only works if the next value in the upper
+        // vector is set, otherwise the there is no value in the entire vector with this bit-prefix,
+        // and we need to search the largest prefix smaller than the query.
         let mut result_upper = (upper << self.lower_len) as u64;
 
-        // if the next value in the upper vector is set, we need to search for the largest element
-        // in the lower vector that is smaller than the query starting at the lower bound index.
-        // If the next value is not set, we can just return the largest element from the previous
-        // block of elements in the lower vector
+        // check if the next bit is set. If it is not, or if the result would be larger than the
+        // query, we need to search for the block of values before the current prefix and return its
+        // last element.
         if self.upper_vec.get(lower_bound_upper_index + 1) > 0 && (result_upper | lower_candidate) <= n {
-            let upper_bound = self.upper_vec.select0(upper + 1) - (upper + 1);
+            // search for the largest element in the lower vector that is smaller than the query.
+            // Abort the search once the upper vector contains another zero, as this marks the end
+            // of the block of values with the same upper prefix.
+            let mut cursor = 1;
+            while self.upper_vec.get(lower_bound_upper_index + cursor + 1) > 0 {
+                let next_candidate = self.lower_vec.get_bits((lower_bound_lower_index + cursor) * self.lower_len, self.lower_len);
 
-            // search for the largest element in the lower vector that is smaller than the query
-            for i in ((lower_bound_lower_index + 1) * self.lower_len..upper_bound * self.lower_len)
-                .step_by(self.lower_len)
-            {
-                let next_candidate = self.lower_vec.get_bits(i, self.lower_len);
+                // if we found a value that is larger than the query, return the previous value
                 if next_candidate > lower {
                     return (result_upper | lower_candidate) + self.universe_zero;
                 } else {
                     lower_candidate = next_candidate;
                 }
+                cursor += 1;
             }
         } else {
             // return the largest element directly in front of the calculated bounds. This is
