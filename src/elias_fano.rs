@@ -132,9 +132,8 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
             }
         } else {
             // return the largest element directly in front of the calculated bounds. This is
-            // done when the bounds are equal (i.e. the vector does not contain an element with the
-            // query's most significant bit prefix), or when the bounds aren't equal but the element
-            // at the lower bound is larger than the query.
+            // done when the vector does not contain an element with the query's most significant
+            // bit prefix), or when the element at the lower bound is larger than the query.
             result_upper =
                 ((self.upper_vec.select1(lower_bound_lower_index - 1) - lower_bound_lower_index) << self.lower_len) as u64;
             lower_candidate = self
