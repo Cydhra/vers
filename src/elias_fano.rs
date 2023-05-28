@@ -109,8 +109,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         let mut lower_candidate = self
             .lower_vec
             .get_bits(lower_bound_lower_index * self.lower_len, self.lower_len);
-        let mut result_upper =
-            ((self.upper_vec.select1(lower_bound_lower_index) - lower_bound_lower_index - 1) << self.lower_len) as u64;
+        let mut result_upper = (upper << self.lower_len) as u64;
 
         // if the next value in the upper vector is set, we need to search for the largest element
         // in the lower vector that is smaller than the query starting at the lower bound index.
