@@ -95,6 +95,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
 
         // calculate the bounds within the lower vector where our predecessor can be found
         let upper = (n >> self.lower_len) as usize;
+        let lower = n & ((1 << self.lower_len) - 1);
         let lower_bound = self.upper_vec.select0(upper) - upper;
         let upper_bound = self.upper_vec.select0(upper + 1) - (upper + 1);
 
@@ -117,7 +118,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
                 .step_by(self.lower_len)
             {
                 let next_candidate = self.lower_vec.get_bits(i, self.lower_len);
-                if result_upper | next_candidate > n {
+                if next_candidate > lower {
                     return (result_upper | lower_candidate) + self.universe_zero;
                 } else {
                     lower_candidate = next_candidate;
