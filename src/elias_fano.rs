@@ -123,6 +123,8 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
                 // if we found a value that is larger than the query, return the previous value
                 if next_candidate > lower {
                     return (result_upper | lower_candidate) + self.universe_zero;
+                } else if next_candidate == lower {
+                    return (result_upper | next_candidate) + self.universe_zero;
                 } else {
                     lower_candidate = next_candidate;
                 }
