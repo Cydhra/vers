@@ -4,5 +4,6 @@ pub use bit_vec::{BitVec, RsVector, RsVectorBuilder};
 
 pub mod bit_vec;
 pub mod elias_fano;
+pub mod rmq;
 
 pub(crate) mod util;
