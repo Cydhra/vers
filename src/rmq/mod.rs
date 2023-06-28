@@ -1,4 +1,5 @@
 pub mod naive;
+pub mod small_naive;
 
 trait RangeMinimumVec {
     fn new(data: &[u64]) -> Self;
