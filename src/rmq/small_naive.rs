@@ -9,20 +9,34 @@ impl SmallNaiveRmq {
     fn new(data: Vec<u64>) -> Self {
         // todo: can we flatten this in a one-dimensional vector of predicted size?
         //  this /might/ save us cache misses later
-        let mut results = vec![Vec::new(); data.len()];
+        let mut results = Vec::with_capacity(data.len());
 
-        // todo using a dynamic programming approach, this can be done in O(n log n) time instead of O(n^2)
-        // only store each 2^n-th element in the results
         for i in 0..data.len() {
-            let mut min = i;
-            for j in i..data.len() {
-                if data[j] < data[min] {
-                    min = j;
-                }
+            results.push(Vec::with_capacity(
+                (data.len() - i).next_power_of_two().trailing_zeros() as usize,
+            ));
+            results[i].push(i);
+        }
 
-                if (j - i).count_ones() == 1 {
-                    results[i].push(min);
-                }
+        for i in 0..data.len().next_power_of_two().trailing_zeros() {
+            let i = i as usize;
+            for j in 0..data.len() {
+                let offset = 1 << i;
+                let arg_min = if j + offset < data.len() {
+                    if data[results[j][i]] < data[results[j + offset][i]] {
+                        results[j][i]
+                    } else {
+                        results[j + offset][i]
+                    }
+                } else {
+                    if data[results[j][i]] < data[results[data.len() - offset - 1][i + 1]] {
+                        results[j][i]
+                    } else {
+                        results[data.len() - offset - 1][i + 1]
+                    }
+                };
+
+                results[j].push(arg_min);
             }
         }
 
@@ -30,10 +44,13 @@ impl SmallNaiveRmq {
     }
 
     fn range_min(&self, i: usize, j: usize) -> usize {
-        if j - i == 0 { return i }
-        let log_dist = (usize::BITS - 1 - (j - i).leading_zeros()) as usize;
-        let dist = 1 << log_dist;
-        min_by(self.results[i][log_dist], self.results[j - dist][log_dist], |a, b| self.data[*a].cmp(&self.data[*b]))
+        let log_dist = (usize::BITS - (j - i).leading_zeros()).saturating_sub(1) as usize;
+        let dist = (1 << log_dist) - 1;
+        min_by(
+            self.results[i][log_dist],
+            self.results[j - dist][log_dist],
+            |a, b| self.data[*a].cmp(&self.data[*b]),
+        )
     }
 }
 
@@ -50,5 +67,7 @@ mod tests {
         assert_eq!(rmq.range_min(0, 3), 3);
         assert_eq!(rmq.range_min(5, 8), 8);
         assert_eq!(rmq.range_min(5, 9), 8);
+        assert_eq!(rmq.range_min(9, 10), 9);
+        assert_eq!(rmq.range_min(0, 10), 4);
     }
 }
