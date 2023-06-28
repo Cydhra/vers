@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use rand::distributions::{Distribution, Standard, Uniform};
 use rand::{thread_rng, Rng};
 use vers::{EliasFanoVec, FastBitVector};

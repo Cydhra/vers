@@ -112,13 +112,18 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         // check if the next bit is set. If it is not, or if the result would be larger than the
         // query, we need to search for the block of values before the current prefix and return its
         // last element.
-        if self.upper_vec.get(lower_bound_upper_index + 1) > 0 && (result_upper | lower_candidate) <= n {
+        if self.upper_vec.get(lower_bound_upper_index + 1) > 0
+            && (result_upper | lower_candidate) <= n
+        {
             // search for the largest element in the lower vector that is smaller than the query.
             // Abort the search once the upper vector contains another zero, as this marks the end
             // of the block of values with the same upper prefix.
             let mut cursor = 1;
             while self.upper_vec.get(lower_bound_upper_index + cursor + 1) > 0 {
-                let next_candidate = self.lower_vec.get_bits((lower_bound_lower_index + cursor) * self.lower_len, self.lower_len);
+                let next_candidate = self.lower_vec.get_bits(
+                    (lower_bound_lower_index + cursor) * self.lower_len,
+                    self.lower_len,
+                );
 
                 // if we found a value that is larger than the query, return the previous value
                 if next_candidate > lower {
