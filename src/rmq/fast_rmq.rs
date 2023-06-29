@@ -1,6 +1,7 @@
+use std::cmp::min_by;
+
 use crate::rmq::small_naive::SmallNaiveRmq;
-use crate::{FastBitVector, RsVectorBuilder};
-use std::ops::Index;
+use crate::{FastBitVector, RsVector, RsVectorBuilder};
 
 /// Size of the blocks the data is split into. One block is indexable with a u8, hence its size.
 const BLOCK_SIZE: usize = 256;
@@ -79,6 +80,49 @@ impl FastRmq {
             block_minima: SmallNaiveRmq::new(block_minima),
             block_min_indices,
             blocks,
+        }
+    }
+
+    pub fn range_min(&self, i: usize, j: usize) -> usize {
+        let block_i = i / BLOCK_SIZE;
+        let block_j = j / BLOCK_SIZE;
+
+        // todo we assume the query spans at least two blocks. Find a way to answer queries
+        //  spanning only one block.
+        assert_ne!(block_i, block_j);
+
+        let partial_block_i_min = (block_i + 1) * BLOCK_SIZE
+            - self.blocks[block_i].suffix_minima.select1(
+                self.blocks[block_i]
+                    .suffix_minima
+                    .rank1(BLOCK_SIZE - (i % BLOCK_SIZE))
+                    - 1,
+            )
+            - 1;
+
+        let partial_block_j_min = block_j * BLOCK_SIZE
+            + self.blocks[block_j]
+                .prefix_minima
+                .select1(self.blocks[block_j].prefix_minima.rank1(j % BLOCK_SIZE + 1) - 1);
+
+        // if there are full blocks between the two partial blocks, we can use the block minima
+        // to find the minimum in the range [block_i + 1, block_j - 1]
+        if block_i + 1 < block_j {
+            let intermediate_min_block = self.block_minima.range_min(block_i + 1, block_j - 1);
+            let min_block_index = intermediate_min_block * BLOCK_SIZE
+                + self.block_min_indices[intermediate_min_block] as usize;
+
+            min_by(
+                min_by(partial_block_i_min, partial_block_j_min, |&a, &b| {
+                    self.data[a as usize].cmp(&self.data[b as usize])
+                }),
+                min_block_index,
+                |&a, &b| self.data[a as usize].cmp(&self.data[b as usize]),
+            )
+        } else {
+            min_by(partial_block_i_min, partial_block_j_min, |&a, &b| {
+                self.data[a as usize].cmp(&self.data[b as usize])
+            })
         }
     }
 }
