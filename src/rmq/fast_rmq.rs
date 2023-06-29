@@ -9,7 +9,7 @@ const BLOCK_SIZE: usize = 256;
 /// block up to each bit's index. This way a simple select(rank(k)) query can be used to find the
 /// minimum element in the block prefix (suffix) of length k.
 /// The space requirement for this structure is (sub-)linear in the block size.
-struct Block {
+pub struct Block {
     prefix_minima: FastBitVector,
     suffix_minima: FastBitVector,
 }
@@ -17,7 +17,7 @@ struct Block {
 /// A data structure for fast range minimum queries with linear space overhead. Practically, the
 /// space overhead is O(n log n), because the block size is constant, however this increases speed
 /// and will only be a problem for very large data sets.
-struct FastRmq {
+pub struct FastRmq {
     data: Vec<u64>,
     block_minima: SmallNaiveRmq,
     block_min_indices: Vec<u8>,
@@ -25,7 +25,7 @@ struct FastRmq {
 }
 
 impl FastRmq {
-    fn new(data: Vec<u64>) -> Self {
+    pub fn new(data: Vec<u64>) -> Self {
         let mut block_minima = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);
         let mut block_min_indices = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);
         let mut blocks = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);
@@ -60,9 +60,9 @@ impl FastRmq {
             for i in 2..=block.len() {
                 if block[block.len() - i] < suffix_minimum {
                     suffix_minimum = block[block.len() - i];
-                    prefix_minima.append_bit(1u8);
+                    suffix_minima.append_bit(1u8);
                 } else {
-                    prefix_minima.append_bit(0u8);
+                    suffix_minima.append_bit(0u8);
                 }
             }
 
