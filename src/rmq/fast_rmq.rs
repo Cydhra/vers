@@ -87,9 +87,15 @@ impl FastRmq {
         let block_i = i / BLOCK_SIZE;
         let block_j = j / BLOCK_SIZE;
 
-        // todo we assume the query spans at least two blocks. Find a way to answer queries
-        //  spanning only one block.
-        assert_ne!(block_i, block_j);
+        // if the range is contained in a single block, we just search it
+        if block_i == block_j {
+            return self.data[i..=j]
+                .iter()
+                .enumerate()
+                .min_by_key(|(_, &x)| x)
+                .unwrap()
+                .0;
+        }
 
         let partial_block_i_min = (block_i + 1) * BLOCK_SIZE
             - self.blocks[block_i].suffix_minima.select1(
