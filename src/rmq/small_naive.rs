@@ -1,12 +1,15 @@
 use std::cmp::min_by;
 
-struct SmallNaiveRmq {
+/// As with the naive implementation, this data-structure pre-calculates some queries.
+/// The minimum element in intervals 2^k for all k is precalculated and each query is turned into
+/// two overlapping sub-queries. This leads to constant-time queries and O(n log n) space overhead.
+pub struct SmallNaiveRmq {
     data: Vec<u64>,
     results: Vec<Vec<usize>>,
 }
 
 impl SmallNaiveRmq {
-    fn new(data: Vec<u64>) -> Self {
+    pub fn new(data: Vec<u64>) -> Self {
         // todo: can we flatten this in a one-dimensional vector of predicted size?
         //  this /might/ save us cache misses later
         let mut results = Vec::with_capacity(data.len());
@@ -43,7 +46,7 @@ impl SmallNaiveRmq {
         Self { data, results }
     }
 
-    fn range_min(&self, i: usize, j: usize) -> usize {
+    pub fn range_min(&self, i: usize, j: usize) -> usize {
         let log_dist = (usize::BITS - (j - i).leading_zeros()).saturating_sub(1) as usize;
         let dist = (1 << log_dist) - 1;
         min_by(
