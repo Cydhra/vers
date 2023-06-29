@@ -1,3 +1,4 @@
+pub mod fast_rmq;
 pub mod naive;
 pub mod small_naive;
 
