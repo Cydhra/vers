@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_fast_rmq() {
-        const L: usize = 500;
+        const L: usize = 2 * BLOCK_SIZE;
 
         let mut numbers_vec = Vec::with_capacity(L);
         for i in 0..L {

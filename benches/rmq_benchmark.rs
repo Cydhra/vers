@@ -9,7 +9,17 @@ fn bench_rmq(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
     let mut group = b.benchmark_group("vers_rmq");
 
-    for l in [2 << 8, 2 << 10, 2 << 12, 2 << 14, 2 << 16, 2 << 18, 2 << 20, 2 << 22, 2 << 24] {
+    for l in [
+        2 << 8,
+        2 << 10,
+        2 << 12,
+        2 << 14,
+        2 << 16,
+        2 << 18,
+        2 << 20,
+        2 << 22,
+        2 << 24,
+    ] {
         let rmq = FastRmq::new(common::fill_random_vec(&mut rng, l));
         let sample = Uniform::new(0, rmq.len());
         group.bench_with_input(BenchmarkId::new("range_min", l), &l, |b, _| {

@@ -8,7 +8,17 @@ fn bench_rank(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
 
     let mut group = b.benchmark_group("vers rank");
-    for l in [2 << 8, 2 << 10, 2 << 12, 2 << 14, 2 << 16, 2 << 18, 2 << 20, 2 << 22, 2 << 24] {
+    for l in [
+        2 << 8,
+        2 << 10,
+        2 << 12,
+        2 << 14,
+        2 << 16,
+        2 << 18,
+        2 << 20,
+        2 << 22,
+        2 << 24,
+    ] {
         let bit_vec = common::construct_vers_vec(&mut rng, l);
         let sample = Uniform::new(0, bit_vec.len());
         group.bench_with_input(BenchmarkId::new("rank", l), &l, |b, _| {
