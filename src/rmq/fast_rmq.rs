@@ -89,7 +89,7 @@ impl FastRmq {
 
         // if the range is contained in a single block, we just search it
         if block_i == block_j {
-            return self.data[i..=j]
+            return i + self.data[i..=j]
                 .iter()
                 .enumerate()
                 .min_by_key(|(_, &x)| x)
