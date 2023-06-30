@@ -132,3 +132,32 @@ impl FastRmq {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fast_rmq() {
+        const L: usize = 500;
+
+        let mut numbers_vec = Vec::with_capacity(L);
+        for i in 0..L {
+            numbers_vec.push(i as u64);
+        }
+
+        let rmq = FastRmq::new(numbers_vec.clone());
+
+        for i in 0..L {
+            for j in i..L {
+                let min = i + numbers_vec[i..=j]
+                    .iter()
+                    .enumerate()
+                    .min_by_key(|(_, &x)| x)
+                    .unwrap()
+                    .0;
+                assert_eq!(rmq.range_min(i, j), min, "i = {}, j = {}", i, j);
+            }
+        }
+    }
+}
