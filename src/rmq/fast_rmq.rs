@@ -41,14 +41,14 @@ impl FastRmq {
             let mut block_minimum = block[0];
             let mut block_minimum_index = 0u8;
 
-            prefix_minima.append_bit(1u8);
+            prefix_minima.append_bit(0u8);
 
             for i in 1..block.len() {
                 if block[i] < prefix_minimum {
                     prefix_minimum = block[i];
-                    prefix_minima.append_bit(1u8);
-                } else {
                     prefix_minima.append_bit(0u8);
+                } else {
+                    prefix_minima.append_bit(1u8);
                 }
 
                 if block[i] < block_minimum {
@@ -58,14 +58,14 @@ impl FastRmq {
             }
 
             let mut suffix_minimum = block[block.len() - 1];
-            suffix_minima.append_bit(1u8);
+            suffix_minima.append_bit(0u8);
 
             for i in 2..=block.len() {
                 if block[block.len() - i] < suffix_minimum {
                     suffix_minimum = block[block.len() - i];
-                    suffix_minima.append_bit(1u8);
-                } else {
                     suffix_minima.append_bit(0u8);
+                } else {
+                    suffix_minima.append_bit(1u8);
                 }
             }
 
@@ -93,24 +93,24 @@ impl FastRmq {
         if block_i == block_j {
             let rank_i_prefix = self.blocks[block_i]
                 .prefix_minima
-                .rank1(i % BLOCK_SIZE + 1);
+                .rank0(i % BLOCK_SIZE + 1);
             let rank_j_prefix = self.blocks[block_i]
                 .prefix_minima
-                .rank1(j % BLOCK_SIZE + 1);
+                .rank0(j % BLOCK_SIZE + 1);
 
             if rank_j_prefix > rank_i_prefix {
-                return block_i * BLOCK_SIZE + self.blocks[block_i].prefix_minima.select1(rank_j_prefix - 1);
+                return block_i * BLOCK_SIZE + self.blocks[block_i].prefix_minima.select0(rank_j_prefix - 1);
             }
 
             let rank_i_suffix = self.blocks[block_i]
                 .suffix_minima
-                .rank1(BLOCK_SIZE - (i % BLOCK_SIZE));
+                .rank0(BLOCK_SIZE - (i % BLOCK_SIZE));
             let rank_j_suffix = self.blocks[block_i]
                 .suffix_minima
-                .rank1(BLOCK_SIZE - (j % BLOCK_SIZE));
+                .rank0(BLOCK_SIZE - (j % BLOCK_SIZE));
 
             if rank_j_suffix > rank_i_suffix {
-                return (block_i + 1) * BLOCK_SIZE - self.blocks[block_i].suffix_minima.select1(rank_j_suffix - 1);
+                return (block_i + 1) * BLOCK_SIZE - self.blocks[block_i].suffix_minima.select0(rank_j_suffix - 1);
             }
 
             return i + self.data[i..=j]
@@ -122,10 +122,10 @@ impl FastRmq {
         }
 
         let partial_block_i_min = (block_i + 1) * BLOCK_SIZE
-            - self.blocks[block_i].suffix_minima.select1(
+            - self.blocks[block_i].suffix_minima.select0(
                 self.blocks[block_i]
                     .suffix_minima
-                    .rank1(BLOCK_SIZE - (i % BLOCK_SIZE))
+                    .rank0(BLOCK_SIZE - (i % BLOCK_SIZE))
                     - 1,
             )
             - 1;
@@ -133,7 +133,7 @@ impl FastRmq {
         let partial_block_j_min = block_j * BLOCK_SIZE
             + self.blocks[block_j]
                 .prefix_minima
-                .select1(self.blocks[block_j].prefix_minima.rank1(j % BLOCK_SIZE + 1) - 1);
+                .select0(self.blocks[block_j].prefix_minima.rank0(j % BLOCK_SIZE + 1) - 1);
 
         // if there are full blocks between the two partial blocks, we can use the block minima
         // to find the minimum in the range [block_i + 1, block_j - 1]
