@@ -13,6 +13,7 @@ const BLOCK_SIZE: usize = 256;
 pub struct Block {
     prefix_minima: FastBitVector,
     suffix_minima: FastBitVector,
+    // range_minima: FastBitVector,
 }
 
 /// A data structure for fast range minimum queries with linear space overhead. Practically, the
@@ -34,6 +35,7 @@ impl FastRmq {
         data.chunks(BLOCK_SIZE).for_each(|block| {
             let mut prefix_minima = RsVectorBuilder::<FastBitVector>::with_capacity(block.len());
             let mut suffix_minima = RsVectorBuilder::<FastBitVector>::with_capacity(block.len());
+            // let mut range_minima = RsVectorBuilder::<FastBitVector>::with_capacity(block.len());
 
             let mut prefix_minimum = block[0];
             let mut block_minimum = block[0];
@@ -165,6 +167,7 @@ impl FastRmq {
 
 #[cfg(test)]
 mod tests {
+    use rand::RngCore;
     use super::*;
 
     #[test]
@@ -187,6 +190,29 @@ mod tests {
                     .unwrap()
                     .0;
                 assert_eq!(rmq.range_min(i, j), min, "i = {}, j = {}", i, j);
+            }
+        }
+    }
+
+    #[test]
+    fn test_fast_rmq_unsorted() {
+        let mut rng = rand::thread_rng();
+        const L: usize = 2 * BLOCK_SIZE;
+
+        let mut numbers_vec = Vec::with_capacity(L);
+        for _ in 0..L {
+            numbers_vec.push(rng.next_u64());
+        }
+
+        let rmq = FastRmq::new(numbers_vec.clone());
+
+        for i in 0..L {
+            for j in i..L {
+                let min = numbers_vec[i..=j]
+                    .iter()
+                    .min()
+                    .unwrap();
+                assert_eq!(numbers_vec[rmq.range_min(i, j)], *min, "i = {}, j = {}", i, j);
             }
         }
     }
