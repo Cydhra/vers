@@ -89,6 +89,28 @@ impl FastRmq {
 
         // if the range is contained in a single block, we just search it
         if block_i == block_j {
+            let rank_i_prefix = self.blocks[block_i]
+                .prefix_minima
+                .rank1(i % BLOCK_SIZE + 1);
+            let rank_j_prefix = self.blocks[block_i]
+                .prefix_minima
+                .rank1(j % BLOCK_SIZE + 1);
+
+            if rank_j_prefix > rank_i_prefix {
+                return block_i * BLOCK_SIZE + self.blocks[block_i].prefix_minima.select1(rank_j_prefix - 1);
+            }
+
+            let rank_i_suffix = self.blocks[block_i]
+                .suffix_minima
+                .rank1(BLOCK_SIZE - (i % BLOCK_SIZE));
+            let rank_j_suffix = self.blocks[block_i]
+                .suffix_minima
+                .rank1(BLOCK_SIZE - (j % BLOCK_SIZE));
+
+            if rank_j_suffix > rank_i_suffix {
+                return (block_i + 1) * BLOCK_SIZE - self.blocks[block_i].suffix_minima.select1(rank_j_suffix - 1);
+            }
+
             return i + self.data[i..=j]
                 .iter()
                 .enumerate()
