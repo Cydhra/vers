@@ -66,7 +66,7 @@ fn handle_predecessor_benchmark(
         .into_iter()
         .map(|x| x.to_string())
         .collect::<Vec<_>>()
-        .join(", ");
+        .join("\n");
     output_file.write_all(output.as_bytes())?;
 
     Ok((time, elias_fano_vec.heap_size() * 8))
