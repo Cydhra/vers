@@ -5,20 +5,17 @@ use std::cmp::min_by;
 /// two overlapping sub-queries. This leads to constant-time queries and O(n log n) space overhead.
 pub struct SmallNaiveRmq {
     data: Vec<u64>,
-    results: Vec<Vec<usize>>,
+    results: Vec<usize>,
 }
 
 impl SmallNaiveRmq {
     pub fn new(data: Vec<u64>) -> Self {
-        // todo: can we flatten this in a one-dimensional vector of predicted size?
-        //  this /might/ save us cache misses later
-        let mut results = Vec::with_capacity(data.len());
+        let len = data.len();
+        let row_length = len.next_power_of_two().trailing_zeros() as usize + 1;
+        let mut results = vec![0; len * row_length];
 
-        for i in 0..data.len() {
-            results.push(Vec::with_capacity(
-                (data.len() - i).next_power_of_two().trailing_zeros() as usize,
-            ));
-            results[i].push(i);
+        for i in 0..len {
+            results[i * row_length] = i;
         }
 
         for i in 0..data.len().next_power_of_two().trailing_zeros() {
@@ -26,20 +23,24 @@ impl SmallNaiveRmq {
             for j in 0..data.len() {
                 let offset = 1 << i;
                 let arg_min = if j + offset < data.len() {
-                    if data[results[j][i]] < data[results[j + offset][i]] {
-                        results[j][i]
+                    if data[results[j * row_length + i]]
+                        < data[results[(j + offset) * row_length + i]]
+                    {
+                        results[j * row_length + i]
                     } else {
-                        results[j + offset][i]
+                        results[(j + offset) * row_length + i]
                     }
                 } else {
-                    if data[results[j][i]] < data[results[data.len() - offset - 1][i + 1]] {
-                        results[j][i]
+                    if data[results[j * row_length + i]]
+                        < data[results[(data.len() - offset - 1) * row_length + i + 1]]
+                    {
+                        results[j * row_length + i]
                     } else {
-                        results[data.len() - offset - 1][i + 1]
+                        results[(data.len() - offset - 1) * row_length + i + 1]
                     }
                 };
 
-                results[j].push(arg_min);
+                results[j * row_length + i + 1] = arg_min;
             }
         }
 
@@ -47,11 +48,12 @@ impl SmallNaiveRmq {
     }
 
     pub fn range_min(&self, i: usize, j: usize) -> usize {
+        let row_len = self.data.len().next_power_of_two().trailing_zeros() as usize + 1;
         let log_dist = (usize::BITS - (j - i).leading_zeros()).saturating_sub(1) as usize;
         let dist = (1 << log_dist) - 1;
         min_by(
-            self.results[i][log_dist],
-            self.results[j - dist][log_dist],
+            self.results[i * row_len + log_dist],
+            self.results[(j - dist) * row_len + log_dist],
             |a, b| self.data[*a].cmp(&self.data[*b]),
         )
     }
