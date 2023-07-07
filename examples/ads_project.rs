@@ -112,7 +112,7 @@ fn handle_rmq_benchmark(
 
     output_file.write_all(output.as_bytes())?;
 
-    Ok((time, rmq.heap_size()))
+    Ok((time, rmq.heap_size() * 8))
 }
 
 /// Read n lines and treat each as a 64 bit number.
