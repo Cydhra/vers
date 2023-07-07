@@ -4,8 +4,8 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::time::Instant;
 use std::{env, io};
-use vers::{EliasFanoVec, FastBitVector};
 use vers::rmq::fast_rmq::FastRmq;
+use vers::{EliasFanoVec, FastBitVector};
 
 fn main() {
     let mut args = env::args().skip(1);
@@ -112,7 +112,7 @@ fn handle_rmq_benchmark(
 
     output_file.write_all(output.as_bytes())?;
 
-    Ok((time, 8))
+    Ok((time, rmq.heap_size()))
 }
 
 /// Read n lines and treat each as a 64 bit number.

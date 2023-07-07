@@ -1,5 +1,6 @@
 use std::arch::x86_64::_pdep_u64;
 use std::cmp::min_by;
+use std::mem::size_of;
 
 use crate::rmq::small_naive::SmallNaiveRmq;
 
@@ -224,6 +225,13 @@ impl FastRmq {
 
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
+    }
+
+    pub fn heap_size(&self) -> usize {
+        self.data.len() * size_of::<u64>()
+            + self.block_minima.heap_size()
+            + self.block_min_indices.len()
+            + self.blocks.len() * size_of::<Block>()
     }
 }
 

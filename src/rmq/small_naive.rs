@@ -1,4 +1,5 @@
 use std::cmp::min_by;
+use std::mem::size_of;
 
 /// As with the naive implementation, this data-structure pre-calculates some queries.
 /// The minimum element in intervals 2^k for all k is precalculated and each query is turned into
@@ -69,6 +70,10 @@ impl SmallNaiveRmq {
             self.results[(j - dist) * row_len + log_dist],
             |a, b| self.data[*a].cmp(&self.data[*b]),
         )
+    }
+
+    pub fn heap_size(&self) -> usize {
+        self.data.len() * size_of::<u64>() + self.results.len() * size_of::<usize>()
     }
 }
 
