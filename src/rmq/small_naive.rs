@@ -10,14 +10,24 @@ pub struct SmallNaiveRmq {
 
 impl SmallNaiveRmq {
     pub fn new(data: Vec<u64>) -> Self {
+        // the results are stored in a one-dimensional array, where the k'th element of each row i is
+        // the index of the minimum element in the interval [i, i + 2^k). The length of the row is
+        // ceil(log2(data.len())) + 1, which wastes 1/2 + 1/4 + 1/8... = 1 * log n words of memory,
+        // but saves us a large amount of page faults for big vectors, when compared to having a
+        // two-dimensional array with dynamic length in the second dimension.
         let len = data.len();
         let row_length = len.next_power_of_two().trailing_zeros() as usize + 1;
         let mut results = vec![0; len * row_length];
 
+        // initialize the first column of the results array with the indices of the elements in the
+        // data array. This is setup for the dynamic programming approach to calculating the rest of
+        // the results.
         for i in 0..len {
             results[i * row_length] = i;
         }
 
+        // calculate the rest of the results using dynamic programming (it uses the minima of smaller
+        // intervals to calculate the minima of larger intervals).
         for i in 0..data.len().next_power_of_two().trailing_zeros() {
             let i = i as usize;
             for j in 0..data.len() {
@@ -47,10 +57,13 @@ impl SmallNaiveRmq {
         Self { data, results }
     }
 
+    /// Calculates the index of the minimum element in the range [i, j].
     pub fn range_min(&self, i: usize, j: usize) -> usize {
         let row_len = self.data.len().next_power_of_two().trailing_zeros() as usize + 1;
         let log_dist = (usize::BITS - (j - i).leading_zeros()).saturating_sub(1) as usize;
         let dist = (1 << log_dist) - 1;
+
+        // the minimum of the two sub-queries with powers of two is the minimum of the whole query.
         min_by(
             self.results[i * row_len + log_dist],
             self.results[(j - dist) * row_len + log_dist],
