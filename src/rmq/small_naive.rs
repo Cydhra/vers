@@ -6,7 +6,11 @@ use std::mem::size_of;
 /// two overlapping sub-queries. This leads to constant-time queries and O(n log n) space overhead.
 pub struct SmallNaiveRmq {
     data: Vec<u64>,
-    results: Vec<usize>,
+
+    // store indices relative to start of range. There is no way to have ranges exceeding 2^32 bits
+    // for reasonable data sizes, because that would exceed 2^43 bits of memory for the input data
+    // alone.
+    results: Vec<u32>,
 }
 
 impl SmallNaiveRmq {
@@ -18,13 +22,13 @@ impl SmallNaiveRmq {
         // two-dimensional array with dynamic length in the second dimension.
         let len = data.len();
         let row_length = len.next_power_of_two().trailing_zeros() as usize + 1;
-        let mut results = vec![0; len * row_length];
+        let mut results = vec![0u32; len * row_length];
 
         // initialize the first column of the results array with the indices of the elements in the
         // data array. This is setup for the dynamic programming approach to calculating the rest of
         // the results.
         for i in 0..len {
-            results[i * row_length] = i;
+            results[i * row_length] = 0;
         }
 
         // calculate the rest of the results using dynamic programming (it uses the minima of smaller
@@ -33,25 +37,32 @@ impl SmallNaiveRmq {
             let i = i as usize;
             for j in 0..data.len() {
                 let offset = 1 << i;
-                let arg_min = if j + offset < data.len() {
-                    if data[results[j * row_length + i]]
-                        < data[results[(j + offset) * row_length + i]]
+                let arg_min: usize = if j + offset < data.len() {
+                    if data[results[j * row_length + i] as usize + j]
+                        < data[results[(j + offset) * row_length + i] as usize + (j + offset)]
                     {
-                        results[j * row_length + i]
+                        results[j * row_length + i] as usize + j
                     } else {
-                        results[(j + offset) * row_length + i]
+                        results[(j + offset) * row_length + i] as usize + (j + offset)
                     }
                 } else {
-                    if data[results[j * row_length + i]]
-                        < data[results[(data.len() - offset - 1) * row_length + i + 1]]
-                    {
-                        results[j * row_length + i]
+                    // TODO check if all -1 offsets are correct.
+                    if data.len() - offset - 1 > j {
+                        if data[results[j * row_length + i] as usize + j]
+                            < data[results[(data.len() - offset - 1) * row_length + i - 1] as usize
+                                + (data.len() - offset - 1)]
+                        {
+                            results[j * row_length + i] as usize + j
+                        } else {
+                            results[(data.len() - offset - 1) * row_length + i - 1] as usize
+                                + (data.len() - offset - 1)
+                        }
                     } else {
-                        results[(data.len() - offset - 1) * row_length + i + 1]
+                        j
                     }
                 };
 
-                results[j * row_length + i + 1] = arg_min;
+                results[j * row_length + i + 1] = (arg_min - j) as u32;
             }
         }
 
@@ -66,14 +77,14 @@ impl SmallNaiveRmq {
 
         // the minimum of the two sub-queries with powers of two is the minimum of the whole query.
         min_by(
-            self.results[i * row_len + log_dist],
-            self.results[(j - dist) * row_len + log_dist],
+            self.results[i * row_len + log_dist] as usize + i,
+            self.results[(j - dist) * row_len + log_dist] as usize + (j - dist),
             |a, b| self.data[*a].cmp(&self.data[*b]),
         )
     }
 
     pub fn heap_size(&self) -> usize {
-        self.data.len() * size_of::<u64>() + self.results.len() * size_of::<usize>()
+        self.data.len() * size_of::<u64>() + self.results.len() * size_of::<u32>()
     }
 }
 
