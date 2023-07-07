@@ -1,5 +1,5 @@
 use rand::distributions::{Distribution, Uniform};
-use rand::{Rng, thread_rng};
+use rand::{thread_rng, Rng};
 use vers::rmq::fast_rmq::FastRmq;
 
 const LEN: usize = 1 << 24;

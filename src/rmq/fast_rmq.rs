@@ -1,19 +1,85 @@
+use std::arch::x86_64::_pdep_u64;
 use std::cmp::min_by;
 
 use crate::rmq::small_naive::SmallNaiveRmq;
-use crate::{FastBitVector, RsVector, RsVectorBuilder};
 
 /// Size of the blocks the data is split into. One block is indexable with a u8, hence its size.
 const BLOCK_SIZE: usize = 256;
+
+/// A constant size small bitvector that supports rank0 and select0 specifically for the RMQ
+/// structure
+struct SmallBitVector(u64, u64, u64, u64);
+
+impl SmallBitVector {
+    /// Calculates the rank0 of the bitvector up to the i-th bit by masking out the bits after i
+    /// and counting the ones of the bitwise-inverted bitvector.
+    fn rank0(&self, i: usize) -> usize {
+        debug_assert!(i <= 256);
+        let mut result = 0;
+        let mut mask = ![(-1i64 << (i & 63)), 0][(i & !63 != 0) as usize] as u64;
+        result += (!self.0 & mask).count_ones() as usize;
+        mask = ![(-1i64 << (i.saturating_sub(64) & 63)), 0]
+            [(i.saturating_sub(64) & !63 != 0) as usize] as u64;
+        result += (!self.1 & mask).count_ones() as usize;
+        mask = ![(-1i64 << (i.saturating_sub(128) & 63)), 0]
+            [(i.saturating_sub(128) & !63 != 0) as usize] as u64;
+        result += (!self.2 & mask).count_ones() as usize;
+        mask = ![(-1i64 << (i.saturating_sub(192) & 63)), 0]
+            [(i.saturating_sub(192) & !63 != 0) as usize] as u64;
+        result += (!self.3 & mask).count_ones() as usize;
+        result
+    }
+
+    fn select0(&self, rank: usize) -> usize {
+        unsafe { self.select0_impl(rank) }
+    }
+
+    #[target_feature(enable = "bmi2")]
+    unsafe fn select0_impl(&self, mut rank: usize) -> usize {
+        let word = self.0;
+        if (word.count_zeros() as usize) <= rank {
+            rank -= word.count_zeros() as usize;
+        } else {
+            return _pdep_u64(1 << rank, !word).trailing_zeros() as usize;
+        }
+        let word = self.1;
+        if (word.count_zeros() as usize) <= rank {
+            rank -= word.count_zeros() as usize;
+        } else {
+            return 64 + _pdep_u64(1 << rank, !word).trailing_zeros() as usize;
+        }
+        let word = self.2;
+        if (word.count_zeros() as usize) <= rank {
+            rank -= word.count_zeros() as usize;
+        } else {
+            return 128 + _pdep_u64(1 << rank, !word).trailing_zeros() as usize;
+        }
+
+        192 + _pdep_u64(1 << (rank % 64), !self.3).trailing_zeros() as usize
+    }
+
+    fn set_bit(&mut self, i: usize) {
+        debug_assert!(i <= 256);
+        let mask = 1u64 << (i % 64);
+        if i < 64 {
+            self.0 |= mask;
+        } else if i < 128 {
+            self.1 |= mask;
+        } else if i < 192 {
+            self.2 |= mask;
+        } else {
+            self.3 |= mask;
+        }
+    }
+}
 
 /// A block has a bit vector indicating the minimum element in the prefix (suffix) of the
 /// block up to each bit's index. This way a simple select(rank(k)) query can be used to find the
 /// minimum element in the block prefix (suffix) of length k.
 /// The space requirement for this structure is (sub-)linear in the block size.
-pub struct Block {
-    prefix_minima: FastBitVector,
-    suffix_minima: FastBitVector,
-    // range_minima: FastBitVector,
+struct Block {
+    prefix_minima: SmallBitVector,
+    suffix_minima: SmallBitVector,
 }
 
 /// A data structure for fast range minimum queries with linear space overhead. Practically, the
@@ -33,22 +99,18 @@ impl FastRmq {
         let mut blocks = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);
 
         data.chunks(BLOCK_SIZE).for_each(|block| {
-            let mut prefix_minima = RsVectorBuilder::<FastBitVector>::with_capacity(block.len());
-            let mut suffix_minima = RsVectorBuilder::<FastBitVector>::with_capacity(block.len());
-            // let mut range_minima = RsVectorBuilder::<FastBitVector>::with_capacity(block.len());
+            let mut prefix_minima = SmallBitVector(0, 0, 0, 0);
+            let mut suffix_minima = SmallBitVector(0, 0, 0, 0);
 
             let mut prefix_minimum = block[0];
             let mut block_minimum = block[0];
             let mut block_minimum_index = 0u8;
 
-            prefix_minima.append_bit(0u8);
-
             for i in 1..block.len() {
                 if block[i] < prefix_minimum {
                     prefix_minimum = block[i];
-                    prefix_minima.append_bit(0u8);
                 } else {
-                    prefix_minima.append_bit(1u8);
+                    prefix_minima.set_bit(i);
                 }
 
                 if block[i] < block_minimum {
@@ -58,22 +120,20 @@ impl FastRmq {
             }
 
             let mut suffix_minimum = block[block.len() - 1];
-            suffix_minima.append_bit(0u8);
 
             for i in 2..=block.len() {
                 if block[block.len() - i] < suffix_minimum {
                     suffix_minimum = block[block.len() - i];
-                    suffix_minima.append_bit(0u8);
                 } else {
-                    suffix_minima.append_bit(1u8);
+                    suffix_minima.set_bit(i - 1);
                 }
             }
 
             block_minima.push(block_minimum);
             block_min_indices.push(block_minimum_index);
             blocks.push(Block {
-                prefix_minima: prefix_minima.build(),
-                suffix_minima: suffix_minima.build(),
+                prefix_minima,
+                suffix_minima,
             });
         });
 
@@ -91,15 +151,14 @@ impl FastRmq {
 
         // if the range is contained in a single block, we just search it
         if block_i == block_j {
-            let rank_i_prefix = self.blocks[block_i]
-                .prefix_minima
-                .rank0(i % BLOCK_SIZE + 1);
-            let rank_j_prefix = self.blocks[block_i]
-                .prefix_minima
-                .rank0(j % BLOCK_SIZE + 1);
+            let rank_i_prefix = self.blocks[block_i].prefix_minima.rank0(i % BLOCK_SIZE + 1);
+            let rank_j_prefix = self.blocks[block_i].prefix_minima.rank0(j % BLOCK_SIZE + 1);
 
             if rank_j_prefix > rank_i_prefix {
-                return block_i * BLOCK_SIZE + self.blocks[block_i].prefix_minima.select0(rank_j_prefix - 1);
+                return block_i * BLOCK_SIZE
+                    + self.blocks[block_i]
+                        .prefix_minima
+                        .select0(rank_j_prefix - 1);
             }
 
             let rank_i_suffix = self.blocks[block_i]
@@ -110,7 +169,10 @@ impl FastRmq {
                 .rank0(BLOCK_SIZE - (j % BLOCK_SIZE));
 
             if rank_j_suffix > rank_i_suffix {
-                return (block_i + 1) * BLOCK_SIZE - self.blocks[block_i].suffix_minima.select0(rank_j_suffix - 1);
+                return (block_i + 1) * BLOCK_SIZE
+                    - self.blocks[block_i]
+                        .suffix_minima
+                        .select0(rank_j_suffix - 1);
             }
 
             return i + self.data[i..=j]
@@ -167,8 +229,43 @@ impl FastRmq {
 
 #[cfg(test)]
 mod tests {
-    use rand::RngCore;
     use super::*;
+    use rand::RngCore;
+
+    #[test]
+    fn test_small_bit_vector_rank0() {
+        let mut sbv = SmallBitVector(0, 0, 0, 0);
+        sbv.set_bit(1);
+        sbv.set_bit(3);
+        sbv.set_bit(64);
+        sbv.set_bit(65);
+
+        assert_eq!(sbv.rank0(0), 0);
+        assert_eq!(sbv.rank0(1), 1);
+        assert_eq!(sbv.rank0(2), 1);
+        assert_eq!(sbv.rank0(3), 2);
+        assert_eq!(sbv.rank0(4), 2);
+
+        assert_eq!(sbv.rank0(64), 62);
+        assert_eq!(sbv.rank0(65), 62);
+        assert_eq!(sbv.rank0(66), 62);
+        assert_eq!(sbv.rank0(67), 63);
+    }
+
+    #[test]
+    fn test_small_bit_vector_select0() {
+        let mut sbv = SmallBitVector(0, 0, 0, 0);
+        sbv.set_bit(1);
+        sbv.set_bit(3);
+        sbv.set_bit(64);
+        sbv.set_bit(65);
+
+        assert_eq!(sbv.select0(0), 0);
+        assert_eq!(sbv.select0(1), 2);
+        assert_eq!(sbv.select0(2), 4);
+        assert_eq!(sbv.select0(3), 5);
+        assert_eq!(sbv.select0(64), 68);
+    }
 
     #[test]
     fn test_fast_rmq() {
@@ -208,11 +305,14 @@ mod tests {
 
         for i in 0..L {
             for j in i..L {
-                let min = numbers_vec[i..=j]
-                    .iter()
-                    .min()
-                    .unwrap();
-                assert_eq!(numbers_vec[rmq.range_min(i, j)], *min, "i = {}, j = {}", i, j);
+                let min = numbers_vec[i..=j].iter().min().unwrap();
+                assert_eq!(
+                    numbers_vec[rmq.range_min(i, j)],
+                    *min,
+                    "i = {}, j = {}",
+                    i,
+                    j
+                );
             }
         }
     }
