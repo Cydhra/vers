@@ -5,11 +5,13 @@ use rand::distributions::{Distribution, Standard, Uniform};
 use rand::{thread_rng, Rng};
 use vers::EliasFanoVec;
 
+mod common;
+
 fn bench_rmq(b: &mut Criterion) {
     let mut group = b.benchmark_group("random-queries");
     let mut rng = rand::thread_rng();
 
-    for l in [2 << 8, 2 << 10, 2 << 12, 2 << 14, 2 << 16, 2 << 18, 2 << 20] {
+    for l in common::SIZES {
         let mut sequence = thread_rng()
             .sample_iter(Standard)
             .take(l)

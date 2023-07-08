@@ -8,6 +8,7 @@ use rand::rngs::ThreadRng;
 use rand::Rng;
 use rsdict::RsDict;
 use RankSelect as BioRsVec;
+use succinct::Rank9;
 
 mod common;
 
@@ -53,18 +54,28 @@ fn construct_ind_bit_vec(rng: &mut ThreadRng, len: usize) -> IndexedBits<Vec<u8>
     IndexedBits::build_from_bytes(vec, len as u64).unwrap()
 }
 
+fn construct_rank9_vec(rng: &mut ThreadRng, len: usize) -> Rank9<SuccinctVec<u64>> {
+    let mut bit_vec = SuccinctVec::with_capacity(len as u64);
+    for _ in 0..len / 8 {
+        bit_vec.push_block(rng.sample(Standard))
+    }
+    Rank9::new(bit_vec)
+}
+
 fn compare_ranks(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
 
     let mut group = b.benchmark_group("rank");
 
-    for l in [2 << 8, 2 << 10, 2 << 12, 2 << 14, 2 << 16, 2 << 18] {
+    for l in common::SIZES {
         let vers_vec = common::construct_vers_vec(&mut rng, l);
         let rsdict = construct_rsdict_vec(&mut rng, l);
         let bio_vec = construct_bio_vec(&mut rng, l);
         let fair_bio_vec = construct_fair_bio_vec(&mut rng, l);
         let fid_vec = construct_fid_vec(&mut rng, l);
         let ind_bit_vec = construct_ind_bit_vec(&mut rng, l);
+        let rank9_vec = construct_rank9_vec(&mut rng, l);
+
         let sample = Uniform::new(0, l);
 
         group.bench_with_input(BenchmarkId::new("vers-rank", l), &l, |b, _| {
@@ -114,11 +125,19 @@ fn compare_ranks(b: &mut Criterion) {
                 BatchSize::SmallInput,
             )
         });
+
+        group.bench_with_input(BenchmarkId::new("rank9-rank", l), &l, |b, _| {
+            b.iter_batched(
+                || sample.sample(&mut rng) as u64,
+                |e| black_box(rank9_vec.rank(e)),
+                BatchSize::SmallInput,
+            )
+        });
     }
     group.finish();
 
     let mut group = b.benchmark_group("select");
-    for l in [2 << 8, 2 << 10, 2 << 12, 2 << 14, 2 << 16, 2 << 18] {
+    for l in common::SIZES {
         let vers_vec = common::construct_vers_vec(&mut rng, l);
         let rsdict = construct_rsdict_vec(&mut rng, l);
         let bio_vec = construct_bio_vec(&mut rng, l);

@@ -7,7 +7,18 @@ fn bench_ef(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
 
     let mut group = b.benchmark_group("vers elias fano");
-    for l in [2 << 8, 2 << 10, 2 << 12, 2 << 14, 2 << 16, 2 << 18, 2 << 20] {
+    for l in [
+        1 << 8,
+        1 << 10,
+        1 << 12,
+        1 << 14,
+        1 << 16,
+        1 << 18,
+        1 << 20,
+        1 << 22,
+        1 << 24,
+        1 << 26,
+    ] {
         let mut sequence = thread_rng()
             .sample_iter(Standard)
             .take(l)

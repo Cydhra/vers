@@ -4,6 +4,19 @@ use rand::distributions::{Distribution, Uniform};
 use rand::prelude::ThreadRng;
 use vers::{RsVec, RsVectorBuilder};
 
+pub const SIZES: [usize; 10] = [
+    1 << 8,
+    1 << 10,
+    1 << 12,
+    1 << 14,
+    1 << 16,
+    1 << 18,
+    1 << 20,
+    1 << 22,
+    1 << 24,
+    1 << 26,
+];
+
 pub fn construct_vers_vec(rng: &mut ThreadRng, len: usize) -> RsVec {
     let sample = Uniform::new(0, u64::MAX);
 
