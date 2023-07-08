@@ -5,30 +5,19 @@ use std::mem::size_of;
 use crate::rmq::small_naive::SmallNaiveRmq;
 
 /// Size of the blocks the data is split into. One block is indexable with a u8, hence its size.
-const BLOCK_SIZE: usize = 256;
+const BLOCK_SIZE: usize = 128;
 
 /// A constant size small bitvector that supports rank0 and select0 specifically for the RMQ
 /// structure
-struct SmallBitVector(u64, u64, u64, u64);
+struct SmallBitVector(u128);
 
 impl SmallBitVector {
     /// Calculates the rank0 of the bitvector up to the i-th bit by masking out the bits after i
     /// and counting the ones of the bitwise-inverted bitvector.
     fn rank0(&self, i: usize) -> usize {
-        debug_assert!(i <= 256);
-        let mut result = 0;
-        let mut mask = ![(-1i64 << (i & 63)), 0][(i & !63 != 0) as usize] as u64;
-        result += (!self.0 & mask).count_ones() as usize;
-        mask = ![(-1i64 << (i.saturating_sub(64) & 63)), 0]
-            [(i.saturating_sub(64) & !63 != 0) as usize] as u64;
-        result += (!self.1 & mask).count_ones() as usize;
-        mask = ![(-1i64 << (i.saturating_sub(128) & 63)), 0]
-            [(i.saturating_sub(128) & !63 != 0) as usize] as u64;
-        result += (!self.2 & mask).count_ones() as usize;
-        mask = ![(-1i64 << (i.saturating_sub(192) & 63)), 0]
-            [(i.saturating_sub(192) & !63 != 0) as usize] as u64;
-        result += (!self.3 & mask).count_ones() as usize;
-        result
+        debug_assert!(i <= 128);
+        let mut mask = ![(-1i128 << (i & 127)), 0][(i == 128) as usize] as u128;
+        (!self.0 & mask).count_ones() as usize
     }
 
     fn select0(&self, rank: usize) -> usize {
@@ -37,40 +26,26 @@ impl SmallBitVector {
 
     #[target_feature(enable = "bmi2")]
     unsafe fn select0_impl(&self, mut rank: usize) -> usize {
-        let word = self.0;
+        let word = (self.0 & 0xFFFFFFFFFFFFFFFF) as u64;
         if (word.count_zeros() as usize) <= rank {
             rank -= word.count_zeros() as usize;
         } else {
             return _pdep_u64(1 << rank, !word).trailing_zeros() as usize;
         }
-        let word = self.1;
-        if (word.count_zeros() as usize) <= rank {
-            rank -= word.count_zeros() as usize;
-        } else {
-            return 64 + _pdep_u64(1 << rank, !word).trailing_zeros() as usize;
-        }
-        let word = self.2;
-        if (word.count_zeros() as usize) <= rank {
-            rank -= word.count_zeros() as usize;
-        } else {
-            return 128 + _pdep_u64(1 << rank, !word).trailing_zeros() as usize;
-        }
-
-        192 + _pdep_u64(1 << (rank % 64), !self.3).trailing_zeros() as usize
+        let word = (self.0 >> 64) as u64;
+        return 64 + _pdep_u64(1 << (rank % 64), !word).trailing_zeros() as usize;
     }
 
     fn set_bit(&mut self, i: usize) {
-        debug_assert!(i <= 256);
-        let mask = 1u64 << (i % 64);
-        if i < 64 {
-            self.0 |= mask;
-        } else if i < 128 {
-            self.1 |= mask;
-        } else if i < 192 {
-            self.2 |= mask;
-        } else {
-            self.3 |= mask;
-        }
+        debug_assert!(i <= 128);
+        let mask = 1u128 << i;
+        self.0 |= mask;
+    }
+}
+
+impl Default for SmallBitVector {
+    fn default() -> Self {
+        Self(0)
     }
 }
 
@@ -100,8 +75,8 @@ impl FastRmq {
         let mut blocks = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);
 
         data.chunks(BLOCK_SIZE).for_each(|block| {
-            let mut prefix_minima = SmallBitVector(0, 0, 0, 0);
-            let mut suffix_minima = SmallBitVector(0, 0, 0, 0);
+            let mut prefix_minima = SmallBitVector::default();
+            let mut suffix_minima = SmallBitVector::default();
 
             let mut prefix_minimum = block[0];
             let mut block_minimum = block[0];
@@ -238,11 +213,12 @@ impl FastRmq {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::RngCore;
+    use rand::{RngCore, SeedableRng};
+    use rand::rngs::StdRng;
 
     #[test]
     fn test_small_bit_vector_rank0() {
-        let mut sbv = SmallBitVector(0, 0, 0, 0);
+        let mut sbv = SmallBitVector::default();
         sbv.set_bit(1);
         sbv.set_bit(3);
         sbv.set_bit(64);
@@ -262,7 +238,7 @@ mod tests {
 
     #[test]
     fn test_small_bit_vector_select0() {
-        let mut sbv = SmallBitVector(0, 0, 0, 0);
+        let mut sbv = SmallBitVector::default();
         sbv.set_bit(1);
         sbv.set_bit(3);
         sbv.set_bit(64);
