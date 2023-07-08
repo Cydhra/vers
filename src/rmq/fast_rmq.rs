@@ -107,15 +107,15 @@ impl FastRmq {
             let mut block_minimum = block[0];
             let mut block_minimum_index = 0u8;
 
-            for i in 1..block.len() {
-                if block[i] < prefix_minimum {
-                    prefix_minimum = block[i];
+            for (i, elem) in block.iter().enumerate().skip(1) {
+                if *elem < prefix_minimum {
+                    prefix_minimum = *elem;
                 } else {
                     prefix_minima.set_bit(i);
                 }
 
-                if block[i] < block_minimum {
-                    block_minimum = block[i];
+                if *elem < block_minimum {
+                    block_minimum = *elem;
                     block_minimum_index = i as u8;
                 }
             }
@@ -207,14 +207,14 @@ impl FastRmq {
 
             min_by(
                 min_by(partial_block_i_min, partial_block_j_min, |&a, &b| {
-                    self.data[a as usize].cmp(&self.data[b as usize])
+                    self.data[a].cmp(&self.data[b])
                 }),
                 min_block_index,
-                |&a, &b| self.data[a as usize].cmp(&self.data[b as usize]),
+                |&a, &b| self.data[a].cmp(&self.data[b]),
             )
         } else {
             min_by(partial_block_i_min, partial_block_j_min, |&a, &b| {
-                self.data[a as usize].cmp(&self.data[b as usize])
+                self.data[a].cmp(&self.data[b])
             })
         }
     }
