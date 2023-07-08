@@ -3,24 +3,15 @@ use rand::distributions::{Distribution, Standard, Uniform};
 use rand::{thread_rng, Rng};
 use vers::EliasFanoVec;
 
+mod common;
+
 fn bench_ef(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
 
     let mut group = b.benchmark_group("vers elias fano");
     group.plot_config(common::plot_config());
 
-    for l in [
-        1 << 8,
-        1 << 10,
-        1 << 12,
-        1 << 14,
-        1 << 16,
-        1 << 18,
-        1 << 20,
-        1 << 22,
-        1 << 24,
-        1 << 26,
-    ] {
+    for l in common::SIZES {
         let mut sequence = thread_rng()
             .sample_iter(Standard)
             .take(l)
