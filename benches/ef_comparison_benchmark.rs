@@ -8,6 +8,8 @@ mod common;
 
 fn bench_ef(b: &mut Criterion) {
     let mut group = b.benchmark_group("random-access");
+    group.plot_config(common::plot_config());
+
     let mut rng = rand::thread_rng();
 
     for l in common::SIZES {
@@ -43,6 +45,8 @@ fn bench_ef(b: &mut Criterion) {
     group.finish();
 
     let mut group = b.benchmark_group("in-order access");
+    group.plot_config(common::plot_config());
+
     for l in [2 << 8, 2 << 10, 2 << 12, 2 << 14, 2 << 16, 2 << 18, 2 << 20] {
         let mut sequence = thread_rng()
             .sample_iter(Standard)

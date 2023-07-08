@@ -7,6 +7,8 @@ fn bench_ef(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
 
     let mut group = b.benchmark_group("vers elias fano");
+    group.plot_config(common::plot_config());
+
     for l in [
         1 << 8,
         1 << 10,

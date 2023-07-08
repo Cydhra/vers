@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use criterion::{Criterion, PlotConfiguration};
 use rand::distributions::{Distribution, Uniform};
 use rand::prelude::ThreadRng;
 use vers::{RsVec, RsVectorBuilder};
@@ -37,4 +38,8 @@ pub fn fill_random_vec(rng: &mut ThreadRng, len: usize) -> Vec<u64> {
     }
 
     vec
+}
+
+pub fn plot_config() -> PlotConfiguration {
+    PlotConfiguration::default().summary_scale(criterion::AxisScale::Logarithmic)
 }

@@ -66,6 +66,7 @@ fn compare_ranks(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
 
     let mut group = b.benchmark_group("rank");
+    group.plot_config(common::plot_config());
 
     for l in common::SIZES {
         let vers_vec = common::construct_vers_vec(&mut rng, l);
@@ -137,6 +138,8 @@ fn compare_ranks(b: &mut Criterion) {
     group.finish();
 
     let mut group = b.benchmark_group("select");
+    group.plot_config(common::plot_config());
+
     for l in common::SIZES {
         let vers_vec = common::construct_vers_vec(&mut rng, l);
         let rsdict = construct_rsdict_vec(&mut rng, l);

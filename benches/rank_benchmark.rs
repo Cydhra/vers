@@ -7,6 +7,8 @@ fn bench_rank(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
 
     let mut group = b.benchmark_group("vers rank");
+    group.plot_config(common::plot_config());
+
     for l in common::SIZES {
         let bit_vec = common::construct_vers_vec(&mut rng, l);
         let sample = Uniform::new(0, bit_vec.len());
