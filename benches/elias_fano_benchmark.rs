@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use rand::distributions::{Distribution, Standard, Uniform};
 use rand::{thread_rng, Rng};
-use vers::{EliasFanoVec, FastBitVector};
+use vers::EliasFanoVec;
 
 fn bench_ef(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
@@ -13,7 +13,7 @@ fn bench_ef(b: &mut Criterion) {
             .take(l)
             .collect::<Vec<u64>>();
         sequence.sort_unstable();
-        let ef_vec = EliasFanoVec::<FastBitVector>::new(&sequence);
+        let ef_vec = EliasFanoVec::new(&sequence);
 
         let pred_sample = Uniform::new(ef_vec.get(0), u64::MAX);
 

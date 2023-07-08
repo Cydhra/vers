@@ -1,4 +1,4 @@
-use super::{BuildingStrategy, RsVector, WORD_SIZE};
+use super::WORD_SIZE;
 use crate::util::unroll;
 use crate::BitVec;
 use core::arch::x86_64::_pdep_u64;
@@ -52,9 +52,9 @@ struct SelectSuperBlockDescriptor {
 /// A bitvector that supports constant-time rank and select queries and is optimized for fast queries.
 /// The bitvector is stored as a vector of `u64`s. The bit-vector stores meta-data for constant-time
 /// rank and select queries, which takes sub-linear additional space. The space overhead is
-/// 32 bytes per 512 bytes of user data (6.25%), plus 36 bytes constant overhead.
+/// 32 bytes per 512 bytes of user data (6.25%).
 #[derive(Clone, Debug)]
-pub struct FastBitVector {
+pub struct RsVec {
     data: Vec<u64>,
     len: usize,
     blocks: Vec<BlockDescriptor>,
@@ -62,8 +62,7 @@ pub struct FastBitVector {
     select_blocks: Vec<SelectSuperBlockDescriptor>,
 }
 
-impl FastBitVector {
-    // todo non-popcount implementation as opt-in feature
+impl RsVec {
     #[target_feature(enable = "popcnt")]
     unsafe fn naive_rank0(&self, pos: usize) -> usize {
         self.rank(true, pos)
@@ -246,34 +245,53 @@ impl FastBitVector {
             )
             .trailing_zeros() as usize
     }
-}
 
-impl RsVector for FastBitVector {
-    fn rank0(&self, pos: usize) -> usize {
+    /// Return the 0-rank of the bit at the given position. The 0-rank is the number of
+    /// 0-bits in the vector up to but excluding the bit at the given position.
+    ///
+    /// # Parameters
+    /// - `pos`: The position of the bit to return the rank of.
+    pub fn rank0(&self, pos: usize) -> usize {
         unsafe { self.naive_rank0(pos) }
     }
 
-    fn rank1(&self, pos: usize) -> usize {
+    /// Return the 1-rank of the bit at the given position. The 1-rank is the number of
+    /// 1-bits in the vector up to but excluding the bit at the given position.
+    ///
+    /// # Parameters
+    /// - `pos`: The position of the bit to return the rank of.
+    pub fn rank1(&self, pos: usize) -> usize {
         unsafe { self.naive_rank1(pos) }
     }
 
-    fn select0(&self, rank: usize) -> usize {
+    /// Return the position of the 0-bit with the given rank. See `rank0`.
+    pub fn select0(&self, rank: usize) -> usize {
         unsafe { self.bmi_select0(rank) }
     }
 
-    fn select1(&self, rank: usize) -> usize {
+    /// Return the position of the 1-bit with the given rank. See `rank1`.
+    pub fn select1(&self, rank: usize) -> usize {
         unsafe { self.bmi_select1(rank) }
     }
 
-    fn len(&self) -> usize {
+    /// Return the length of the vector, i.e. the number of bits it contains.
+    pub fn len(&self) -> usize {
         self.len
     }
 
-    fn get(&self, pos: usize) -> u64 {
+    /// Return whether the vector is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Return the bit at the given position within a u64 word. The bit takes the least significant
+    /// bit of the returned u64 word.
+    pub fn get(&self, pos: usize) -> u64 {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
     }
 
-    fn heap_size(&self) -> usize {
+    /// Returns the number of bytes on the heap for this vector.
+    pub fn heap_size(&self) -> usize {
         self.data.len() * size_of::<u64>()
             + self.blocks.len() * size_of::<BlockDescriptor>()
             + self.super_blocks.len() * size_of::<SuperBlockDescriptor>()
@@ -281,14 +299,70 @@ impl RsVector for FastBitVector {
     }
 }
 
-impl BuildingStrategy for FastBitVector {
-    type Vector = FastBitVector;
+/// A builder for `FastBitVector`. This is used to efficiently construct a `BitVector` by appending
+/// bits to it. Once all bits have been appended, the `BitVector` can be built using the `build`
+/// method. If the number of bits to be appended is known in advance, it is recommended to use
+/// `with_capacity` to avoid re-allocations. If bits are already available in little endian u64
+/// words, those words can be appended using `append_word`.
+#[derive(Clone, Debug)]
+pub struct RsVectorBuilder {
+    vec: BitVec,
+}
 
-    fn from_bit_vec(mut vec: BitVec) -> FastBitVector {
+impl Default for RsVectorBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl RsVectorBuilder {
+    /// Create a new empty `BitVectorBuilder`.
+    #[must_use]
+    pub fn new() -> RsVectorBuilder {
+        RsVectorBuilder { vec: BitVec::new() }
+    }
+
+    /// Create a new empty `BitVectorBuilder` with the specified initial capacity to avoid
+    /// re-allocations. The capacity is measured in bits
+    #[must_use]
+    pub fn with_capacity(capacity: usize) -> RsVectorBuilder {
+        RsVectorBuilder {
+            vec: BitVec::with_capacity(capacity),
+        }
+    }
+
+    /// Append a bit to the vector.
+    pub fn append_bit<T>(&mut self, bit: T)
+    where
+        T: Into<u64>,
+    {
+        self.vec.append_bit(bit.into());
+    }
+
+    /// Append a word to the vector. The word is assumed to be in little endian, i.e. the least
+    /// significant bit is the first bit.
+    pub fn append_word(&mut self, word: u64) {
+        self.vec.append_word(word);
+    }
+}
+
+/// A trait to be implemented for each bit vector type to specify how it is built from a
+/// `BitVectorBuilder`.
+impl RsVectorBuilder {
+    /// Build the `BitVector` from all bits that have been appended so far. This will consume the
+    /// `BitVectorBuilder`.
+    #[must_use]
+    pub fn build(self) -> RsVec {
+        Self::from_bit_vec(self.vec)
+    }
+
+    /// Build a `BitVector` from a `BitVec`. This will consume the `BitVec`.
+    #[must_use]
+    pub fn from_bit_vec(mut vec: BitVec) -> RsVec {
         // Construct the block descriptor meta data. Each block descriptor contains the number of
         // zeros in the super-block, up to but excluding the block.
-        let mut blocks = Vec::with_capacity(vec.len / BLOCK_SIZE + 1);
-        let mut super_blocks = Vec::with_capacity(vec.len / SUPER_BLOCK_SIZE + 1);
+        let mut blocks = Vec::with_capacity(vec.len() / BLOCK_SIZE + 1);
+        let mut super_blocks = Vec::with_capacity(vec.len() / SUPER_BLOCK_SIZE + 1);
         let mut select_blocks = Vec::new();
 
         // sentinel value
@@ -358,7 +432,7 @@ impl BuildingStrategy for FastBitVector {
             vec.data.push(0);
         }
 
-        FastBitVector {
+        RsVec {
             data: vec.data,
             len: vec.len,
             blocks,
@@ -378,7 +452,7 @@ mod tests {
 
     #[test]
     fn test_append_bit() {
-        let mut bv = RsVectorBuilder::<FastBitVector>::new();
+        let mut bv = RsVectorBuilder::new();
         bv.append_bit(0u8);
         bv.append_bit(1u8);
         bv.append_bit(1u8);
@@ -389,7 +463,7 @@ mod tests {
 
     #[test]
     fn test_random_data_rank() {
-        let mut bv = RsVectorBuilder::<FastBitVector>::with_capacity(LENGTH);
+        let mut bv = RsVectorBuilder::with_capacity(LENGTH);
         let mut rng = StdRng::from_seed([
             0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4,
             5, 6, 7,
@@ -434,61 +508,150 @@ mod tests {
 
     #[test]
     fn test_append_bit_long() {
-        let bv = RsVectorBuilder::<FastBitVector>::new();
-        crate::bit_vec::common_tests::test_append_bit_long(bv, SUPER_BLOCK_SIZE);
+        let mut bv = RsVectorBuilder::new();
+        let len = SUPER_BLOCK_SIZE + 1;
+        for _ in 0..len {
+            bv.append_bit(0u8);
+            bv.append_bit(1u8);
+        }
+
+        let bv = bv.build();
+
+        assert_eq!(bv.len(), len * 2);
+        assert_eq!(bv.rank0(2 * len - 1), len);
+        assert_eq!(bv.rank1(2 * len - 1), len - 1);
     }
 
     #[test]
     fn test_rank() {
-        let bv = RsVectorBuilder::<FastBitVector>::new();
-        crate::bit_vec::common_tests::test_rank(bv);
+        let mut bv = RsVectorBuilder::new();
+        bv.append_bit(0u8);
+        bv.append_bit(1u8);
+        bv.append_bit(1u8);
+        bv.append_bit(0u8);
+        bv.append_bit(1u8);
+        bv.append_bit(1u8);
+        let bv = bv.build();
+
+        // first bit must always have rank 0
+        assert_eq!(bv.rank0(0), 0);
+        assert_eq!(bv.rank1(0), 0);
+
+        assert_eq!(bv.rank1(2), 1);
+        assert_eq!(bv.rank1(3), 2);
+        assert_eq!(bv.rank1(4), 2);
+        assert_eq!(bv.rank0(3), 1);
     }
 
     #[test]
     fn test_multi_words_rank() {
-        let bv = RsVectorBuilder::<FastBitVector>::new();
-        crate::bit_vec::common_tests::test_multi_words_rank(bv);
+        let mut bv = RsVectorBuilder::new();
+        bv.append_word(0);
+        bv.append_bit(0u8);
+        bv.append_bit(1u8);
+        bv.append_bit(1u8);
+        let bv = bv.build();
+
+        assert_eq!(bv.rank0(63), 63);
+        assert_eq!(bv.rank0(64), 64);
+        assert_eq!(bv.rank0(65), 65);
+        assert_eq!(bv.rank0(66), 65);
     }
 
     #[test]
     fn test_only_zeros_rank() {
-        let bv = RsVectorBuilder::<FastBitVector>::new();
-        crate::bit_vec::common_tests::test_only_zeros_rank(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+        let mut bv = RsVectorBuilder::new();
+        for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
+            bv.append_word(0);
+        }
+        bv.append_bit(0u8);
+        let bv = bv.build();
+
+        assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE + 1);
+
+        for i in 0..bv.len() {
+            assert_eq!(bv.rank0(i), i);
+            assert_eq!(bv.rank1(i), 0);
+        }
     }
 
     #[test]
     fn test_only_ones_rank() {
-        let bv = RsVectorBuilder::<FastBitVector>::new();
-        crate::bit_vec::common_tests::test_only_ones_rank(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+        let mut bv = RsVectorBuilder::new();
+        for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
+            bv.append_word(u64::MAX);
+        }
+        bv.append_bit(1u8);
+        let bv = bv.build();
+
+        assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE + 1);
+
+        for i in 0..bv.len() {
+            assert_eq!(bv.rank0(i), 0);
+            assert_eq!(bv.rank1(i), i);
+        }
     }
 
     #[test]
     fn test_simple_select() {
-        let bv = RsVectorBuilder::<FastBitVector>::new();
-        crate::bit_vec::common_tests::test_simple_select(bv);
+        let mut bv = RsVectorBuilder::new();
+        bv.append_word(0b10110);
+        let bv = bv.build();
+        assert_eq!(bv.select0(0), 0);
+        assert_eq!(bv.select1(1), 2);
+        assert_eq!(bv.select0(1), 3);
     }
 
     #[test]
     fn test_multi_words_select() {
-        let bv = RsVectorBuilder::<FastBitVector>::new();
-        crate::bit_vec::common_tests::test_multi_words_select(bv);
+        let mut bv = RsVectorBuilder::new();
+        bv.append_word(0);
+        bv.append_word(0);
+        bv.append_word(0b10110);
+        let bv = bv.build();
+        assert_eq!(bv.select1(0), 129);
+        assert_eq!(bv.select1(1), 130);
+        assert_eq!(bv.select0(32), 32);
+        assert_eq!(bv.select0(128), 128);
+        assert_eq!(bv.select0(129), 131);
     }
 
     #[test]
     fn test_only_zeros_select() {
-        let bv = RsVectorBuilder::<FastBitVector>::new();
-        crate::bit_vec::common_tests::test_only_zeros_select(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+        let mut bv = RsVectorBuilder::new();
+        for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
+            bv.append_word(0);
+        }
+        bv.append_bit(0u8);
+        let bv = bv.build();
+
+        assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE + 1);
+
+        for i in 0..bv.len() {
+            assert_eq!(bv.select0(i), i);
+        }
     }
 
     #[test]
     fn test_only_ones_select() {
-        let bv = RsVectorBuilder::<FastBitVector>::new();
-        crate::bit_vec::common_tests::test_only_ones_select(bv, SUPER_BLOCK_SIZE, WORD_SIZE);
+        let mut bv = RsVectorBuilder::new();
+
+        for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
+            bv.append_word(u64::MAX);
+        }
+        bv.append_bit(1u8);
+        let bv = bv.build();
+
+        assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE + 1);
+
+        for i in 0..bv.len() {
+            assert_eq!(bv.select1(i), i);
+        }
     }
 
     #[test]
     fn random_data_select() {
-        let mut bv = RsVectorBuilder::<FastBitVector>::with_capacity(LENGTH);
+        let mut bv = RsVectorBuilder::with_capacity(LENGTH);
         let mut rng = StdRng::from_seed([
             0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4,
             5, 6, 7,

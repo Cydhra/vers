@@ -1,6 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use rand::distributions::{Distribution, Uniform};
-use vers::RsVector;
 
 mod common;
 

@@ -7,7 +7,6 @@ use rand::distributions::{Distribution, Standard, Uniform};
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use rsdict::RsDict;
-use vers::RsVector;
 use RankSelect as BioRsVec;
 
 mod common;

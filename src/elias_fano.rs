@@ -1,16 +1,16 @@
-use crate::bit_vec::{BitVec, BuildingStrategy};
-use crate::RsVector;
+use crate::BitVec;
+use crate::{RsVec, RsVectorBuilder};
 use std::cmp::max;
 
-pub struct EliasFanoVec<B: RsVector> {
-    upper_vec: B,
+pub struct EliasFanoVec {
+    upper_vec: RsVec,
     lower_vec: BitVec,
     universe_zero: u64,
     universe_max: u64,
     lower_len: usize,
 }
 
-impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
+impl EliasFanoVec {
     /// Create a new Elias-Fano vector by compressing the given data. The data must be sorted in
     /// ascending order. The resulting vector is immutable, which will be exploited by limiting the
     /// word length of elements to the minimum required to represent the universe bound.
@@ -49,7 +49,7 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
         }
 
         Self {
-            upper_vec: B::from_bit_vec(upper_vec),
+            upper_vec: RsVectorBuilder::from_bit_vec(upper_vec),
             lower_vec,
             universe_zero,
             universe_max: data[data.len() - 1],
@@ -154,12 +154,12 @@ impl<B: RsVector + BuildingStrategy<Vector = B>> EliasFanoVec<B> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{EliasFanoVec, FastBitVector};
+    use crate::EliasFanoVec;
     use rand::{thread_rng, Rng};
 
     #[test]
     fn test_elias_fano() {
-        let ef = EliasFanoVec::<FastBitVector>::new(&vec![0, 1, 4, 7]);
+        let ef = EliasFanoVec::new(&vec![0, 1, 4, 7]);
 
         assert_eq!(ef.len(), 4);
         assert_eq!(ef.get(0), 0);
@@ -178,21 +178,21 @@ mod tests {
     // but the result is the last element before the bounds.
     #[test]
     fn test_edge_case() {
-        let ef = EliasFanoVec::<FastBitVector>::new(&vec![0, 1, u64::MAX - 10, u64::MAX - 1]);
+        let ef = EliasFanoVec::new(&vec![0, 1, u64::MAX - 10, u64::MAX - 1]);
         assert_eq!(ef.pred(u64::MAX - 11), 1);
     }
 
     // test a query that is way larger than any element in the vector
     #[test]
     fn test_large_query() {
-        let ef = EliasFanoVec::<FastBitVector>::new(&vec![0, 1, 2, 3]);
+        let ef = EliasFanoVec::new(&vec![0, 1, 2, 3]);
         assert_eq!(ef.pred(u64::MAX), 3);
     }
 
     // test whether duplicates are handled correctly by predecessor queries and reconstruction
     #[test]
     fn test_duplicates() {
-        let ef = EliasFanoVec::<FastBitVector>::new(&vec![0, 0, 0, 1, 1, 1, 2, 2, 2]);
+        let ef = EliasFanoVec::new(&vec![0, 0, 0, 1, 1, 1, 2, 2, 2]);
         assert_eq!(ef.pred(0), 0);
         assert_eq!(ef.pred(1), 1);
         assert_eq!(ef.pred(2), 2);
@@ -214,7 +214,7 @@ mod tests {
         }
         seq.sort_unstable();
 
-        let ef = EliasFanoVec::<FastBitVector>::new(&seq);
+        let ef = EliasFanoVec::new(&seq);
 
         assert_eq!(ef.len(), seq.len());
 

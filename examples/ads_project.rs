@@ -5,7 +5,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::time::Instant;
 use std::{env, io};
 use vers::rmq::fast_rmq::FastRmq;
-use vers::{EliasFanoVec, FastBitVector};
+use vers::{EliasFanoVec, RsVec};
 
 fn main() {
     let mut args = env::args().skip(1);
@@ -53,7 +53,7 @@ fn handle_predecessor_benchmark(
     }
 
     let start = Instant::now();
-    let elias_fano_vec = EliasFanoVec::<FastBitVector>::new(&pred_buffer);
+    let elias_fano_vec = EliasFanoVec::new(&pred_buffer);
 
     for req in req_buffer.iter_mut() {
         *req = elias_fano_vec.pred(*req);
