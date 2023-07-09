@@ -213,8 +213,8 @@ impl FastRmq {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{RngCore, SeedableRng};
     use rand::rngs::StdRng;
+    use rand::{RngCore, SeedableRng};
 
     #[test]
     fn test_small_bit_vector_rank0() {

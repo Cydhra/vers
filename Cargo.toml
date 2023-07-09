@@ -34,6 +34,10 @@ name = "select_benchmark"
 harness = false
 
 [[bench]]
+name = "worst_select_benchmark"
+harness = false
+
+[[bench]]
 name = "elias_fano_benchmark"
 harness = false
 
@@ -58,4 +62,5 @@ lto = true
 #debug = true
 
 [profile.release]
-debug = true
+#lto = true
+#debug = true
