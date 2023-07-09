@@ -38,6 +38,10 @@ name = "elias_fano_benchmark"
 harness = false
 
 [[bench]]
+name = "worst_ef_benchmark"
+harness = false
+
+[[bench]]
 name = "ef_comparison_benchmark"
 harness = false
 
@@ -50,7 +54,8 @@ name = "rmq_benchmark"
 harness = false
 
 [profile.bench]
-debug = true
+lto = true
+#debug = true
 
 [profile.release]
 debug = true

@@ -6,19 +6,18 @@ use vers::EliasFanoVec;
 mod common;
 
 fn bench_ef(b: &mut Criterion) {
-    let mut rng = rand::thread_rng();
+    let mut rng = thread_rng();
 
     let mut group = b.benchmark_group("vers elias fano");
     group.plot_config(common::plot_config());
 
     for l in common::SIZES {
-        let mut sequence = thread_rng()
+        let mut sequence = (&mut rng)
             .sample_iter(Standard)
             .take(l)
             .collect::<Vec<u64>>();
         sequence.sort_unstable();
         let ef_vec = EliasFanoVec::new(&sequence);
-
         let pred_sample = Uniform::new(ef_vec.get(0), u64::MAX);
 
         group.bench_with_input(BenchmarkId::new("predecessor", l), &l, |b, _| {

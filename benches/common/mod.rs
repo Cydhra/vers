@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use criterion::{Criterion, PlotConfiguration};
+use criterion::PlotConfiguration;
 use rand::distributions::{Distribution, Uniform};
 use rand::prelude::ThreadRng;
 use vers::{RsVec, RsVectorBuilder};
