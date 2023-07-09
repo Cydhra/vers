@@ -21,7 +21,7 @@ fn bench_ef(b: &mut Criterion) {
         // uniformly distributed sequence
         let bit_vec = common::construct_vers_vec(&mut rng, l);
         group.bench_with_input(BenchmarkId::new("select uniform", l), &l, |b, _| {
-            b.iter(|| black_box(bit_vec.select1(1 << 13 - 1)))
+            b.iter(|| black_box(bit_vec.select1((1 << 13) - 1)))
         });
         drop(bit_vec);
 
@@ -31,16 +31,16 @@ fn bench_ef(b: &mut Criterion) {
         for _ in 0..(1usize << 13) / 64 - 1 {
             bit_vec_builder.append_word(u64::MAX);
         }
-        bit_vec_builder.append_word(u64::MAX - 1);
+        bit_vec_builder.append_word(u64::MAX >> 1);
 
         for _ in 0..(l - (1 << 13)) / 64 - 1 {
             bit_vec_builder.append_word(0);
         }
         bit_vec_builder.append_word(2);
-
         let bit_vec = bit_vec_builder.build();
+
         group.bench_with_input(BenchmarkId::new("select bad", l), &l, |b, _| {
-            b.iter(|| black_box(bit_vec.select1(1 << 13 - 1)))
+            b.iter(|| black_box(bit_vec.select1((1 << 13) - 1)))
         });
     }
     group.finish();

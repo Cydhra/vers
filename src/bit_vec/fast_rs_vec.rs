@@ -138,13 +138,17 @@ impl RsVec {
         {
             let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0;
 
-            while super_block < upper_bound {
-                let middle = (super_block + upper_bound) / 2;
-                if self.super_blocks[super_block + 1].zeros <= rank {
+            while super_block < upper_bound - 1 {
+                let middle = super_block + ((upper_bound - super_block) >> 1);
+                if self.super_blocks[middle].zeros <= rank {
                     super_block = middle;
                 } else {
                     upper_bound = middle;
                 }
+            }
+
+            if self.super_blocks[super_block].zeros <= rank {
+                super_block += 1;
             }
         } else {
             // linear search for super block that contains the rank
@@ -212,15 +216,18 @@ impl RsVec {
             let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
 
             // binary search for super block that contains the rank
-            while super_block < upper_bound {
-                let middle = (super_block + upper_bound) / 2;
-                if ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
-                    <= rank
+            while super_block < upper_bound - 1 {
+                let middle = super_block + ((upper_bound - super_block) >> 1);
+                if ((middle + 1) * SUPER_BLOCK_SIZE - self.super_blocks[middle].zeros) <= rank
                 {
                     super_block = middle;
                 } else {
                     upper_bound = middle;
                 }
+            }
+
+            if ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block].zeros) <= rank {
+                super_block += 1;
             }
         } else {
             // linear search for super block that contains the rank
