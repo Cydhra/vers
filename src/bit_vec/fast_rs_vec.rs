@@ -133,11 +133,26 @@ impl RsVec {
     unsafe fn impl_select0(&self, mut rank: usize) -> usize {
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_0;
 
-        // linear search for super block that contains the rank
-        while self.super_blocks.len() > (super_block + 1)
-            && self.super_blocks[super_block + 1].zeros <= rank
+        if rank / SELECT_BLOCK_SIZE + 1 < self.select_blocks.len()
+            && self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0 - super_block > 8
         {
-            super_block += 1;
+            let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0;
+
+            while super_block < upper_bound {
+                let middle = (super_block + upper_bound) / 2;
+                if self.super_blocks[super_block + 1].zeros <= rank {
+                    super_block = middle;
+                } else {
+                    upper_bound = middle;
+                }
+            }
+        } else {
+            // linear search for super block that contains the rank
+            while self.super_blocks.len() > (super_block + 1)
+                && self.super_blocks[super_block + 1].zeros <= rank
+            {
+                super_block += 1;
+            }
         }
 
         rank -= self.super_blocks[super_block].zeros;
@@ -191,12 +206,30 @@ impl RsVec {
     unsafe fn impl_select1(&self, mut rank: usize) -> usize {
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
 
-        // linear search for super block that contains the rank
-        while self.super_blocks.len() > (super_block + 1)
-            && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
-                <= rank
+        if rank / SELECT_BLOCK_SIZE + 1 < self.select_blocks.len()
+            && self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1 - super_block > 8
         {
-            super_block += 1;
+            let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
+
+            // binary search for super block that contains the rank
+            while super_block < upper_bound {
+                let middle = (super_block + upper_bound) / 2;
+                if ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
+                    <= rank
+                {
+                    super_block = middle;
+                } else {
+                    upper_bound = middle;
+                }
+            }
+        } else {
+            // linear search for super block that contains the rank
+            while self.super_blocks.len() > (super_block + 1)
+                && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
+                    <= rank
+            {
+                super_block += 1;
+            }
         }
 
         rank -= (super_block) * SUPER_BLOCK_SIZE - self.super_blocks[super_block].zeros;
