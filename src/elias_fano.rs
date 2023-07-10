@@ -340,7 +340,7 @@ mod tests {
         for _ in 0..1000 {
             let elem = (&mut rng).sample(query_distribution);
             let supposed = sequence.partition_point(|&n| n < elem) - 1;
-            bad_ef_vec.pred(elem);
+            assert_eq!(bad_ef_vec.pred(elem), sequence[supposed]);
         }
     }
 }
