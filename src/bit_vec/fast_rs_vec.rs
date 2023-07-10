@@ -133,29 +133,33 @@ impl RsVec {
     unsafe fn impl_select0(&self, mut rank: usize) -> usize {
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_0;
 
-        if rank / SELECT_BLOCK_SIZE + 1 < self.select_blocks.len()
-            && self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0 - super_block > 8
+        if self.super_blocks.len() > (super_block + 1)
+            && self.super_blocks[super_block + 1].zeros <= rank
         {
-            let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0;
-
-            while super_block < upper_bound - 1 {
-                let middle = super_block + ((upper_bound - super_block) >> 1);
-                if self.super_blocks[middle].zeros <= rank {
-                    super_block = middle;
-                } else {
-                    upper_bound = middle;
-                }
-            }
-
-            if self.super_blocks[super_block].zeros <= rank {
-                super_block += 1;
-            }
-        } else {
-            // linear search for super block that contains the rank
-            while self.super_blocks.len() > (super_block + 1)
-                && self.super_blocks[super_block + 1].zeros <= rank
+            if rank / SELECT_BLOCK_SIZE + 1 < self.select_blocks.len()
+                && self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0 - super_block > 8
             {
-                super_block += 1;
+                let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0;
+
+                while super_block < upper_bound - 1 {
+                    let middle = super_block + ((upper_bound - super_block) >> 1);
+                    if self.super_blocks[middle].zeros <= rank {
+                        super_block = middle;
+                    } else {
+                        upper_bound = middle;
+                    }
+                }
+
+                if self.super_blocks[super_block + 1].zeros <= rank {
+                    super_block += 1;
+                }
+            } else {
+                // linear search for super block that contains the rank
+                while self.super_blocks.len() > (super_block + 1)
+                    && self.super_blocks[super_block + 1].zeros <= rank
+                {
+                    super_block += 1;
+                }
             }
         }
 
@@ -210,32 +214,39 @@ impl RsVec {
     unsafe fn impl_select1(&self, mut rank: usize) -> usize {
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
 
-        if rank / SELECT_BLOCK_SIZE + 1 < self.select_blocks.len()
-            && self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1 - super_block > 8
+        if self.super_blocks.len() > (super_block + 1)
+            && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
+                <= rank
         {
-            let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
-
-            // binary search for super block that contains the rank
-            while super_block < upper_bound - 1 {
-                let middle = super_block + ((upper_bound - super_block) >> 1);
-                if ((middle + 1) * SUPER_BLOCK_SIZE - self.super_blocks[middle].zeros) <= rank
-                {
-                    super_block = middle;
-                } else {
-                    upper_bound = middle;
-                }
-            }
-
-            if ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block].zeros) <= rank {
-                super_block += 1;
-            }
-        } else {
-            // linear search for super block that contains the rank
-            while self.super_blocks.len() > (super_block + 1)
-                && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
-                    <= rank
+            if rank / SELECT_BLOCK_SIZE + 1 < self.select_blocks.len()
+                && self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1 - super_block > 8
             {
-                super_block += 1;
+                let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
+
+                // binary search for super block that contains the rank
+                while super_block < upper_bound - 1 {
+                    let middle = super_block + ((upper_bound - super_block) >> 1);
+                    if ((middle + 1) * SUPER_BLOCK_SIZE - self.super_blocks[middle].zeros) <= rank {
+                        super_block = middle;
+                    } else {
+                        upper_bound = middle;
+                    }
+                }
+
+                if ((super_block + 2) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
+                    <= rank
+                {
+                    super_block += 1;
+                }
+            } else {
+                // linear search for super block that contains the rank
+                while self.super_blocks.len() > (super_block + 1)
+                    && ((super_block + 1) * SUPER_BLOCK_SIZE
+                        - self.super_blocks[super_block + 1].zeros)
+                        <= rank
+                {
+                    super_block += 1;
+                }
             }
         }
 
