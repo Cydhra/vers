@@ -2,6 +2,9 @@ use crate::BitVec;
 use crate::{RsVec, RsVectorBuilder};
 use std::cmp::max;
 
+// TODO verify that switching from linear to binary search is actually faster
+const BIN_SEARCH_THRESHOLD: usize = 8;
+
 pub struct EliasFanoVec {
     upper_vec: RsVec,
     lower_vec: BitVec,
@@ -134,6 +137,41 @@ impl EliasFanoVec {
                     lower_candidate = next_candidate;
                 }
                 cursor += 1;
+
+                // if linear search takes too long, we can use select0 to find the next zero in the
+                // upper vector, and then use binary search
+                if cursor == BIN_SEARCH_THRESHOLD {
+                    let mut upper_bound = self.upper_vec.select0(upper + 1) - upper - 2;
+                    let mut lower_bound = lower_bound_lower_index + cursor - 1;
+
+                    // check if the upper bound is already the result we seek
+                    let upper_candidate = self
+                        .lower_vec
+                        .get_bits((upper_bound) * self.lower_len, self.lower_len);
+                    if upper_candidate <= lower {
+                        return (result_upper | upper_candidate) + self.universe_zero;
+                    }
+
+                    // binary search the largest element smaller than the query
+                    while lower_bound < upper_bound - 1 {
+                        let middle = lower_bound + ((upper_bound - lower_bound) >> 1);
+
+                        let middle_candidate = self
+                            .lower_vec
+                            .get_bits(middle * self.lower_len, self.lower_len);
+
+                        if middle_candidate > lower {
+                            upper_bound = middle;
+                        } else if middle_candidate == lower {
+                            return (result_upper | middle_candidate) + self.universe_zero;
+                        } else {
+                            lower_candidate = middle_candidate;
+                            lower_bound = middle;
+                        }
+                    }
+
+                    break;
+                }
             }
 
             (result_upper | lower_candidate) + self.universe_zero
@@ -155,6 +193,7 @@ impl EliasFanoVec {
 #[cfg(test)]
 mod tests {
     use crate::EliasFanoVec;
+    use rand::distributions::Uniform;
     use rand::{thread_rng, Rng};
 
     #[test]
