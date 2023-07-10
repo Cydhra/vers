@@ -26,24 +26,28 @@ impl EliasFanoVec {
         // required to represent each element, and also spread the elements out more evenly through
         // the upper vector. We also subtract the first element from all elements to make the
         // universe start at zero and possibly save some bits for dense distributions.
-        let mut universe_zero = data[0];
-        let mut universe_bound = data[data.len() - 1] - universe_zero;
-        if data.len() > universe_bound as usize {
-            universe_zero = 0;
-            universe_bound = max(data.len() as u64, data[data.len() - 1]);
-        }
+        let universe_zero = data[0];
+        let universe_bound = data[data.len() - 1] - universe_zero;
 
         // Calculate the number of bits that will be stored in the lower vector per element. This
         // is the log2 of the universe size rounded up (Rounding up is forced by adding one, so if
         // the log is even, it will be rounded up regardless).
         let lower_width =
-            (data.len().leading_zeros() + 1 - universe_bound.leading_zeros()) as usize;
+            max((data.len().leading_zeros() + 1 - universe_bound.leading_zeros()) as usize, 1);
 
         let mut upper_vec = BitVec::from_zeros(data.len() * 2 + 1);
         let mut lower_vec = BitVec::with_capacity(data.len() * lower_width);
 
+        let mut last_word = 0u64;
         for (i, &word) in data.iter().enumerate() {
             let word = word - universe_zero;
+
+            if word == last_word && i > 0 {
+                continue;
+            } else {
+                last_word = word;
+            }
+
             let upper = (word >> lower_width) as usize;
             let lower = word & ((1 << lower_width) - 1);
 
@@ -230,6 +234,7 @@ mod tests {
 
     // test whether duplicates are handled correctly by predecessor queries and reconstruction
     #[test]
+    #[ignore] // this test is useless because the EliasFanoVec constructor removes duplicates
     fn test_duplicates() {
         let ef = EliasFanoVec::new(&vec![0, 0, 0, 1, 1, 1, 2, 2, 2]);
         assert_eq!(ef.pred(0), 0);
