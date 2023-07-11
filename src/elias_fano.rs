@@ -39,10 +39,11 @@ impl EliasFanoVec {
         let mut lower_vec = BitVec::with_capacity(data.len() * lower_width);
 
         let mut last_word = 0u64;
-        for (i, &word) in data.iter().enumerate() {
+        let mut word_count = 0usize;
+        for &word in data.iter() {
             let word = word - universe_zero;
 
-            if word == last_word && i > 0 {
+            if word == last_word && word_count > 0 {
                 continue;
             } else {
                 last_word = word;
@@ -51,7 +52,8 @@ impl EliasFanoVec {
             let upper = (word >> lower_width) as usize;
             let lower = word & ((1 << lower_width) - 1);
 
-            upper_vec.flip_bit(upper + i + 1);
+            upper_vec.flip_bit(upper + word_count + 1);
+            word_count += 1;
             lower_vec.append_bits(lower, lower_width);
         }
 
