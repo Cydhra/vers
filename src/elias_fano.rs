@@ -32,8 +32,10 @@ impl EliasFanoVec {
         // Calculate the number of bits that will be stored in the lower vector per element. This
         // is the log2 of the universe size rounded up (Rounding up is forced by adding one, so if
         // the log is even, it will be rounded up regardless).
-        let lower_width =
-            max((data.len().leading_zeros() + 1 - universe_bound.leading_zeros()) as usize, 1);
+        let lower_width = max(
+            (data.len().leading_zeros() + 1 - universe_bound.leading_zeros()) as usize,
+            1,
+        );
 
         let mut upper_vec = BitVec::from_zeros(data.len() * 2 + 1);
         let mut lower_vec = BitVec::with_capacity(data.len() * lower_width);
@@ -283,6 +285,8 @@ mod tests {
         }
     }
 
+    // a test case that checks for correctness of the predecessor query in a
+    // clustered vector (i.e. a vector with large gaps between elements)
     #[test]
     fn test_clustered_ef() {
         let mut seq = Vec::with_capacity(4000);
@@ -320,6 +324,8 @@ mod tests {
         }
     }
 
+    // a randomized test case that checks for correctness of the predecessor query in a
+    // clustered vector (i.e. a vector with large gaps between elements)
     #[test]
     fn large_clustered_rng() {
         let mut rng = thread_rng();
