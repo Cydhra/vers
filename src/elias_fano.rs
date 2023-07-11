@@ -102,7 +102,7 @@ impl EliasFanoVec {
         let upper = (n >> self.lower_len) as usize;
         let lower = n & ((1 << self.lower_len) - 1);
 
-        // calculate the bounds within the lower vector where our predecessor can be found. Since
+        // calculate the lower bound within the lower vector where our predecessor can be found. Since
         // each bit-prefix in the universe has exactly one corresponding zero in the upper vector,
         // we can use select0 to find the start of the block of values with the same upper value.
         let lower_bound_upper_index = self.upper_vec.select0(upper);
@@ -346,7 +346,7 @@ mod tests {
         // query random values from the actual sequences, to force long searches in the lower vec
         for _ in 0..1000 {
             let elem = (&mut rng).sample(query_distribution);
-            let supposed = sequence.partition_point(|&n| n < elem) - 1;
+            let supposed = sequence.partition_point(|&n| n <= elem) - 1;
             assert_eq!(bad_ef_vec.pred(elem), sequence[supposed]);
         }
     }
