@@ -9,6 +9,7 @@ const BLOCK_SIZE: usize = 128;
 
 /// A constant size small bitvector that supports rank0 and select0 specifically for the RMQ
 /// structure
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 struct SmallBitVector(u128);
 
 impl SmallBitVector {
@@ -16,7 +17,7 @@ impl SmallBitVector {
     /// and counting the ones of the bitwise-inverted bitvector.
     fn rank0(&self, i: usize) -> usize {
         debug_assert!(i <= 128);
-        let mut mask = ![(-1i128 << (i & 127)), 0][(i == 128) as usize] as u128;
+        let mask = ![(-1i128 << (i & 127)), 0][(i == 128) as usize] as u128;
         (!self.0 & mask).count_ones() as usize
     }
 
@@ -33,19 +34,13 @@ impl SmallBitVector {
             return _pdep_u64(1 << rank, !word).trailing_zeros() as usize;
         }
         let word = (self.0 >> 64) as u64;
-        return 64 + _pdep_u64(1 << (rank % 64), !word).trailing_zeros() as usize;
+        64 + _pdep_u64(1 << (rank % 64), !word).trailing_zeros() as usize
     }
 
     fn set_bit(&mut self, i: usize) {
         debug_assert!(i <= 128);
         let mask = 1u128 << i;
         self.0 |= mask;
-    }
-}
-
-impl Default for SmallBitVector {
-    fn default() -> Self {
-        Self(0)
     }
 }
 
@@ -213,8 +208,7 @@ impl FastRmq {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::rngs::StdRng;
-    use rand::{RngCore, SeedableRng};
+    use rand::RngCore;
 
     #[test]
     fn test_small_bit_vector_rank0() {

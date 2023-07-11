@@ -178,7 +178,6 @@ impl RsVec {
 
         rank -= self.blocks[block_index].zeros as usize;
 
-        // todo non-bmi2 implementation as opt-in feature
         // linear search for word that contains the rank. Binary search is not possible here,
         // because we don't have accumulated popcounts for the words. We use pdep to find the
         // position of the rank-th zero bit in the word, if the word contains enough zeros, otherwise
@@ -267,7 +266,6 @@ impl RsVec {
         rank -= (block_index - block_at_super_block) * BLOCK_SIZE
             - self.blocks[block_index].zeros as usize;
 
-        // todo non-bmi2 implementation as opt-in feature
         // linear search for word that contains the rank. Binary search is not possible here,
         // because we don't have accumulated popcounts for the words. We use pdep to find the
         // position of the rank-th zero bit in the word, if the word contains enough zeros, otherwise
