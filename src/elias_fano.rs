@@ -2,8 +2,11 @@ use crate::BitVec;
 use crate::{RsVec, RsVectorBuilder};
 use std::cmp::max;
 
-// TODO verify that switching from linear to binary search is actually faster
-const BIN_SEARCH_THRESHOLD: usize = 8;
+/// We use linear search for small 1-blocks in the upper vector because it is generally more memory-
+/// friendly. But for large clusters this takes too long, so we switch to binary search.
+/// We use 4 because benchmarks suggested that this was the best trade-off between speed for average
+/// case and for worst case.
+const BIN_SEARCH_THRESHOLD: usize = 4;
 
 pub struct EliasFanoVec {
     upper_vec: RsVec,
@@ -20,9 +23,8 @@ impl EliasFanoVec {
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub fn new(data: &Vec<u64>) -> Self {
-        // calculate the largest element the vector needs to represent. If there are more elements
-        // in the vector than the largest element is able to represent, the length of the vector
-        // will be used instead. By limiting the universe size, we can limit the number of bits
+        // calculate the largest element the vector needs to represent.
+        // By limiting the universe size, we can limit the number of bits
         // required to represent each element, and also spread the elements out more evenly through
         // the upper vector. We also subtract the first element from all elements to make the
         // universe start at zero and possibly save some bits for dense distributions.
