@@ -59,6 +59,14 @@ impl EliasFanoVec {
             lower_vec.append_bits(lower, lower_width);
         }
 
+        // since we initialized the upper vector with zeros, we need to remove the extra zeros at
+        // the end, if we removed duplicates. We don't remove duplicates before the loop, because
+        // that would require an extra pass over the data and potentially large reallocations or
+        // at least cache misses.
+        if word_count < data.len() {
+            upper_vec.truncate(2 * data.len() + 1 - word_count);
+        }
+
         Self {
             upper_vec: RsVectorBuilder::from_bit_vec(upper_vec),
             lower_vec,

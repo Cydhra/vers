@@ -53,6 +53,14 @@ impl BitVec {
         self.len += 1;
     }
 
+    /// Drop the last n bits from the bit vector.
+    pub fn truncate(&mut self, n: usize) {
+        self.len -= n;
+        if self.len / WORD_SIZE > 0 {
+            self.data.truncate(self.len / WORD_SIZE);
+        }
+    }
+
     /// Append a bit from a quad-word. The least significant bit is appended to the bit vector.
     /// All other bits are ignored.
     pub fn append_bit(&mut self, bit: u64) {
