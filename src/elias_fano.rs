@@ -14,6 +14,7 @@ pub struct EliasFanoVec {
     universe_zero: u64,
     universe_max: u64,
     lower_len: usize,
+    len: usize,
 }
 
 impl EliasFanoVec {
@@ -31,15 +32,13 @@ impl EliasFanoVec {
         let universe_zero = data[0];
         let universe_bound = data[data.len() - 1] - universe_zero;
 
-        // Calculate the number of bits that will be stored in the lower vector per element. This
-        // is the log2 of the universe size rounded up (Rounding up is forced by adding one, so if
-        // the log is even, it will be rounded up regardless).
-        let lower_width = max(
-            (data.len().leading_zeros() + 1 - universe_bound.leading_zeros()) as usize,
-            1,
-        );
+        let log_n = ((data.len() + 2) as f64).log2().ceil() as usize;
+        let bits_per_number = (max(universe_bound, 2) as f64).log2().ceil() as usize;
+        let bits_for_upper_values = (max(data.len(), 2) as f64).log2().ceil() as usize;
+        let lower_width = max(bits_per_number, log_n) - bits_for_upper_values;
 
-        let mut upper_vec = BitVec::from_zeros(data.len() * 2 + 1);
+        let mut upper_vec =
+            BitVec::from_zeros(2 + data.len() + (universe_bound >> lower_width) as usize);
         let mut lower_vec = BitVec::with_capacity(data.len() * lower_width);
 
         let mut last_word = 0u64;
@@ -61,26 +60,19 @@ impl EliasFanoVec {
             lower_vec.append_bits(lower, lower_width);
         }
 
-        // since we initialized the upper vector with zeros, we need to remove the extra zeros at
-        // the end, if we removed duplicates. We don't remove duplicates before the loop, because
-        // that would require an extra pass over the data and potentially large reallocations or
-        // at least cache misses.
-        if word_count < data.len() {
-            upper_vec.truncate(2 * data.len() + 1 - word_count);
-        }
-
         Self {
             upper_vec: RsVectorBuilder::from_bit_vec(upper_vec),
             lower_vec,
             universe_zero,
             universe_max: data[data.len() - 1],
             lower_len: lower_width,
+            len: data.len(),
         }
     }
 
     /// Returns the number of elements in the vector.
     pub fn len(&self) -> usize {
-        self.lower_vec.len() / self.lower_len
+        self.len
     }
 
     /// Returns true if the vector is empty.
@@ -111,14 +103,14 @@ impl EliasFanoVec {
         let n = n - self.universe_zero;
 
         // split the query into the upper and lower part
-        let upper = (n >> self.lower_len) as usize;
-        let lower = n & ((1 << self.lower_len) - 1);
+        let upper_query = (n >> self.lower_len) as usize;
+        let lower_query = n & ((1 << self.lower_len) - 1);
 
         // calculate the lower bound within the lower vector where our predecessor can be found. Since
         // each bit-prefix in the universe has exactly one corresponding zero in the upper vector,
         // we can use select0 to find the start of the block of values with the same upper value.
-        let lower_bound_upper_index = self.upper_vec.select0(upper);
-        let lower_bound_lower_index = lower_bound_upper_index - upper;
+        let lower_bound_upper_index = self.upper_vec.select0(upper_query);
+        let lower_bound_lower_index = lower_bound_upper_index - upper_query;
 
         // get the first value from the lower vector that corresponds to the query prefix
         let mut lower_candidate = self
@@ -128,7 +120,7 @@ impl EliasFanoVec {
         // calculate the upper part of the result. This only works if the next value in the upper
         // vector is set, otherwise the there is no value in the entire vector with this bit-prefix,
         // and we need to search the largest prefix smaller than the query.
-        let result_upper = (upper << self.lower_len) as u64;
+        let result_upper = (upper_query << self.lower_len) as u64;
 
         // check if the next bit is set. If it is not, or if the result would be larger than the
         // query, we need to search for the block of values before the current prefix and return its
@@ -147,9 +139,9 @@ impl EliasFanoVec {
                 );
 
                 // if we found a value that is larger than the query, return the previous value
-                if next_candidate > lower {
+                if next_candidate > lower_query {
                     return (result_upper | lower_candidate) + self.universe_zero;
-                } else if next_candidate == lower {
+                } else if next_candidate == lower_query {
                     return (result_upper | next_candidate) + self.universe_zero;
                 } else {
                     lower_candidate = next_candidate;
@@ -159,16 +151,9 @@ impl EliasFanoVec {
                 // if linear search takes too long, we can use select0 to find the next zero in the
                 // upper vector, and then use binary search
                 if cursor == BIN_SEARCH_THRESHOLD {
-                    let mut upper_bound = self.upper_vec.select0(upper + 1) - upper - 2;
+                    let block_end = self.upper_vec.select0(upper_query + 1) - upper_query - 2;
+                    let mut upper_bound = block_end;
                     let mut lower_bound = lower_bound_lower_index + cursor - 1;
-
-                    // check if the upper bound is already the result we seek
-                    let upper_candidate = self
-                        .lower_vec
-                        .get_bits((upper_bound) * self.lower_len, self.lower_len);
-                    if upper_candidate <= lower {
-                        return (result_upper | upper_candidate) + self.universe_zero;
-                    }
 
                     // binary search the largest element smaller than the query
                     while lower_bound < upper_bound - 1 {
@@ -178,9 +163,9 @@ impl EliasFanoVec {
                             .lower_vec
                             .get_bits(middle * self.lower_len, self.lower_len);
 
-                        if middle_candidate > lower {
+                        if middle_candidate > lower_query {
                             upper_bound = middle;
-                        } else if middle_candidate == lower {
+                        } else if middle_candidate == lower_query {
                             return (result_upper | middle_candidate) + self.universe_zero;
                         } else {
                             lower_candidate = middle_candidate;
@@ -191,7 +176,6 @@ impl EliasFanoVec {
                     break;
                 }
             }
-
             (result_upper | lower_candidate) + self.universe_zero
         } else {
             // return the largest element directly in front of the calculated bounds. This is
@@ -288,6 +272,9 @@ mod tests {
                 random_splitter = rng.gen();
             }
 
+            let pred = ef.pred(random_splitter);
+            assert!(seq.iter().filter(|&&x| x == pred).count() >= 1);
+
             assert_eq!(
                 ef.pred(random_splitter),
                 seq[seq.partition_point(|&x| x <= random_splitter) - 1]
@@ -318,7 +305,8 @@ mod tests {
         }
 
         let ef = EliasFanoVec::new(&seq);
-        for x in seq {
+        for (i, &x) in seq.iter().enumerate() {
+            assert_eq!(ef.get(i), x, "expected {:b}", x);
             assert_eq!(ef.pred(x), x);
         }
 
@@ -338,17 +326,19 @@ mod tests {
     // clustered vector (i.e. a vector with large gaps between elements)
     #[test]
     fn large_clustered_rng() {
-        let mut rng = thread_rng();
-        const L: usize = 1 << 16;
+        cluster_test(1 << 16)
+    }
 
+    fn cluster_test(l: usize) {
+        let mut rng = thread_rng();
         let dist_high = Uniform::new(u64::MAX / 2 - 200, u64::MAX / 2 - 1);
-        let dist_low = Uniform::new(0, L as u64);
-        let query_distribution = Uniform::new(0, L as u64);
+        let dist_low = Uniform::new(0, l as u64);
+        let query_distribution = Uniform::new(0, l);
 
         // prepare a sequence of low values with a few high values at the end
         let mut sequence = (&mut rng)
             .sample_iter(dist_low)
-            .take(L - 100)
+            .take(l - 100)
             .collect::<Vec<u64>>();
         sequence.sort_unstable();
         let mut sequence_top = (&mut rng)
@@ -361,7 +351,7 @@ mod tests {
 
         // query random values from the actual sequences, to force long searches in the lower vec
         for _ in 0..1000 {
-            let elem = (&mut rng).sample(query_distribution);
+            let elem = sequence[(&mut rng).sample(query_distribution)];
             let supposed = sequence.partition_point(|&n| n <= elem) - 1;
             assert_eq!(bad_ef_vec.pred(elem), sequence[supposed]);
         }
