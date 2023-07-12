@@ -136,30 +136,22 @@ impl RsVec {
         if self.super_blocks.len() > (super_block + 1)
             && self.super_blocks[super_block + 1].zeros <= rank
         {
-            if rank / SELECT_BLOCK_SIZE + 1 < self.select_blocks.len()
-                && self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0 - super_block > 8
+            let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0;
+
+            while upper_bound - super_block > 8 {
+                let middle = super_block + ((upper_bound - super_block) >> 1);
+                if self.super_blocks[middle].zeros <= rank {
+                    super_block = middle;
+                } else {
+                    upper_bound = middle;
+                }
+            }
+
+            // linear search for super block that contains the rank
+            while self.super_blocks.len() > (super_block + 1)
+                && self.super_blocks[super_block + 1].zeros <= rank
             {
-                let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0;
-
-                while super_block < upper_bound - 1 {
-                    let middle = super_block + ((upper_bound - super_block) >> 1);
-                    if self.super_blocks[middle].zeros <= rank {
-                        super_block = middle;
-                    } else {
-                        upper_bound = middle;
-                    }
-                }
-
-                if self.super_blocks[super_block + 1].zeros <= rank {
-                    super_block += 1;
-                }
-            } else {
-                // linear search for super block that contains the rank
-                while self.super_blocks.len() > (super_block + 1)
-                    && self.super_blocks[super_block + 1].zeros <= rank
-                {
-                    super_block += 1;
-                }
+                super_block += 1;
             }
         }
 
@@ -170,8 +162,8 @@ impl RsVec {
         let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
         debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 8, "change unroll constant");
         unroll!(3,
-            |boundary = { min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - block_index) / 2)}|
-                if rank >= self.blocks[block_index + boundary].zeros as usize {
+            |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
+                if self.blocks.len() > block_index + boundary && rank >= self.blocks[block_index + boundary].zeros as usize {
                     block_index += boundary;
                 },
             boundary /= 2);
@@ -214,38 +206,26 @@ impl RsVec {
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
 
         if self.super_blocks.len() > (super_block + 1)
-            && ((super_block + 2) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
+            && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
                 <= rank
         {
-            if rank / SELECT_BLOCK_SIZE + 1 < self.select_blocks.len()
-                && self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1 - super_block > 8
-            {
-                let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
+            let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
 
-                // binary search for super block that contains the rank
-                while super_block < upper_bound - 1 {
-                    let middle = super_block + ((upper_bound - super_block) >> 1);
-                    if ((middle + 1) * SUPER_BLOCK_SIZE - self.super_blocks[middle].zeros) <= rank {
-                        super_block = middle;
-                    } else {
-                        upper_bound = middle;
-                    }
+            // binary search for super block that contains the rank
+            while upper_bound - super_block > 8 {
+                let middle = super_block + ((upper_bound - super_block) >> 1);
+                if ((middle + 1) * SUPER_BLOCK_SIZE - self.super_blocks[middle].zeros) <= rank {
+                    super_block = middle;
+                } else {
+                    upper_bound = middle;
                 }
-
-                if ((super_block + 2) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
+            }
+            // linear search for super block that contains the rank
+            while self.super_blocks.len() > (super_block + 1)
+                && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
                     <= rank
-                {
-                    super_block += 1;
-                }
-            } else {
-                // linear search for super block that contains the rank
-                while self.super_blocks.len() > (super_block + 1)
-                    && ((super_block + 1) * SUPER_BLOCK_SIZE
-                        - self.super_blocks[super_block + 1].zeros)
-                        <= rank
-                {
-                    super_block += 1;
-                }
+            {
+                super_block += 1;
             }
         }
 
@@ -257,8 +237,8 @@ impl RsVec {
         let mut block_index = block_at_super_block;
         debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 8, "change unroll constant");
         unroll!(3,
-            |boundary = { min((SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2, (self.blocks.len() - block_index) / 2)}|
-                if rank >= (block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.blocks[block_index + boundary].zeros as usize {
+            |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
+                if self.blocks.len() > block_index + boundary && rank >= (block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.blocks[block_index + boundary].zeros as usize {
                     block_index += boundary;
                 }
             , boundary /= 2);
@@ -490,7 +470,8 @@ impl RsVectorBuilder {
             });
         } else {
             debug_assert!(select_blocks[last_zero_select_block + 1].index_0 == 0);
-            select_blocks[last_zero_select_block + 1].index_0 = select_blocks[last_zero_select_block].index_0;
+            select_blocks[last_zero_select_block + 1].index_0 =
+                select_blocks[last_zero_select_block].index_0;
         }
         if last_one_select_block == select_blocks.len() - 1 {
             select_blocks.push(SelectSuperBlockDescriptor {
@@ -499,9 +480,9 @@ impl RsVectorBuilder {
             });
         } else {
             debug_assert!(select_blocks[last_one_select_block + 1].index_1 == 0);
-            select_blocks[last_one_select_block + 1].index_1 = select_blocks[last_one_select_block].index_1;
+            select_blocks[last_one_select_block + 1].index_1 =
+                select_blocks[last_one_select_block].index_1;
         }
-
 
         // pad the internal vector to be block-aligned, so SIMD operations don't try to read
         // past the end of the vector. Note that this does not affect the content of the vector,
