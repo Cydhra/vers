@@ -214,7 +214,7 @@ impl RsVec {
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
 
         if self.super_blocks.len() > (super_block + 1)
-            && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
+            && ((super_block + 2) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
                 <= rank
         {
             if rank / SELECT_BLOCK_SIZE + 1 < self.select_blocks.len()
