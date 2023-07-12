@@ -422,6 +422,9 @@ impl RsVectorBuilder {
 
         let mut total_zeros: usize = 0;
         let mut current_zeros: usize = 0;
+        let mut last_zero_select_block: usize = 0;
+        let mut last_one_select_block: usize = 0;
+
         for (idx, &word) in vec.data.iter().enumerate() {
             // if we moved past a block boundary, append the block information for the previous
             // block and reset the counter if we moved past a super-block boundary.
@@ -454,6 +457,8 @@ impl RsVectorBuilder {
                 } else {
                     select_blocks[all_zeros / SELECT_BLOCK_SIZE].index_0 = super_blocks.len() - 1;
                 }
+
+                last_zero_select_block += 1;
             }
 
             let total_bits = (idx + 1) * WORD_SIZE;
@@ -469,10 +474,34 @@ impl RsVectorBuilder {
                 } else {
                     select_blocks[all_ones / SELECT_BLOCK_SIZE].index_1 = super_blocks.len() - 1;
                 }
+
+                last_one_select_block += 1;
             }
 
             current_zeros += new_zeros;
         }
+
+        // insert dummy select blocks at the end that just report the same index like the last real
+        // block, so the bound check for binary search doesn't overflow
+        if last_zero_select_block == select_blocks.len() - 1 {
+            select_blocks.push(SelectSuperBlockDescriptor {
+                index_0: select_blocks[last_zero_select_block].index_0,
+                index_1: 0,
+            });
+        } else {
+            debug_assert!(select_blocks[last_zero_select_block + 1].index_0 == 0);
+            select_blocks[last_zero_select_block + 1].index_0 = select_blocks[last_zero_select_block].index_0;
+        }
+        if last_one_select_block == select_blocks.len() - 1 {
+            select_blocks.push(SelectSuperBlockDescriptor {
+                index_0: 0,
+                index_1: select_blocks[last_one_select_block].index_1,
+            });
+        } else {
+            debug_assert!(select_blocks[last_one_select_block + 1].index_1 == 0);
+            select_blocks[last_one_select_block + 1].index_1 = select_blocks[last_one_select_block].index_1;
+        }
+
 
         // pad the internal vector to be block-aligned, so SIMD operations don't try to read
         // past the end of the vector. Note that this does not affect the content of the vector,
