@@ -1,9 +1,9 @@
-struct NaiveRmq {
+pub struct NaiveRmq {
     results: Vec<Vec<usize>>,
 }
 
 impl NaiveRmq {
-    fn new(data: &[u64]) -> Self {
+    pub fn new(data: &[u64]) -> Self {
         let mut results = vec![vec![0; data.len()]; data.len()];
         for i in 0..data.len() {
             results[i][i] = i;
@@ -20,7 +20,7 @@ impl NaiveRmq {
         Self { results }
     }
 
-    fn range_min(&self, i: usize, j: usize) -> usize {
+    pub fn range_min(&self, i: usize, j: usize) -> usize {
         self.results[i][j]
     }
 }

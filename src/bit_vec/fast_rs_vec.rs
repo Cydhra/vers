@@ -2,7 +2,6 @@ use super::WORD_SIZE;
 use crate::util::unroll;
 use crate::BitVec;
 use core::arch::x86_64::_pdep_u64;
-use std::cmp::min;
 use std::mem::size_of;
 
 /// Size of a block in the bitvector. The size is deliberately chosen to fit one block into a
