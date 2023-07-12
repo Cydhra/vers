@@ -24,7 +24,7 @@ fn main() {
     match result {
         Ok((time, heap_size)) => {
             println!(
-                "RESULT algo={} namejohannes_hengstler time={} space={}",
+                "RESULT algo={} name=johannes_hengstler time={} space={}",
                 mode, time, heap_size
             );
         }
