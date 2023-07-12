@@ -177,6 +177,18 @@ impl EliasFanoVec {
                         }
                     }
 
+                    // check the last element in the binary search interval is smaller than the query,
+                    // if it is in the 1-block
+                    if lower_bound < block_end {
+                        let check_candidate = self
+                            .lower_vec
+                            .get_bits((lower_bound + 1) * self.lower_len, self.lower_len);
+
+                        if check_candidate <= lower_query {
+                            return (result_upper | check_candidate) + self.universe_zero;
+                        }
+                    }
+
                     break;
                 }
             }
