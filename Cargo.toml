@@ -59,8 +59,6 @@ harness = false
 
 [profile.bench]
 lto = true
-#debug = true
 
 [profile.release]
-#lto = true
-#debug = true
+lto = true
