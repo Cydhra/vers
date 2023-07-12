@@ -100,6 +100,10 @@ impl EliasFanoVec {
             return self.get(self.len() - 1);
         }
 
+        if n < self.universe_zero {
+            return u64::MAX;
+        }
+
         let n = n - self.universe_zero;
 
         // split the query into the upper and lower part
