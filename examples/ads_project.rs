@@ -5,7 +5,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::time::Instant;
 use std::{env, io};
 use vers::rmq::fast_rmq::FastRmq;
-use vers::{EliasFanoVec, RsVec};
+use vers::EliasFanoVec;
 
 fn main() {
     let mut args = env::args().skip(1);
