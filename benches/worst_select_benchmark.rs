@@ -1,5 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use rand::thread_rng;
+use rsdict::RsDict;
 use vers::RsVectorBuilder;
 
 mod common;
@@ -42,6 +43,26 @@ fn bench_ef(b: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("worst case input", l), &l, |b, _| {
             b.iter(|| black_box(bit_vec.select1((1 << 13) - 1)))
         });
+        drop(bit_vec);
+
+        let mut rs_dict = RsDict::with_capacity(l / 64);
+        for _ in 0..(1usize << 13) - 1 {
+            rs_dict.push(true);
+        }
+        rs_dict.push(false);
+
+        for _ in 0..(l - (1 << 13)) - 1 {
+            rs_dict.push(false);
+        }
+        rs_dict.push(true);
+        rs_dict.push(true);
+        rs_dict.push(false);
+        rs_dict.push(false);
+
+        group.bench_with_input(BenchmarkId::new("rsdict worst case input", l), &l, |b, _| {
+            b.iter(|| black_box(rs_dict.select1((1 << 13) - 1)))
+        });
+        drop(rs_dict);
     }
     group.finish();
 }
