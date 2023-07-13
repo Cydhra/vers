@@ -7,7 +7,7 @@ use rand::distributions::{Distribution, Standard, Uniform};
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use rsdict::RsDict;
-use succinct::Rank9;
+use succinct::{BitVecPush, BitVector as SuccinctVec, Rank9, BitRankSupport};
 use RankSelect as BioRsVec;
 
 mod common;
@@ -130,7 +130,7 @@ fn compare_ranks(b: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("rank9-rank", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
-                |e| black_box(rank9_vec.rank(e)),
+                |e| black_box(rank9_vec.rank0(e)),
                 BatchSize::SmallInput,
             )
         });

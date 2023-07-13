@@ -6,18 +6,18 @@ edition = "2021"
 [dependencies]
 
 [dev-dependencies]
+# benchmarking
 criterion = { version = "0.4", features = ["html_reports"] }
 rand = "0.8"
-# comparison benchmarks
+
+# comparison benchmarks libraries
 rsdict = { version = "0.0.6", features = ["simd"] }
 bio = "1.1"
 bv = "0.11.1"
 fid = "0.1"
 indexed_bitvec = "4.0"
 succinct = "0.5"
-
 elias-fano = "1.1"
-
 range_minimum_query = "0.1"
 librualg = "0.29"
 

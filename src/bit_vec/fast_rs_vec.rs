@@ -159,7 +159,11 @@ impl RsVec {
         // full binary search for block that contains the rank, manually loop-unrolled, because
         // LLVM doesn't do it for us, but it gains just under 20% performance
         let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
-        debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 16, "change unroll constant to {}", 64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1);
+        debug_assert!(
+            SUPER_BLOCK_SIZE / BLOCK_SIZE == 16,
+            "change unroll constant to {}",
+            64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
+        );
         unroll!(4,
             |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
                 if self.blocks.len() > block_index + boundary && rank >= self.blocks[block_index + boundary].zeros as usize {
