@@ -7,6 +7,7 @@ mod common;
 
 fn bench_rmq(b: &mut Criterion) {
     let mut group = b.benchmark_group("RMQ Comparison: Randomized Input");
+    group.plot_config(common::plot_config());
     let mut rng = rand::thread_rng();
 
     for l in common::SIZES {
