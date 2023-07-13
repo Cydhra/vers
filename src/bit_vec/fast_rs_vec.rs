@@ -14,9 +14,9 @@ const BLOCK_SIZE: usize = 512;
 /// instruction. This means we want to make the super block size as large as possible, as long as
 /// the zero-counter in normal blocks still fits in a reasonable amount of bits. However, this has
 /// impact on the performance of select queries. The larger the super block size, the deeper will
-/// a binary search be. We found 4096 to be a good compromise between memory overhead and
+/// a binary search be. We found 2^13 to be a good compromise between memory overhead and
 /// performance.
-const SUPER_BLOCK_SIZE: usize = 1 << 12;
+const SUPER_BLOCK_SIZE: usize = 1 << 13;
 
 /// Size of a select block. The select block is used to speed up select queries. The select block
 /// contains the indices of every `SELECT_BLOCK_SIZE`'th 1-bit and 0-bit in the bitvector.
@@ -159,8 +159,8 @@ impl RsVec {
         // full binary search for block that contains the rank, manually loop-unrolled, because
         // LLVM doesn't do it for us, but it gains just under 20% performance
         let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
-        debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 8, "change unroll constant");
-        unroll!(3,
+        debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 16, "change unroll constant to {}", 64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1);
+        unroll!(4,
             |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
                 if self.blocks.len() > block_index + boundary && rank >= self.blocks[block_index + boundary].zeros as usize {
                     block_index += boundary;
@@ -234,8 +234,8 @@ impl RsVec {
         // LLVM doesn't do it for us, but it gains just under 20% performance
         let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
         let mut block_index = block_at_super_block;
-        debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 8, "change unroll constant");
-        unroll!(3,
+        debug_assert!(SUPER_BLOCK_SIZE / BLOCK_SIZE == 16, "change unroll constant to {}", 64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1);
+        unroll!(4,
             |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
                 if self.blocks.len() > block_index + boundary && rank >= (block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.blocks[block_index + boundary].zeros as usize {
                     block_index += boundary;
@@ -414,8 +414,7 @@ impl RsVectorBuilder {
                     super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
                 }
 
-                // this cannot overflow because the only block where it could (the last in a super-
-                // block) is not added to the list of blocks
+                // this cannot overflow because a super block isn't 2^16 bits long
                 #[allow(clippy::cast_possible_truncation)]
                 blocks.push(BlockDescriptor {
                     zeros: current_zeros as u16,
