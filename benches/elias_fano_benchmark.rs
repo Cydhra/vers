@@ -8,7 +8,7 @@ mod common;
 fn bench_ef(b: &mut Criterion) {
     let mut rng = thread_rng();
 
-    let mut group = b.benchmark_group("vers elias fano");
+    let mut group = b.benchmark_group("Elias-Fano Benchmark: Random Access");
     group.plot_config(common::plot_config());
 
     for l in common::SIZES {

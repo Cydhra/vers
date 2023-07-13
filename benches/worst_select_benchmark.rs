@@ -6,7 +6,7 @@ mod common;
 
 fn bench_ef(b: &mut Criterion) {
     let mut rng = thread_rng();
-    let mut group = b.benchmark_group("vers select worst case");
+    let mut group = b.benchmark_group("Select Benchmark: Worst Case Input");
     group.plot_config(common::plot_config());
 
     for l in [
@@ -20,7 +20,7 @@ fn bench_ef(b: &mut Criterion) {
     ] {
         // uniformly distributed sequence
         let bit_vec = common::construct_vers_vec(&mut rng, l);
-        group.bench_with_input(BenchmarkId::new("select uniform", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("uniform input", l), &l, |b, _| {
             b.iter(|| black_box(bit_vec.select1((1 << 13) - 1)))
         });
         drop(bit_vec);
@@ -39,7 +39,7 @@ fn bench_ef(b: &mut Criterion) {
         bit_vec_builder.append_word(2);
         let bit_vec = bit_vec_builder.build();
 
-        group.bench_with_input(BenchmarkId::new("select bad", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("worst case input", l), &l, |b, _| {
             b.iter(|| black_box(bit_vec.select1((1 << 13) - 1)))
         });
     }

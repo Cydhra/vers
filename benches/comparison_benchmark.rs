@@ -7,8 +7,9 @@ use rand::distributions::{Distribution, Standard, Uniform};
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use rsdict::RsDict;
-use succinct::{BitVecPush, BitVector as SuccinctVec, Rank9, BitRankSupport};
+use succinct::{BitVecPush, BitVector as SuccinctVec, Rank9, BitRankSupport, BinSearchSelect};
 use RankSelect as BioRsVec;
+use succinct::select::Select0Support;
 
 mod common;
 
@@ -62,10 +63,14 @@ fn construct_rank9_vec(rng: &mut ThreadRng, len: usize) -> Rank9<SuccinctVec<u64
     Rank9::new(bit_vec)
 }
 
+fn construct_rank9_select_vec(rng: &mut ThreadRng, len: usize) -> BinSearchSelect<Rank9<SuccinctVec<u64>>> {
+    BinSearchSelect::new(construct_rank9_vec(rng, len))
+}
+
 fn compare_ranks(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
 
-    let mut group = b.benchmark_group("rank");
+    let mut group = b.benchmark_group("Rank Comparison: Randomized Input");
     group.plot_config(common::plot_config());
 
     for l in common::SIZES {
@@ -79,7 +84,7 @@ fn compare_ranks(b: &mut Criterion) {
 
         let sample = Uniform::new(0, l);
 
-        group.bench_with_input(BenchmarkId::new("vers-rank", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("vers", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng),
                 |e| black_box(vers_vec.rank0(e)),
@@ -87,7 +92,7 @@ fn compare_ranks(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("rsdict-rank", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("rsdict", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(rsdict.rank(e, false)),
@@ -95,7 +100,7 @@ fn compare_ranks(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("bio-rank", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("bio", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(bio_vec.rank_0(e)),
@@ -103,7 +108,7 @@ fn compare_ranks(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("fair-bio-rank", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("fair bio", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(fair_bio_vec.rank_0(e)),
@@ -111,7 +116,7 @@ fn compare_ranks(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("fid-rank", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("fid", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(fid_vec.rank0(e)),
@@ -119,7 +124,7 @@ fn compare_ranks(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("ind-bit-rank", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("indexed bitvector", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(ind_bit_vec.rank_zeros(e)),
@@ -127,7 +132,7 @@ fn compare_ranks(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("rank9-rank", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("rank9", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(rank9_vec.rank0(e)),
@@ -137,7 +142,7 @@ fn compare_ranks(b: &mut Criterion) {
     }
     group.finish();
 
-    let mut group = b.benchmark_group("select");
+    let mut group = b.benchmark_group("Select Comparison: Randomized Input");
     group.plot_config(common::plot_config());
 
     for l in common::SIZES {
@@ -147,9 +152,10 @@ fn compare_ranks(b: &mut Criterion) {
         let fair_bio_vec = construct_fair_bio_vec(&mut rng, l);
         let fid_vec = construct_fid_vec(&mut rng, l);
         let ind_bit_vec = construct_ind_bit_vec(&mut rng, l);
+        let rank9_vec = construct_rank9_select_vec(&mut rng, l);
         let sample = Uniform::new(0, l / 3);
 
-        group.bench_with_input(BenchmarkId::new("vers-select", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("vers", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng),
                 |e| black_box(vers_vec.select0(e)),
@@ -157,7 +163,7 @@ fn compare_ranks(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("rsdict-select", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("rsdict", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(rsdict.select(e, false)),
@@ -165,7 +171,7 @@ fn compare_ranks(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("bio-select", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("bio", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(bio_vec.select_0(e)),
@@ -173,7 +179,7 @@ fn compare_ranks(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("fair-bio-select", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("fair bio", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(fair_bio_vec.select_0(e)),
@@ -181,7 +187,7 @@ fn compare_ranks(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("fid-select", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("fid", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(fid_vec.select0(e)),
@@ -189,10 +195,18 @@ fn compare_ranks(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("ind-bit-select", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("indexed bitvector", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(ind_bit_vec.select_zeros(e)),
+                BatchSize::SmallInput,
+            )
+        });
+
+        group.bench_with_input(BenchmarkId::new("rank9", l), &l, |b, _| {
+            b.iter_batched(
+                || sample.sample(&mut rng) as u64,
+                |e| black_box(rank9_vec.select0(e)),
                 BatchSize::SmallInput,
             )
         });

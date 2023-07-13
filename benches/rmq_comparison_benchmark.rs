@@ -1,20 +1,16 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
-use elias_fano::EliasFano;
 use librualg::segment_tree::RmqMin;
 use rand::distributions::{Distribution, Standard, Uniform};
 use rand::{thread_rng, Rng};
-use vers::EliasFanoVec;
 
 mod common;
 
 fn bench_rmq(b: &mut Criterion) {
-    let mut group = b.benchmark_group("random-queries");
-    group.plot_config(common::plot_config());
-
+    let mut group = b.benchmark_group("RMQ Comparison: Randomized Input");
     let mut rng = rand::thread_rng();
 
     for l in common::SIZES {
-        let mut sequence = thread_rng()
+        let sequence = thread_rng()
             .sample_iter(Standard)
             .take(l)
             .collect::<Vec<u64>>();
@@ -24,7 +20,7 @@ fn bench_rmq(b: &mut Criterion) {
         let ru_rmq = RmqMin::new(&sequence.iter().map(|x| *x as usize).collect::<Vec<_>>());
         let creates_rmq = range_minimum_query::Rmq::from_iter(sequence);
 
-        group.bench_with_input(BenchmarkId::new("vers rmq", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("vers", l), &l, |b, _| {
             b.iter_batched(
                 || {
                     let a = sample.sample(&mut rng);
@@ -40,7 +36,7 @@ fn bench_rmq(b: &mut Criterion) {
             )
         });
 
-        group.bench_with_input(BenchmarkId::new("librualg rmq", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("librualg", l), &l, |b, _| {
             b.iter_batched(
                 || {
                     let a = sample.sample(&mut rng);

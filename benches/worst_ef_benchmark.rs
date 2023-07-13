@@ -8,7 +8,7 @@ mod common;
 fn bench_ef(b: &mut Criterion) {
     let mut rng = thread_rng();
 
-    let mut group = b.benchmark_group("vers elias fano worst case");
+    let mut group = b.benchmark_group("Elias-Fano Benchmark: Worst Case Input");
     group.plot_config(common::plot_config());
 
     let dist_high = Uniform::new(u64::MAX / 2 - 200, u64::MAX / 2 - 1);
@@ -27,7 +27,7 @@ fn bench_ef(b: &mut Criterion) {
 
         // query random values from the actual sequences, to be equivalent to the worst case
         // benchmark below
-        group.bench_with_input(BenchmarkId::new("predecessor uni", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("uniform input", l), &l, |b, _| {
             b.iter_batched(
                 || sequence[query_distribution.sample(&mut rng)],
                 |e| black_box(uniform_ef_vec.pred(e)),
@@ -50,7 +50,7 @@ fn bench_ef(b: &mut Criterion) {
         let bad_ef_vec = EliasFanoVec::new(&sequence);
 
         // query random values from the actual sequences, to force long searches in the lower vec
-        group.bench_with_input(BenchmarkId::new("predecessor bad", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("clustered input", l), &l, |b, _| {
             b.iter_batched(
                 || sequence[query_distribution.sample(&mut rng)],
                 |e| black_box(bad_ef_vec.pred(e)),

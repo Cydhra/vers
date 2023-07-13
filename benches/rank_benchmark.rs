@@ -6,7 +6,7 @@ mod common;
 fn bench_rank(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
 
-    let mut group = b.benchmark_group("vers rank");
+    let mut group = b.benchmark_group("Rank Benchmark: Randomized Input");
     group.plot_config(common::plot_config());
 
     for l in common::SIZES {
