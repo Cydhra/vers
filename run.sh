@@ -1,1 +1,1 @@
-RUSTFLAGS="-C target-cpu=native" cargo run --release --example ads_project -- "$@"
+RUSTFLAGS="-C target-cpu=native" cargo +nightly run --release --example ads_project -- "$@"
