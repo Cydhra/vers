@@ -1,0 +1,1 @@
+RUSTFLAGS="-C target-cpu=native" cargo run --release --example ads_project -- "$@"
