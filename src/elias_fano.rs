@@ -41,22 +41,13 @@ impl EliasFanoVec {
             BitVec::from_zeros(2 + data.len() + (universe_bound >> lower_width) as usize);
         let mut lower_vec = BitVec::with_capacity(data.len() * lower_width);
 
-        let mut last_word = 0u64;
-        let mut word_count = 0usize;
-        for &word in data.iter() {
+        for (i, &word) in data.iter().enumerate() {
             let word = word - universe_zero;
-
-            if word == last_word && word_count > 0 {
-                continue;
-            } else {
-                last_word = word;
-            }
 
             let upper = (word >> lower_width) as usize;
             let lower = word & ((1 << lower_width) - 1);
 
-            upper_vec.flip_bit(upper + word_count + 1);
-            word_count += 1;
+            upper_vec.flip_bit(upper + i + 1);
             lower_vec.append_bits(lower, lower_width);
         }
 
@@ -248,7 +239,6 @@ mod tests {
 
     // test whether duplicates are handled correctly by predecessor queries and reconstruction
     #[test]
-    #[ignore] // this test is useless because the EliasFanoVec constructor removes duplicates
     fn test_duplicates() {
         let ef = EliasFanoVec::new(&vec![0, 0, 0, 1, 1, 1, 2, 2, 2]);
         assert_eq!(ef.pred(0), 0);
