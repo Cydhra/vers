@@ -1,10 +1,10 @@
 use std::cmp::min_by;
 use std::mem::size_of;
 
-/// As with the naive implementation, this data-structure pre-calculates some queries.
+/// This RMQ data structure pre-calculates some queries.
 /// The minimum element in intervals 2^k for all k is precalculated and each query is turned into
 /// two overlapping sub-queries. This leads to constant-time queries and O(n log n) space overhead.
-pub struct SmallNaiveRmq {
+pub struct BinaryRmq {
     data: Vec<u64>,
 
     // store indices relative to start of range. There is no way to have ranges exceeding 2^32 bits
@@ -13,7 +13,7 @@ pub struct SmallNaiveRmq {
     results: Vec<u32>,
 }
 
-impl SmallNaiveRmq {
+impl BinaryRmq {
     pub fn new(data: Vec<u64>) -> Self {
         // the results are stored in a one-dimensional array, where the k'th element of each row i is
         // the index of the minimum element in the interval [i, i + 2^k). The length of the row is
@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn small_naive_rmq_test() {
-        let rmq = super::SmallNaiveRmq::new(vec![9, 6, 10, 4, 0, 8, 3, 7, 1, 2, 5]);
+        let rmq = super::BinaryRmq::new(vec![9, 6, 10, 4, 0, 8, 3, 7, 1, 2, 5]);
 
         assert_eq!(rmq.range_min(0, 0), 0);
         assert_eq!(rmq.range_min(0, 1), 1);

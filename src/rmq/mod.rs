@@ -1,6 +1,5 @@
 pub mod fast_rmq;
-pub mod naive;
-pub mod small_naive;
+pub mod binary_rmq;
 
 trait RangeMinimumVec {
     fn new(data: &[u64]) -> Self;

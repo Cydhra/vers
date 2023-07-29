@@ -2,7 +2,7 @@ use std::arch::x86_64::_pdep_u64;
 use std::cmp::min_by;
 use std::mem::size_of;
 
-use crate::rmq::small_naive::SmallNaiveRmq;
+use crate::rmq::binary_rmq::BinaryRmq;
 
 /// Size of the blocks the data is split into. One block is indexable with a u8, hence its size.
 const BLOCK_SIZE: usize = 128;
@@ -58,7 +58,7 @@ struct Block {
 /// and will only be a problem for very large data sets.
 pub struct FastRmq {
     data: Vec<u64>,
-    block_minima: SmallNaiveRmq,
+    block_minima: BinaryRmq,
     block_min_indices: Vec<u8>,
     blocks: Vec<Block>,
 }
@@ -110,7 +110,7 @@ impl FastRmq {
 
         Self {
             data,
-            block_minima: SmallNaiveRmq::new(block_minima),
+            block_minima: BinaryRmq::new(block_minima),
             block_min_indices,
             blocks,
         }
