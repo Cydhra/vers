@@ -6,8 +6,7 @@ authors = ["Johannes \"Cydhra\" Hengstler"]
 description = "A collection of succinct data structures supported by fast implementations of rank and select queries."
 readme = "readme.md"
 repository = "https://github.com/Cydhra/vers"
-license = "MIT"
-license-file = "LICENSE"
+license = "MIT OR Apache-2.0"
 keywords = ["succinct", "bit-vector", "elias-fano", "rmq", "predecessor"]
 categories = ["data-structures", "algorithms"]
 
