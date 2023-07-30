@@ -31,6 +31,7 @@ const SELECT_BLOCK_SIZE: usize = 1 << 13;
 /// always stores the number zero, which serves as a sentinel value to avoid special-casing the
 /// first block in a super-block (which would be a performance hit due branch prediction failures).
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct BlockDescriptor {
     zeros: u16,
 }
@@ -39,6 +40,7 @@ struct BlockDescriptor {
 /// This allows the `BlockDescriptor` to store the number of zeros in a much smaller
 /// space. The `zeros` field is the number of zeros up to the super-block.
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct SuperBlockDescriptor {
     zeros: usize,
 }
@@ -46,6 +48,7 @@ struct SuperBlockDescriptor {
 /// Meta-data for the select query. Each entry i in the select vector contains the indices to find
 /// the i * `SELECT_BLOCK_SIZE`'th 0- and 1-bit in the bitvector. Those indices may be very far apart.
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct SelectSuperBlockDescriptor {
     index_0: usize,
     index_1: usize,
@@ -56,6 +59,7 @@ struct SelectSuperBlockDescriptor {
 /// rank and select queries, which takes sub-linear additional space. The space overhead is
 /// 28 bits per 512 bits of user data (~5.47%).
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RsVec {
     data: Vec<u64>,
     len: usize,

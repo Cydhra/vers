@@ -14,6 +14,7 @@ const BLOCK_SIZE: usize = 128;
 /// A constant size small bitvector that supports rank0 and select0 specifically for the RMQ
 /// structure
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct SmallBitVector(u128);
 
 impl SmallBitVector {
@@ -54,6 +55,7 @@ impl SmallBitVector {
 /// minimum element in the block prefix (suffix) of length k.
 /// The space requirement for this structure is (sub-)linear in the block size.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct Block {
     prefix_minima: SmallBitVector,
     suffix_minima: SmallBitVector,
@@ -65,6 +67,7 @@ struct Block {
 /// The data structure can handle up to 2^40 elements, after which some queries may cause
 /// panics.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FastRmq {
     data: Vec<u64>,
     block_minima: BinaryRmq,

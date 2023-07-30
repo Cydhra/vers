@@ -17,6 +17,8 @@ The implementation is tested, benchmarked, optimized, and documented.
 However, I currently ignore many edge-cases, like illegal inputs.
 Such cases are documented and must be checked by the caller if they are possible.
 
+This, and a few other rough spots concerning the API Guidelines, are the reason for the beta status.
+
 ## Safety
 The library uses no unsafe code.
 As mentioned above, it does not validate inputs and can therefore panic or produce unexpected results.
@@ -24,6 +26,8 @@ As mentioned above, it does not validate inputs and can therefore panic or produ
 ## Dependencies
 The library has no dependencies outside the Rust standard library.
 It has a plethora of dependencies for benchmarking purposes, but these are not required for normal use.
+Optionally, the `serde` feature can be enabled to allow serialization and deserialization of the data structures,
+which requires the `serde` crate and its `derive` feature.
 
 ## Benchmarks
 I benchmarked the implementations against publicly available implementations of the same data structures.

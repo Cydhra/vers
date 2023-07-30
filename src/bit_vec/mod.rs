@@ -11,6 +11,7 @@ const WORD_SIZE: usize = 64;
 /// A simple bit vector that does not support rank and select queries. It has a constant memory
 /// overhead of 32 bytes on the stack.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BitVec {
     data: Vec<u64>,
     len: usize,

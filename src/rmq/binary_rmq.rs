@@ -9,6 +9,7 @@ use std::mem::size_of;
 /// The minimum element in intervals 2^k for all k is precalculated and each query is turned into
 /// two overlapping sub-queries. This leads to constant-time queries and O(n log n) space overhead.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BinaryRmq {
     data: Vec<u64>,
 

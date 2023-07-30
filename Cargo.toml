@@ -11,6 +11,7 @@ keywords = ["succinct", "bit-vector", "elias-fano", "rmq", "predecessor"]
 categories = ["data-structures", "algorithms"]
 
 [dependencies]
+serde = { version = "1.0", optional = true, features = ["derive"] }
 
 [dev-dependencies]
 # benchmarking
