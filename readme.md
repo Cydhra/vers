@@ -73,7 +73,9 @@ implementation.
 ![Elias-Fano Worst Case](images/elias_fano_worst_case.svg)
 
 ### Range Minimum Query
-The Range Minimum Query implementations are compared against the `range_minimum_query` and `librualg` crate.
+The Range Minimum Query implementations are compared against the 
+[range_minimum_query](https://crates.io/crates/range_minimum_query) and 
+[librualg](https://crates.io/crates/librualg) crate.
 Vers outperforms both crates by a significant margin.
 The x-axis is the number of elements in the sequence.
 An increase in runtime can be observed for input sizes exceeding the L3 cache size (64 MB).
