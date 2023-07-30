@@ -1,15 +1,16 @@
 # Vers - Very Efficient Rank and Select
 
-Vers contains pure-Rust implementations of several data structures backed by rank and select operations.
+Vers (vers-vecs on crates.io)
+contains pure-Rust implementations of several data structures backed by rank and select operations.
 The library was originally a grad student project for a semester course,
-but since it outperforms all publicly available implementations (as well as competition within the course)
+but since it outperforms all publicly available implementations (and won a competition within the course)
 I've decided to publish it.
 
 ## Data Structures
 - a bit-vector with no overhead.
 - a succinct bit-vector supporting fast rank and select queries.
-- an Elias-Fano encoding of monotone sequences supporting constant time predecessor queries.
-- two Range Minimum Query structures for constant-time range minimum queries.
+- an Elias-Fano encoding of monotone sequences; supporting constant time predecessor queries.
+- two Range Minimum Query vector structures for constant-time range minimum queries.
 
 ## Beta Status
 I published this library as 0.1.0 as a beta release.
