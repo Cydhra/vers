@@ -18,8 +18,8 @@ const BIN_SEARCH_THRESHOLD: usize = 4;
 /// constant factor (smaller than one, unless the required word length is close to 64 bit).
 ///
 /// # Predecessor Queries
-/// This data structure supports constant time predecessor queries on average. See [pred] for more
-/// information.
+/// This data structure supports constant time predecessor queries on average.
+/// See [`EliasFanoVec::pred`] for more information.
 pub struct EliasFanoVec {
     upper_vec: RsVec,
     lower_vec: BitVec,
