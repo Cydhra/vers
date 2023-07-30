@@ -1,3 +1,7 @@
+//! This module contains the implementation of the binary RMQ data structure. It pre-computes the
+//! minimum element in intervals 2^k for all k and uses this information to answer queries in
+//! constant time. This uses O(n log n) space overhead.
+
 use std::cmp::min_by;
 use std::mem::size_of;
 
@@ -14,6 +18,9 @@ pub struct BinaryRmq {
 }
 
 impl BinaryRmq {
+    /// Create a new RMQ data structure for the given data. This uses O(n log n) space and
+    /// precalculates the minimum element in intervals 2^k for all k for all elements.
+    #[must_use]
     pub fn new(data: Vec<u64>) -> Self {
         // the results are stored in a one-dimensional array, where the k'th element of each row i is
         // the index of the minimum element in the interval [i, i + 2^k). The length of the row is
@@ -69,7 +76,14 @@ impl BinaryRmq {
         Self { data, results }
     }
 
-    /// Calculates the index of the minimum element in the range [i, j].
+    /// Calculates the index of the minimum element in the range [i, j]. This has a constant query
+    /// time. The range is inclusive.
+    ///
+    /// # Panics
+    /// Calling this function with i > j will produce either a panic or an incorrect result.
+    /// Calling this function where one of the indices is out of bounds will produce a panic or an
+    /// incorrect result.
+    #[must_use]
     pub fn range_min(&self, i: usize, j: usize) -> usize {
         let row_len = self.data.len().next_power_of_two().trailing_zeros() as usize + 1;
         let log_dist = (usize::BITS - (j - i).leading_zeros()).saturating_sub(1) as usize;
@@ -83,6 +97,9 @@ impl BinaryRmq {
         )
     }
 
+    /// Returns the amount of memory used by this data structure in bytes. This does not include
+    /// space allocated but not in use (e.g. unused capacity of vectors).
+    #[must_use]
     pub fn heap_size(&self) -> usize {
         self.data.len() * size_of::<u64>() + self.results.len() * size_of::<u32>()
     }

@@ -1,3 +1,6 @@
+//! A fast succinct bit vector implementation with rank and select queries. Rank computes in
+//! constant time, select on average in constant time, with a logarithmic worst case.
+
 use super::WORD_SIZE;
 use crate::util::unroll;
 use crate::BitVec;
@@ -273,6 +276,7 @@ impl RsVec {
     ///
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
+    #[must_use]
     pub fn rank0(&self, pos: usize) -> usize {
         unsafe { self.naive_rank0(pos) }
     }
@@ -284,6 +288,7 @@ impl RsVec {
     ///
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
+    #[must_use]
     pub fn rank1(&self, pos: usize) -> usize {
         unsafe { self.naive_rank1(pos) }
     }
@@ -291,6 +296,7 @@ impl RsVec {
     /// Return the position of the 0-bit with the given rank. See `rank0`.
     /// It is a logical error to call this function with a rank larger than the number of 0-bits in
     /// the vector. Doing this may cause a panic or return an incorrect value.
+    #[must_use]
     pub fn select0(&self, rank: usize) -> usize {
         unsafe { self.bmi_select0(rank) }
     }
@@ -298,28 +304,33 @@ impl RsVec {
     /// Return the position of the 1-bit with the given rank. See `rank1`.
     /// It is a logical error to call this function with a rank larger than the number of 1-bits in
     /// the vector. Doing this may cause a panic or return an incorrect value.
+    #[must_use]
     pub fn select1(&self, rank: usize) -> usize {
         unsafe { self.bmi_select1(rank) }
     }
 
     /// Return the length of the vector, i.e. the number of bits it contains.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.len
     }
 
     /// Return whether the vector is empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// Return the bit at the given position within a u64 word. The bit takes the least significant
     /// bit of the returned u64 word.
+    #[must_use]
     pub fn get(&self, pos: usize) -> u64 {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
     }
 
     /// Returns the number of bytes used on the heap for this vector. This does not include
     /// allocated space that is not used (e.g. by the allocation behavior of `Vec`).
+    #[must_use]
     pub fn heap_size(&self) -> usize {
         self.data.len() * size_of::<u64>()
             + self.blocks.len() * size_of::<BlockDescriptor>()

@@ -1,3 +1,6 @@
+//! This module contains a simple bit vector implementation with no overhead and a fast succinct
+//! [bit vector][fast_rs_vec::RsVec] implementation with rank and select queries.
+
 use std::mem::size_of;
 
 pub mod fast_rs_vec;
@@ -106,6 +109,7 @@ impl BitVec {
         self.len
     }
 
+    /// Return whether the bit vector is empty (contains no bits).
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len == 0
@@ -139,6 +143,7 @@ impl BitVec {
 
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
     /// that isn't used.
+    #[must_use]
     pub fn heap_size(&self) -> usize {
         self.data.len() * size_of::<u64>()
     }

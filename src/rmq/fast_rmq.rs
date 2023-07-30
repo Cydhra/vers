@@ -1,3 +1,7 @@
+//! A fast and quasi-succinct range minimum query data structure. It is based on a linear RMQ
+//! data structure, but uses constant sized structures in place of logarithmic ones, which makes
+//! it faster at the cost of O(n log n) space overhead.
+
 use std::arch::x86_64::_pdep_u64;
 use std::cmp::min_by;
 use std::mem::size_of;
@@ -15,6 +19,7 @@ struct SmallBitVector(u128);
 impl SmallBitVector {
     /// Calculates the rank0 of the bitvector up to the i-th bit by masking out the bits after i
     /// and counting the ones of the bitwise-inverted bitvector.
+    #[allow(clippy::cast_sign_loss)]
     fn rank0(&self, i: usize) -> usize {
         debug_assert!(i <= 128);
         let mask = ![(-1i128 << (i & 127)), 0][(i == 128) as usize] as u128;
@@ -27,7 +32,7 @@ impl SmallBitVector {
 
     #[target_feature(enable = "bmi2")]
     unsafe fn select0_impl(&self, mut rank: usize) -> usize {
-        let word = (self.0 & 0xFFFFFFFFFFFFFFFF) as u64;
+        let word = (self.0 & 0xFFFF_FFFF_FFFF_FFFF) as u64;
         if (word.count_zeros() as usize) <= rank {
             rank -= word.count_zeros() as usize;
         } else {
@@ -53,9 +58,11 @@ struct Block {
     suffix_minima: SmallBitVector,
 }
 
-/// A data structure for fast range minimum queries with linear space overhead. Practically, the
-/// space overhead is O(n log n), because the block size is constant, however this increases speed
-/// and will only be a problem for very large data sets.
+/// A data structure for fast range minimum queries with theoretically linear space overhead.
+/// In practice, the space overhead is O(n log n), because the block size is constant,
+/// however this increases speed and will only be a problem for incredibly large data sets.
+/// The data structure can handle up to 2^40 elements, after which some queries may cause
+/// panics.
 pub struct FastRmq {
     data: Vec<u64>,
     block_minima: BinaryRmq,
@@ -64,6 +71,10 @@ pub struct FastRmq {
 }
 
 impl FastRmq {
+    /// Creates a new range minimum query data structure from the given data. Creation time is
+    /// O(n log n) and space overhead is O(n log n) with a fractional constant factor
+    /// (see [`FastRmq`])
+    #[must_use]
     pub fn new(data: Vec<u64>) -> Self {
         let mut block_minima = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);
         let mut block_min_indices = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);
@@ -116,6 +127,15 @@ impl FastRmq {
         }
     }
 
+    /// Returns the minimum element in the range [i, j] in O(1) time. Runtime may still vary for different
+    /// ranges, but is independent of the size of the data structure and bound by a constant for all
+    /// possible ranges. The range is inclusive.
+    ///
+    /// # Panics
+    /// Calling this function with i > j will produce either a panic or an incorrect result.
+    /// Calling this function where one of the indices is out of bounds will produce a panic or an
+    /// incorrect result.
+    #[must_use]
     pub fn range_min(&self, i: usize, j: usize) -> usize {
         let block_i = i / BLOCK_SIZE;
         let block_j = j / BLOCK_SIZE;
@@ -189,14 +209,21 @@ impl FastRmq {
         }
     }
 
+    /// Returns the length of the RMQ data structure (i.e. the number of elements)
+    #[must_use]
     pub fn len(&self) -> usize {
         self.data.len()
     }
 
+    /// Returns true if the RMQ data structure is empty (i.e. contains no elements)
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
 
+    /// Returns the amount of memory used by the RMQ data structure in bytes. Does not include
+    /// space allocated but not in use (e.g. unused capacity of vectors).
+    #[must_use]
     pub fn heap_size(&self) -> usize {
         self.data.len() * size_of::<u64>()
             + self.block_minima.heap_size()

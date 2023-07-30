@@ -1,3 +1,7 @@
+//! Elias-Fano encoding for sorted vectors of u64 values. It reduces the space required to represent
+//! all numbers (compression ratio dependent on data) and allows for constant time predecessor
+//! queries.
+
 use crate::BitVec;
 use crate::{RsVec, RsVectorBuilder};
 use std::cmp::max;
@@ -8,6 +12,14 @@ use std::cmp::max;
 /// case and for worst case.
 const BIN_SEARCH_THRESHOLD: usize = 4;
 
+/// An elias-fano encoded vector of u64 values. The vector is immutable, which will be exploited by
+/// limiting the word length of elements to the minimum required to represent all elements.
+/// The space requirement for this structure is thus linear in the number of elements with a small
+/// constant factor (smaller than one, unless the required word length is close to 64 bit).
+///
+/// # Predecessor Queries
+/// This data structure supports constant time predecessor queries on average. See [pred] for more
+/// information.
 pub struct EliasFanoVec {
     upper_vec: RsVec,
     lower_vec: BitVec,
@@ -62,16 +74,19 @@ impl EliasFanoVec {
     }
 
     /// Returns the number of elements in the vector.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.len
     }
 
     /// Returns true if the vector is empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// Returns the element at the given index.
+    #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub fn get(&self, index: usize) -> u64 {
         let upper = self.upper_vec.select1(index) - index - 1;
@@ -81,9 +96,15 @@ impl EliasFanoVec {
         ((upper << self.lower_len) as u64 | lower) + self.universe_zero
     }
 
-    /// Returns the largest element that is smaller than the given element. If the given element is
-    /// smaller than the smallest element in the vector, the code will panic or produce a logical
-    /// error.
+    /// Returns the largest element that is smaller than or equal to the given element.
+    /// If the given element is smaller than the smallest element in the vector,
+    /// `u64::MAX` is returned.
+    ///
+    /// # Runtime
+    /// This query runs in constant time on average. The worst case runtime is logarithmic in the
+    /// number of elements in the vector. The worst case occurs when values in the vector are very
+    /// dense with only very few elements that are much larger than most.
+    #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub fn pred(&self, n: u64) -> u64 {
         // bound the query to the universe size
@@ -194,6 +215,7 @@ impl EliasFanoVec {
 
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
     /// that isn't used.
+    #[must_use]
     pub fn heap_size(&self) -> usize {
         self.upper_vec.heap_size() + self.lower_vec.heap_size()
     }
