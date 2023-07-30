@@ -2,6 +2,13 @@
 name = "vers"
 version = "0.1.0"
 edition = "2021"
+authors = ["Johannes \"Cydhra\" Hengstler"]
+description = "A collection of succinct data structures supported by fast implementations of rank and select queries."
+readme = "readme.md"
+repository = "https://github.com/Cydhra/vers"
+license = "MIT"
+keywords = ["succinct", "bit-vector", "elias-fano", "rmq", "predecessor"]
+categories = ["data-structures", "algorithms"]
 
 [dependencies]
 
