@@ -51,7 +51,7 @@ struct SelectSuperBlockDescriptor {
 /// A bitvector that supports constant-time rank and select queries and is optimized for fast queries.
 /// The bitvector is stored as a vector of `u64`s. The bit-vector stores meta-data for constant-time
 /// rank and select queries, which takes sub-linear additional space. The space overhead is
-/// 32 bytes per 512 bytes of user data (6.25%).
+/// 28 bits per 512 bits of user data (~5.47%).
 #[derive(Clone, Debug)]
 pub struct RsVec {
     data: Vec<u64>,
@@ -318,7 +318,8 @@ impl RsVec {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
     }
 
-    /// Returns the number of bytes on the heap for this vector.
+    /// Returns the number of bytes used on the heap for this vector. This does not include
+    /// allocated space that is not used (e.g. by the allocation behavior of `Vec`).
     pub fn heap_size(&self) -> usize {
         self.data.len() * size_of::<u64>()
             + self.blocks.len() * size_of::<BlockDescriptor>()
