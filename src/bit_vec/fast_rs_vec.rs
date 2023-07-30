@@ -268,6 +268,8 @@ impl RsVec {
 
     /// Return the 0-rank of the bit at the given position. The 0-rank is the number of
     /// 0-bits in the vector up to but excluding the bit at the given position.
+    /// It is a logical error to call this function with a position larger than the length of the
+    /// bitvector. Doing this may cause a panic or return an incorrect value.
     ///
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
@@ -277,6 +279,8 @@ impl RsVec {
 
     /// Return the 1-rank of the bit at the given position. The 1-rank is the number of
     /// 1-bits in the vector up to but excluding the bit at the given position.
+    /// It is a logical error to call this function with a position larger than the length of the
+    /// bitvector. Doing this may cause a panic or return an incorrect value.
     ///
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
@@ -285,11 +289,15 @@ impl RsVec {
     }
 
     /// Return the position of the 0-bit with the given rank. See `rank0`.
+    /// It is a logical error to call this function with a rank larger than the number of 0-bits in
+    /// the vector. Doing this may cause a panic or return an incorrect value.
     pub fn select0(&self, rank: usize) -> usize {
         unsafe { self.bmi_select0(rank) }
     }
 
     /// Return the position of the 1-bit with the given rank. See `rank1`.
+    /// It is a logical error to call this function with a rank larger than the number of 1-bits in
+    /// the vector. Doing this may cause a panic or return an incorrect value.
     pub fn select1(&self, rank: usize) -> usize {
         unsafe { self.bmi_select1(rank) }
     }
