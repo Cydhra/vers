@@ -53,6 +53,7 @@ impl SmallBitVector {
 /// block up to each bit's index. This way a simple select(rank(k)) query can be used to find the
 /// minimum element in the block prefix (suffix) of length k.
 /// The space requirement for this structure is (sub-)linear in the block size.
+#[derive(Clone, Debug)]
 struct Block {
     prefix_minima: SmallBitVector,
     suffix_minima: SmallBitVector,
@@ -63,6 +64,7 @@ struct Block {
 /// however this increases speed and will only be a problem for incredibly large data sets.
 /// The data structure can handle up to 2^40 elements, after which some queries may cause
 /// panics.
+#[derive(Clone, Debug)]
 pub struct FastRmq {
     data: Vec<u64>,
     block_minima: BinaryRmq,
