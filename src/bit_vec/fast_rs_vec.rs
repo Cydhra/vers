@@ -73,63 +73,8 @@ impl RsVec {
     }
 
     #[target_feature(enable = "bmi2")]
-    unsafe fn bmi_select0(&self, rank: usize) -> usize {
-        self.impl_select0(rank)
-    }
-
-    #[target_feature(enable = "bmi2")]
-    unsafe fn bmi_select1(&self, rank: usize) -> usize {
-        self.impl_select1(rank)
-    }
-
-    // I measured 5-10% improvement with this. I don't know why it's not inlined by default, the
-    // branch elimination profits alone should make it worth it.
-    #[allow(clippy::inline_always)]
-    #[inline(always)]
-    fn rank(&self, zero: bool, pos: usize) -> usize {
-        #[allow(unused_variables)]
-        let index = pos / WORD_SIZE;
-        let block_index = pos / BLOCK_SIZE;
-        let super_block_index = pos / SUPER_BLOCK_SIZE;
-        let mut rank = 0;
-
-        // at first add the number of zeros/ones before the current super block
-        rank += if zero {
-            self.super_blocks[super_block_index].zeros
-        } else {
-            (super_block_index * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_index].zeros
-        };
-
-        // then add the number of zeros/ones before the current block
-        rank += if zero {
-            self.blocks[block_index].zeros as usize
-        } else {
-            ((block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
-                - self.blocks[block_index].zeros as usize
-        };
-
-        // naive popcount of blocks
-        for &i in &self.data[(block_index * BLOCK_SIZE) / WORD_SIZE..index] {
-            rank += if zero {
-                i.count_zeros() as usize
-            } else {
-                i.count_ones() as usize
-            };
-        }
-
-        rank += if zero {
-            (!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
-        } else {
-            (self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
-        };
-
-        rank
-    }
-
-    #[allow(clippy::inline_always)]
     #[allow(clippy::assertions_on_constants)]
-    #[inline(always)]
-    unsafe fn impl_select0(&self, mut rank: usize) -> usize {
+    unsafe fn bmi_select0(&self, mut rank: usize) -> usize {
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_0;
 
         if self.super_blocks.len() > (super_block + 1)
@@ -196,21 +141,20 @@ impl RsVec {
         block_index * BLOCK_SIZE
             + index_counter
             + _pdep_u64(
-                1 << rank,
-                !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-            )
+            1 << rank,
+            !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+        )
             .trailing_zeros() as usize
     }
 
-    #[allow(clippy::inline_always)]
+    #[target_feature(enable = "bmi2")]
     #[allow(clippy::assertions_on_constants)]
-    #[inline(always)]
-    unsafe fn impl_select1(&self, mut rank: usize) -> usize {
+    unsafe fn bmi_select1(&self, mut rank: usize) -> usize {
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
 
         if self.super_blocks.len() > (super_block + 1)
             && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
-                <= rank
+            <= rank
         {
             let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
 
@@ -226,7 +170,7 @@ impl RsVec {
             // linear search for super block that contains the rank
             while self.super_blocks.len() > (super_block + 1)
                 && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
-                    <= rank
+                <= rank
             {
                 super_block += 1;
             }
@@ -272,10 +216,54 @@ impl RsVec {
         block_index * BLOCK_SIZE
             + index_counter
             + _pdep_u64(
-                1 << rank,
-                self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-            )
+            1 << rank,
+            self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+        )
             .trailing_zeros() as usize
+    }
+
+    // I measured 5-10% improvement with this. I don't know why it's not inlined by default, the
+    // branch elimination profits alone should make it worth it.
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
+    fn rank(&self, zero: bool, pos: usize) -> usize {
+        #[allow(unused_variables)]
+        let index = pos / WORD_SIZE;
+        let block_index = pos / BLOCK_SIZE;
+        let super_block_index = pos / SUPER_BLOCK_SIZE;
+        let mut rank = 0;
+
+        // at first add the number of zeros/ones before the current super block
+        rank += if zero {
+            self.super_blocks[super_block_index].zeros
+        } else {
+            (super_block_index * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_index].zeros
+        };
+
+        // then add the number of zeros/ones before the current block
+        rank += if zero {
+            self.blocks[block_index].zeros as usize
+        } else {
+            ((block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
+                - self.blocks[block_index].zeros as usize
+        };
+
+        // naive popcount of blocks
+        for &i in &self.data[(block_index * BLOCK_SIZE) / WORD_SIZE..index] {
+            rank += if zero {
+                i.count_zeros() as usize
+            } else {
+                i.count_ones() as usize
+            };
+        }
+
+        rank += if zero {
+            (!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
+        } else {
+            (self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
+        };
+
+        rank
     }
 
     /// Return the 0-rank of the bit at the given position. The 0-rank is the number of
