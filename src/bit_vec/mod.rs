@@ -10,7 +10,7 @@ const WORD_SIZE: usize = 64;
 
 /// A simple bit vector that does not support rank and select queries. It has a constant memory
 /// overhead of 32 bytes on the stack.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BitVec {
     data: Vec<u64>,
@@ -21,10 +21,7 @@ impl BitVec {
     /// Create a new empty bit vector.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            data: Vec::new(),
-            len: 0,
-        }
+        Self::default()
     }
 
     /// Create a new empty bit vector with the given capacity. The capacity is measured in bits.
@@ -147,11 +144,5 @@ impl BitVec {
     #[must_use]
     pub fn heap_size(&self) -> usize {
         self.data.len() * size_of::<u64>()
-    }
-}
-
-impl Default for BitVec {
-    fn default() -> Self {
-        Self::new()
     }
 }

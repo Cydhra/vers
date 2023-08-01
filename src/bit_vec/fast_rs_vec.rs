@@ -348,22 +348,16 @@ impl RsVec {
 /// method. If the number of bits to be appended is known in advance, it is recommended to use
 /// `with_capacity` to avoid re-allocations. If bits are already available in little endian u64
 /// words, those words can be appended using `append_word`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RsVectorBuilder {
     vec: BitVec,
-}
-
-impl Default for RsVectorBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl RsVectorBuilder {
     /// Create a new empty `BitVectorBuilder`.
     #[must_use]
     pub fn new() -> RsVectorBuilder {
-        RsVectorBuilder { vec: BitVec::new() }
+        RsVectorBuilder::default()
     }
 
     /// Create a new empty `BitVectorBuilder` with the specified initial capacity to avoid
@@ -597,7 +591,7 @@ mod tests {
 
     #[test]
     fn test_rank() {
-        let mut bv = RsVectorBuilder::new();
+        let mut bv = RsVectorBuilder::default();
         bv.append_bit(0u8);
         bv.append_bit(1u8);
         bv.append_bit(1u8);
@@ -618,7 +612,7 @@ mod tests {
 
     #[test]
     fn test_multi_words_rank() {
-        let mut bv = RsVectorBuilder::new();
+        let mut bv = RsVectorBuilder::default();
         bv.append_word(0);
         bv.append_bit(0u8);
         bv.append_bit(1u8);
@@ -633,7 +627,7 @@ mod tests {
 
     #[test]
     fn test_only_zeros_rank() {
-        let mut bv = RsVectorBuilder::new();
+        let mut bv = RsVectorBuilder::default();
         for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
             bv.append_word(0);
         }
@@ -650,7 +644,7 @@ mod tests {
 
     #[test]
     fn test_only_ones_rank() {
-        let mut bv = RsVectorBuilder::new();
+        let mut bv = RsVectorBuilder::default();
         for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
             bv.append_word(u64::MAX);
         }
@@ -667,7 +661,7 @@ mod tests {
 
     #[test]
     fn test_simple_select() {
-        let mut bv = RsVectorBuilder::new();
+        let mut bv = RsVectorBuilder::default();
         bv.append_word(0b10110);
         let bv = bv.build();
         assert_eq!(bv.select0(0), 0);
@@ -677,7 +671,7 @@ mod tests {
 
     #[test]
     fn test_multi_words_select() {
-        let mut bv = RsVectorBuilder::new();
+        let mut bv = RsVectorBuilder::default();
         bv.append_word(0);
         bv.append_word(0);
         bv.append_word(0b10110);
@@ -691,7 +685,7 @@ mod tests {
 
     #[test]
     fn test_only_zeros_select() {
-        let mut bv = RsVectorBuilder::new();
+        let mut bv = RsVectorBuilder::default();
         for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
             bv.append_word(0);
         }
@@ -707,7 +701,7 @@ mod tests {
 
     #[test]
     fn test_only_ones_select() {
-        let mut bv = RsVectorBuilder::new();
+        let mut bv = RsVectorBuilder::default();
 
         for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
             bv.append_word(u64::MAX);
