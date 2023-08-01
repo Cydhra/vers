@@ -3,7 +3,7 @@
 use criterion::PlotConfiguration;
 use rand::distributions::{Distribution, Uniform};
 use rand::prelude::ThreadRng;
-use vers::{RsVec, RsVectorBuilder};
+use vers_vecs::{RsVec, RsVectorBuilder};
 
 pub const SIZES: [usize; 10] = [
     1 << 8,

@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use rand::thread_rng;
 use rsdict::RsDict;
-use vers::RsVectorBuilder;
+use vers_vecs::RsVectorBuilder;
 
 mod common;
 
