@@ -363,7 +363,7 @@ impl RsVec {
         self.len() == 0
     }
 
-    /// Return the bit at the given position within a u64 word. The bit takes the least significant
+    /// Return the bit at the given position. The bit takes the least significant
     /// bit of the returned u64 word.
     /// If the position is larger than the length of the vector,
     /// the behavior is undefined (the function will either return 0 or panic).
