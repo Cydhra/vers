@@ -113,36 +113,90 @@ impl BitVec {
         self.len == 0
     }
 
-    /// Flip the bit at the given position.
-    pub fn flip_bit(&mut self, pos: usize) {
+    /// Flip the bit at the given position. If the position is larger than the length of the
+    /// vector, an error is returned. Otherwise an empty result is returned.
+    pub fn flip_bit(&mut self, pos: usize) -> Result<(), &str> {
+        if pos >= self.len {
+            Err("Index out of bounds")
+        } else {
+            self.flip_bit_unchecked(pos);
+            Ok(())
+        }
+    }
+
+    /// Flip the bit at the given position. If the position is larger than the length of the
+    /// vector, the behavior is undefined (the function will either modify unused memory or panic.
+    /// This will not corrupt memory, but will affect invalid unchecked get operations).
+    pub fn flip_bit_unchecked(&mut self, pos: usize) {
         self.data[pos / WORD_SIZE] ^= 1 << (pos % WORD_SIZE);
     }
 
     /// Return the bit at the given position.
     /// The bit takes the least significant bit of the returned u64 word.
-    /// If the position is larger than the length of the vector,
-    /// the behavior is undefined (the function will either return 0 or panic).
+    /// If the position is larger than the length of the vector, None is returned.
     #[must_use]
-    pub fn get(&self, pos: usize) -> u64 {
+    pub fn get(&self, pos: usize) -> Option<u64> {
+        if pos >= self.len {
+            None
+        } else {
+            Some(self.get_unchecked(pos))
+        }
+    }
+
+    /// Return the bit at the given position.
+    /// The bit takes the least significant bit of the returned u64 word.
+    /// If the position is larger than the length of the vector,
+    /// the behavior is undefined (the function will either return unpredictable data or panic).
+    #[must_use]
+    pub fn get_unchecked(&self, pos: usize) -> u64 {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
     }
 
     /// Return whether the bit at the given position is set.
-    /// If the position is larger than the length of the vector,
-    /// the behavior is undefined (the function will either return false or panic).
+    /// If the position is larger than the length of the vector, None is returned.
     #[must_use]
-    pub fn is_bit_set(&self, pos: usize) -> bool {
-        self.get(pos) != 0
+    pub fn is_bit_set(&self, pos: usize) -> Option<bool> {
+        if pos >= self.len {
+            None
+        } else {
+            Some(self.is_bit_set_unchecked(pos))
+        }
+    }
+
+    /// Return whether the bit at the given position is set.
+    /// If the position is larger than the length of the vector,
+    /// the behavior is undefined (the function will either return unpredictable results or panic).
+    #[must_use]
+    pub fn is_bit_set_unchecked(&self, pos: usize) -> bool {
+        self.get_unchecked(pos) != 0
+    }
+
+    /// Return multiple bits at the given position. The number of bits to return is given by `len`.
+    /// At most 64 bits can be returned.
+    /// If the position at the end of the query is larger than the length of the vector,
+    /// None is returned (even if the query partially overlaps with the vector).
+    /// If the length of the query is larger than 64, None is returned.
+    #[must_use]
+    pub fn get_bits(&self, pos: usize, len: usize) -> Option<u64> {
+        if len > WORD_SIZE {
+            return None;
+        }
+        if pos + len > self.len {
+            None
+        } else {
+            Some(self.get_bits_unchecked(pos, len))
+        }
     }
 
     /// Return multiple bits at the given position. The number of bits to return is given by `len`.
     /// At most 64 bits can be returned.
     /// If the position is larger than the length of the vector,
-    /// the behavior is undefined (the function will either return any valid results padded with zeros
-    /// or panic).
+    /// the behavior is undefined (the function will either return any valid results padded with unpredictable
+    /// memory or panic).
+    /// If the length of the query is larger than 64, the behavior is undefined.
     #[must_use]
     #[inline(always)] // inline to gain loop optimization and pipeline advantages for elias fano
-    pub fn get_bits(&self, pos: usize, len: usize) -> u64 {
+    pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
         debug_assert!(len <= WORD_SIZE);
         let partial_word = self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE);
         if pos % WORD_SIZE + len <= WORD_SIZE {

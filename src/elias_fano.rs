@@ -61,7 +61,7 @@ impl EliasFanoVec {
             let upper = (word >> lower_width) as usize;
             let lower = word & ((1 << lower_width) - 1);
 
-            upper_vec.flip_bit(upper + i + 1);
+            upper_vec.flip_bit_unchecked(upper + i + 1);
             lower_vec.append_bits(lower, lower_width);
         }
 
@@ -94,7 +94,7 @@ impl EliasFanoVec {
         let upper = self.upper_vec.select1(index) - index - 1;
         let lower = self
             .lower_vec
-            .get_bits(index * self.lower_len, self.lower_len);
+            .get_bits_unchecked(index * self.lower_len, self.lower_len);
         ((upper << self.lower_len) as u64 | lower) + self.universe_zero
     }
 
@@ -133,7 +133,7 @@ impl EliasFanoVec {
         // get the first value from the lower vector that corresponds to the query prefix
         let mut lower_candidate = self
             .lower_vec
-            .get_bits(lower_bound_lower_index * self.lower_len, self.lower_len);
+            .get_bits_unchecked(lower_bound_lower_index * self.lower_len, self.lower_len);
 
         // calculate the upper part of the result. This only works if the next value in the upper
         // vector is set, otherwise the there is no value in the entire vector with this bit-prefix,
@@ -143,15 +143,15 @@ impl EliasFanoVec {
         // check if the next bit is set. If it is not, or if the result would be larger than the
         // query, we need to search for the block of values before the current prefix and return its
         // last element.
-        if self.upper_vec.get(lower_bound_upper_index + 1) > 0
+        if self.upper_vec.get_unchecked(lower_bound_upper_index + 1) > 0
             && (result_upper | lower_candidate) <= n
         {
             // search for the largest element in the lower vector that is smaller than the query.
             // Abort the search once the upper vector contains another zero, as this marks the end
             // of the block of values with the same upper prefix.
             let mut cursor = 1;
-            while self.upper_vec.get(lower_bound_upper_index + cursor + 1) > 0 {
-                let next_candidate = self.lower_vec.get_bits(
+            while self.upper_vec.get_unchecked(lower_bound_upper_index + cursor + 1) > 0 {
+                let next_candidate = self.lower_vec.get_bits_unchecked(
                     (lower_bound_lower_index + cursor) * self.lower_len,
                     self.lower_len,
                 );
@@ -179,7 +179,7 @@ impl EliasFanoVec {
 
                         let middle_candidate = self
                             .lower_vec
-                            .get_bits(middle * self.lower_len, self.lower_len);
+                            .get_bits_unchecked(middle * self.lower_len, self.lower_len);
 
                         if middle_candidate > lower_query {
                             upper_bound = middle;
@@ -196,7 +196,7 @@ impl EliasFanoVec {
                     if lower_bound < block_end {
                         let check_candidate = self
                             .lower_vec
-                            .get_bits((lower_bound + 1) * self.lower_len, self.lower_len);
+                            .get_bits_unchecked((lower_bound + 1) * self.lower_len, self.lower_len);
 
                         if check_candidate <= lower_query {
                             return (result_upper | check_candidate) + self.universe_zero;
