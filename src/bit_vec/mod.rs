@@ -119,6 +119,8 @@ impl BitVec {
     }
 
     /// Return the bit at the given position.
+    /// If the position is larger than the length of the vector,
+    /// the behavior is undefined (the function will either return false or panic).
     #[must_use]
     pub fn get(&self, pos: usize) -> bool {
         self.data[pos / WORD_SIZE] & (1 << (pos % WORD_SIZE)) != 0
@@ -126,6 +128,9 @@ impl BitVec {
 
     /// Return multiple bits at the given position. The number of bits to return is given by `len`.
     /// At most 64 bits can be returned.
+    /// If the position is larger than the length of the vector,
+    /// the behavior is undefined (the function will either return any valid results padded with zeros
+    /// or panic).
     #[must_use]
     #[inline(always)] // inline to gain loop optimization and pipeline advantages for elias fano
     pub fn get_bits(&self, pos: usize, len: usize) -> u64 {

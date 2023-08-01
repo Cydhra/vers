@@ -365,6 +365,8 @@ impl RsVec {
 
     /// Return the bit at the given position within a u64 word. The bit takes the least significant
     /// bit of the returned u64 word.
+    /// If the position is larger than the length of the vector,
+    /// the behavior is undefined (the function will either return 0 or panic).
     #[must_use]
     pub fn get(&self, pos: usize) -> u64 {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
