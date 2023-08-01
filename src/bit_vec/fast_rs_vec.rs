@@ -66,6 +66,8 @@ pub struct RsVec {
     blocks: Vec<BlockDescriptor>,
     super_blocks: Vec<SuperBlockDescriptor>,
     select_blocks: Vec<SelectSuperBlockDescriptor>,
+    rank0: usize,
+    rank1: usize,
 }
 
 impl RsVec {
@@ -234,6 +236,16 @@ impl RsVec {
     #[allow(clippy::inline_always)]
     #[inline(always)]
     fn rank(&self, zero: bool, pos: usize) -> usize {
+        if zero {
+            if pos > self.len() {
+                return self.rank0;
+            }
+        } else {
+            if pos > self.len() {
+                return self.rank1;
+            }
+        }
+
         #[allow(unused_variables)]
         let index = pos / WORD_SIZE;
         let block_index = pos / BLOCK_SIZE;
@@ -274,9 +286,9 @@ impl RsVec {
     }
 
     /// Return the 0-rank of the bit at the given position. The 0-rank is the number of
-    /// 0-bits in the vector up to but excluding the bit at the given position.
-    /// It is a logical error to call this function with a position larger than the length of the
-    /// bitvector. Doing this may cause a panic or return an incorrect value.
+    /// 0-bits in the vector up to but excluding the bit at the given position. Calling this
+    /// function with an index larger than the length of the bit-vector will report the total
+    /// number of 0-bits in the bit-vector.
     ///
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
@@ -286,9 +298,9 @@ impl RsVec {
     }
 
     /// Return the 1-rank of the bit at the given position. The 1-rank is the number of
-    /// 1-bits in the vector up to but excluding the bit at the given position.
-    /// It is a logical error to call this function with a position larger than the length of the
-    /// bitvector. Doing this may cause a panic or return an incorrect value.
+    /// 1-bits in the vector up to but excluding the bit at the given position. Calling this
+    /// function with an index larger than the length of the bit-vector will report the total
+    /// number of 1-bits in the bit-vector.
     ///
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
@@ -471,6 +483,9 @@ impl RsVectorBuilder {
 
         // insert dummy select blocks at the end that just report the same index like the last real
         // block, so the bound check for binary search doesn't overflow
+        // this is technically the incorrect value, but since all valid queries will be smaller,
+        // this will only tell select to stay in the current super block, which is correct.
+        // we cannot use a real value here, because this would change the size of the super-block
         if last_zero_select_block == select_blocks.len() - 1 {
             select_blocks.push(SelectSuperBlockDescriptor {
                 index_0: select_blocks[last_zero_select_block].index_0,
@@ -505,6 +520,9 @@ impl RsVectorBuilder {
             blocks,
             super_blocks,
             select_blocks,
+            // the last block may contain padding zeros, which should not be counted
+            rank0: total_zeros + current_zeros - ((WORD_SIZE - (vec.len % WORD_SIZE)) % WORD_SIZE),
+            rank1: vec.len - (total_zeros + current_zeros - ((WORD_SIZE - (vec.len % WORD_SIZE)) % WORD_SIZE)),
         }
     }
 }
@@ -771,5 +789,41 @@ mod tests {
 
             assert_eq!(actual_index0, expected_index0);
         }
+    }
+
+    #[test]
+    fn test_total_ranks() {
+        let mut bv = RsVectorBuilder::default();
+        bv.append_word(0b10110);
+        bv.append_word(0b10110);
+        bv.append_word(0b10110);
+        bv.append_word(0b10110);
+        let bv = bv.build();
+        assert_eq!(bv.rank0, 4 * 61);
+        assert_eq!(bv.rank1, 4 * 3);
+
+        let mut bv = RsVectorBuilder::default();
+        for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
+            bv.append_word(0b10110);
+        }
+        bv.append_bit(0u8);
+        bv.append_bit(1u8);
+        bv.append_bit(0u8);
+
+        let bv = bv.build();
+
+        assert_eq!(bv.rank0, 2 * (SUPER_BLOCK_SIZE / WORD_SIZE) * 61 + 2);
+        assert_eq!(bv.rank1, 2 * (SUPER_BLOCK_SIZE / WORD_SIZE) * 3 + 1);
+    }
+
+    #[test]
+    fn test_large_query() {
+        let mut bv = RsVectorBuilder::default();
+        bv.append_bit(1u8);
+        bv.append_bit(0u8);
+        let bv = bv.build();
+
+        assert_eq!(bv.rank0(10), 1);
+        assert_eq!(bv.rank1(10), 1);
     }
 }
