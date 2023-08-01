@@ -120,19 +120,42 @@ impl BitVec {
 
     /// Return the bit at the given position.
     /// The bit takes the least significant bit of the returned u64 word.
+    /// If the position is larger than the length of the vector, None is returned.
+    #[must_use]
+    pub fn get(&self, pos: usize) -> Option<u64> {
+        if pos >= self.len {
+            None
+        } else {
+            Some(self.get_unchecked(pos))
+        }
+    }
+
+    /// Return the bit at the given position.
+    /// The bit takes the least significant bit of the returned u64 word.
     /// If the position is larger than the length of the vector,
     /// the behavior is undefined (the function will either return 0 or panic).
     #[must_use]
-    pub fn get(&self, pos: usize) -> u64 {
+    pub fn get_unchecked(&self, pos: usize) -> u64 {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
+    }
+
+    /// Return whether the bit at the given position is set.
+    /// If the position is larger than the length of the vector, None is returned.
+    #[must_use]
+    pub fn is_bit_set(&self, pos: usize) -> Option<bool> {
+        if pos >= self.len {
+            None
+        } else {
+            Some(self.is_bit_set_unchecked(pos))
+        }
     }
 
     /// Return whether the bit at the given position is set.
     /// If the position is larger than the length of the vector,
     /// the behavior is undefined (the function will either return false or panic).
     #[must_use]
-    pub fn is_bit_set(&self, pos: usize) -> bool {
-        self.get(pos) != 0
+    pub fn is_bit_set_unchecked(&self, pos: usize) -> bool {
+        self.get_unchecked(pos) != 0
     }
 
     /// Return multiple bits at the given position. The number of bits to return is given by `len`.
