@@ -21,7 +21,9 @@ Such cases are documented and must be checked by the caller if they are possible
 This, and a few other rough spots concerning the API Guidelines, are the reason for the beta status.
 
 ## Safety
-The library uses no unsafe code.
+The library uses no unsafe code apart from CPU intrinsics, which was tested heavily.
+Since this library heavily relies on popcnt, pdep, and trailing zero count instructions,
+it will only work on x86_64 CPUs with these features.
 As mentioned above, it does not validate inputs and can therefore panic or produce unexpected results.
 
 ## Dependencies

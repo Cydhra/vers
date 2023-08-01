@@ -292,6 +292,9 @@ impl RsVec {
     ///
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
+    ///
+    /// # Compatability
+    /// This function forcibly enables the `popcnt` x86 CPU feature.
     #[must_use]
     pub fn rank0(&self, pos: usize) -> usize {
         unsafe { self.naive_rank0(pos) }
@@ -304,6 +307,9 @@ impl RsVec {
     ///
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
+    ///
+    /// # Compatability
+    /// This function forcibly enables the `popcnt` x86 CPU feature.
     #[must_use]
     pub fn rank1(&self, pos: usize) -> usize {
         unsafe { self.naive_rank1(pos) }
@@ -312,6 +318,10 @@ impl RsVec {
     /// Return the position of the 0-bit with the given rank. See `rank0`.
     /// It is a logical error to call this function with a rank larger than the number of 0-bits in
     /// the vector. Doing this may cause a panic or return an incorrect value.
+    ///
+    /// # Compatability
+    /// This function forcibly enables the `bmi2` x86 CPU feature. If this feature is not available
+    /// on the CPU, this function will not work.
     #[must_use]
     pub fn select0(&self, rank: usize) -> usize {
         unsafe { self.bmi_select0(rank) }
@@ -320,6 +330,10 @@ impl RsVec {
     /// Return the position of the 1-bit with the given rank. See `rank1`.
     /// It is a logical error to call this function with a rank larger than the number of 1-bits in
     /// the vector. Doing this may cause a panic or return an incorrect value.
+    ///
+    /// # Compatability
+    /// This function forcibly enables the `bmi2` x86 CPU feature. If this feature is not available
+    /// on the CPU, this function will not work.
     #[must_use]
     pub fn select1(&self, rank: usize) -> usize {
         unsafe { self.bmi_select1(rank) }
