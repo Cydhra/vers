@@ -84,6 +84,10 @@ impl RsVec {
     #[target_feature(enable = "bmi2")]
     #[allow(clippy::assertions_on_constants)]
     unsafe fn bmi_select0(&self, mut rank: usize) -> usize {
+        if rank > self.rank0 {
+            return self.len;
+        }
+
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_0;
 
         if self.super_blocks.len() > (super_block + 1)
@@ -159,6 +163,10 @@ impl RsVec {
     #[target_feature(enable = "bmi2")]
     #[allow(clippy::assertions_on_constants)]
     unsafe fn bmi_select1(&self, mut rank: usize) -> usize {
+        if rank > self.rank1 {
+            return self.len;
+        }
+
         let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
 
         if self.super_blocks.len() > (super_block + 1)
@@ -316,8 +324,10 @@ impl RsVec {
     }
 
     /// Return the position of the 0-bit with the given rank. See `rank0`.
-    /// It is a logical error to call this function with a rank larger than the number of 0-bits in
-    /// the vector. Doing this may cause a panic or return an incorrect value.
+    /// This instruction is inclusive, while `rank0` is exclusive, which means the following holds:
+    /// ``select0(rank0(pos) + 1) == pos``
+    /// If the rank is larger than the number of 0-bits in the vector, the length of the vector is
+    /// returned.
     ///
     /// # Compatability
     /// This function forcibly enables the `bmi2` x86 CPU feature. If this feature is not available
@@ -328,8 +338,10 @@ impl RsVec {
     }
 
     /// Return the position of the 1-bit with the given rank. See `rank1`.
-    /// It is a logical error to call this function with a rank larger than the number of 1-bits in
-    /// the vector. Doing this may cause a panic or return an incorrect value.
+    /// This instruction is inclusive, while `rank1` is exclusive, which means the following holds:
+    /// ``select1(rank1(pos) + 1) == pos``
+    /// If the rank is larger than the number of 0-bits in the vector, the length of the vector is
+    /// returned.
     ///
     /// # Compatability
     /// This function forcibly enables the `bmi2` x86 CPU feature. If this feature is not available
