@@ -294,3 +294,20 @@ fn test_large_query() {
     assert_eq!(bv.rank0(10), 1);
     assert_eq!(bv.rank1(10), 1);
 }
+
+// test ranking and selecting positions and data on and outside of the vector boundaries
+#[test]
+fn test_large_selects() {
+    let mut bit_vec = BitVec::new();
+    bit_vec.append_bit(0);
+    bit_vec.append_word(u64::MAX);
+
+    let rs_vec = RsVec::from_bit_vec(bit_vec);
+    assert_eq!(rs_vec.rank1(65), 64);
+    assert_eq!(rs_vec.rank1(66), 64);
+
+    assert_eq!(rs_vec.select0(1), 65); // select0(1) is not in the vector
+    assert_eq!(rs_vec.select1(63), 64); // last 1 in the vector
+    assert_eq!(rs_vec.select1(64), 65); // select1(64) is not in the vector
+    assert_eq!(rs_vec.select1(65), 65); // select1(65) is not in the vector
+}

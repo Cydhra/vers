@@ -10,6 +10,7 @@
 //!
 //! let rs_vec = RsVec::from_bit_vec(bit_vec);
 //! assert_eq!(rs_vec.rank1(64), 64);
+//! assert_eq!(rs_vec.select1(64), 64);
 //!```
 
 use super::WORD_SIZE;
@@ -217,7 +218,7 @@ impl RsVec {
     #[target_feature(enable = "bmi2")]
     #[allow(clippy::assertions_on_constants)]
     unsafe fn bmi_select0(&self, mut rank: usize) -> usize {
-        if rank > self.rank0 {
+        if rank >= self.rank0 {
             return self.len;
         }
 
@@ -296,7 +297,7 @@ impl RsVec {
     #[target_feature(enable = "bmi2")]
     #[allow(clippy::assertions_on_constants)]
     unsafe fn bmi_select1(&self, mut rank: usize) -> usize {
-        if rank > self.rank1 {
+        if rank >= self.rank1 {
             return self.len;
         }
 
@@ -459,10 +460,8 @@ impl RsVec {
     }
 
     /// Return the position of the 0-bit with the given rank. See `rank0`.
-    /// This instruction is inclusive, while `rank0` is exclusive, which means the following holds:
-    /// ``select0(rank0(pos) + 1) == pos``
-    /// If the rank is larger than the number of 0-bits in the vector, the length of the vector is
-    /// returned.
+    /// The following holds:
+    /// ``select0(rank0(pos)) == pos``
     ///
     /// # Compatability
     /// This function forcibly enables the `bmi2` x86 CPU feature. If this feature is not available
@@ -473,10 +472,8 @@ impl RsVec {
     }
 
     /// Return the position of the 1-bit with the given rank. See `rank1`.
-    /// This instruction is inclusive, while `rank1` is exclusive, which means the following holds:
-    /// ``select1(rank1(pos) + 1) == pos``
-    /// If the rank is larger than the number of 0-bits in the vector, the length of the vector is
-    /// returned.
+    /// The following holds:
+    /// ``select1(rank1(pos)) == pos``
     ///
     /// # Compatability
     /// This function forcibly enables the `bmi2` x86 CPU feature. If this feature is not available
