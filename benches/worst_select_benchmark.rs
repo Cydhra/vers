@@ -59,9 +59,11 @@ fn bench_ef(b: &mut Criterion) {
         rs_dict.push(false);
         rs_dict.push(false);
 
-        group.bench_with_input(BenchmarkId::new("rsdict worst case input", l), &l, |b, _| {
-            b.iter(|| black_box(rs_dict.select1((1 << 13) - 1)))
-        });
+        group.bench_with_input(
+            BenchmarkId::new("rsdict worst case input", l),
+            &l,
+            |b, _| b.iter(|| black_box(rs_dict.select1((1 << 13) - 1))),
+        );
         drop(rs_dict);
     }
     group.finish();

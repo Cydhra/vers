@@ -7,9 +7,9 @@ use rand::distributions::{Distribution, Standard, Uniform};
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use rsdict::RsDict;
-use succinct::{BitVecPush, BitVector as SuccinctVec, Rank9, BitRankSupport, BinSearchSelect};
-use RankSelect as BioRsVec;
 use succinct::select::Select0Support;
+use succinct::{BinSearchSelect, BitRankSupport, BitVecPush, BitVector as SuccinctVec, Rank9};
+use RankSelect as BioRsVec;
 
 mod common;
 
@@ -63,7 +63,10 @@ fn construct_rank9_vec(rng: &mut ThreadRng, len: usize) -> Rank9<SuccinctVec<u64
     Rank9::new(bit_vec)
 }
 
-fn construct_rank9_select_vec(rng: &mut ThreadRng, len: usize) -> BinSearchSelect<Rank9<SuccinctVec<u64>>> {
+fn construct_rank9_select_vec(
+    rng: &mut ThreadRng,
+    len: usize,
+) -> BinSearchSelect<Rank9<SuccinctVec<u64>>> {
     BinSearchSelect::new(construct_rank9_vec(rng, len))
 }
 

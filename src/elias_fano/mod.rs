@@ -163,7 +163,11 @@ impl EliasFanoVec {
             // Abort the search once the upper vector contains another zero, as this marks the end
             // of the block of values with the same upper prefix.
             let mut cursor = 1;
-            while self.upper_vec.get_unchecked(lower_bound_upper_index + cursor + 1) > 0 {
+            while self
+                .upper_vec
+                .get_unchecked(lower_bound_upper_index + cursor + 1)
+                > 0
+            {
                 let next_candidate = self.lower_vec.get_bits_unchecked(
                     (lower_bound_lower_index + cursor) * self.lower_len,
                     self.lower_len,
@@ -230,10 +234,7 @@ impl EliasFanoVec {
 
     /// Returns an iterator over the values in the vector.
     pub fn iter(&self) -> impl Iterator<Item = u64> + '_ {
-        EliasFanoVecRefIter {
-            ef: self,
-            index: 0,
-        }
+        EliasFanoVecRefIter { ef: self, index: 0 }
     }
 
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
