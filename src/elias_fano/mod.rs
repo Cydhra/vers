@@ -89,6 +89,7 @@ impl EliasFanoVec {
 
     /// Returns the element at the given index, or `None` if the index exceeds the length of the
     /// vector.
+    #[must_use]
     pub fn get(&self, index: usize) -> Option<u64> {
         if index >= self.len() {
             return None;
@@ -178,9 +179,9 @@ impl EliasFanoVec {
                     return (result_upper | lower_candidate) + self.universe_zero;
                 } else if next_candidate == lower_query {
                     return (result_upper | next_candidate) + self.universe_zero;
-                } else {
-                    lower_candidate = next_candidate;
                 }
+
+                lower_candidate = next_candidate;
                 cursor += 1;
 
                 // if linear search takes too long, we can use select0 to find the next zero in the

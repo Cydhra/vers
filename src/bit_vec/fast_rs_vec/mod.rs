@@ -366,6 +366,8 @@ impl RsVec {
     #[allow(clippy::inline_always)]
     #[inline(always)]
     fn rank(&self, zero: bool, pos: usize) -> usize {
+        #[allow(clippy::collapsible_else_if)]
+        // readability and more obvious where dead branch elimination happens
         if zero {
             if pos > self.len() {
                 return self.rank0;

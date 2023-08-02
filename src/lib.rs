@@ -5,7 +5,7 @@
 //! after they have been created.
 //!
 //! # Data structures
-//!  - [BitVector][bit_vec::BitVec] with no overhead.
+//!  - [Bit-Vector][bit_vec::BitVec] with no overhead.
 //!  - [Succinct Bit-Vector][bit_vec::fast_rs_vec::RsVec] supporting fast rank and select queries.
 //!  - [Elias-Fano][elias_fano::EliasFanoVec] encoding of monotone sequences supporting constant time predecessor queries.
 //!  - Two [Range Minimum Query][rmq] structures for constant time range minimum queries.

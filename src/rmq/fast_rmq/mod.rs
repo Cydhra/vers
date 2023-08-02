@@ -101,6 +101,8 @@ impl FastRmq {
                     prefix_minima.set_bit(i);
                 }
 
+                // This is safe because the block size is constant and smaller than 256
+                #[allow(clippy::cast_possible_truncation)]
                 if *elem < block_minimum {
                     block_minimum = *elem;
                     block_minimum_index = i as u8;

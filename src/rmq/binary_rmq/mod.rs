@@ -35,6 +35,8 @@ impl BinaryRmq {
         // but saves us a large amount of page faults for big vectors, when compared to having a
         // two-dimensional array with dynamic length in the second dimension.
         let len = data.len();
+        assert!(len <= u32::MAX as usize, "input too large for binary rmq");
+
         let row_length = len.next_power_of_two().trailing_zeros() as usize + 1;
         let mut results = vec![0u32; len * row_length];
 
@@ -51,6 +53,7 @@ impl BinaryRmq {
             let i = i as usize;
             for j in 0..data.len() {
                 let offset = 1 << i;
+                #[allow(clippy::collapsible_else_if)] // readability
                 let arg_min: usize = if j + offset < data.len() {
                     if data[results[j * row_length + i] as usize + j]
                         < data[results[(j + offset) * row_length + i] as usize + (j + offset)]
@@ -75,7 +78,11 @@ impl BinaryRmq {
                     }
                 };
 
-                results[j * row_length + i + 1] = (arg_min - j) as u32;
+                #[allow(clippy::cast_possible_truncation)]
+                // we know that the result is in bounds, since the input is bounded to 2^32 elements
+                {
+                    results[j * row_length + i + 1] = (arg_min - j) as u32;
+                }
             }
         }
 

@@ -75,13 +75,13 @@ impl BitVec {
     /// Append a bit from a u32. The least significant bit is appended to the bit vector.
     /// All other bits are ignored.
     pub fn append_bit_u32(&mut self, bit: u32) {
-        self.append_bit(bit as u64);
+        self.append_bit(u64::from(bit));
     }
 
     /// Append a bit from a u8. The least significant bit is appended to the bit vector.
     /// All other bits are ignored.
     pub fn append_bit_u8(&mut self, bit: u8) {
-        self.append_bit(bit as u64);
+        self.append_bit(u64::from(bit));
     }
 
     /// Append a word to the bit vector. The bits are appended in little endian order (i.e. the first
@@ -104,11 +104,11 @@ impl BitVec {
     /// # Panics
     /// Panics if `len` is larger than 64.
     pub fn append_bits(&mut self, mut bits: u64, len: usize) {
-        if len > 64 {
-            panic!("Cannot append more than 64 bits");
-        }
+        assert!(len <= 64, "Cannot append more than 64 bits");
 
-        bits &= (1 << len) - 1;
+        if len < 64 {
+            bits &= (1 << len) - 1;
+        }
 
         if self.len % WORD_SIZE == 0 {
             self.data.push(bits);
@@ -134,12 +134,12 @@ impl BitVec {
         self.len == 0
     }
 
-    /// Flip the bit at the given position. If the position is larger than the length of the
-    /// vector, the function panics.
+    /// Flip the bit at the given position.
+    ///
+    /// # Panics
+    /// If the position is larger than the length of the vector, the function panics.
     pub fn flip_bit(&mut self, pos: usize) {
-        if pos >= self.len {
-            panic!("Index out of bounds")
-        }
+        assert!(pos < self.len, "Index out of bounds");
         self.flip_bit_unchecked(pos);
     }
 
@@ -209,11 +209,14 @@ impl BitVec {
 
     /// Return multiple bits at the given position. The number of bits to return is given by `len`.
     /// At most 64 bits can be returned.
+    ///
+    /// # Panics
     /// If the position is larger than the length of the vector,
     /// the behavior is undefined (the function will either return any valid results padded with unpredictable
     /// memory or panic).
     /// If the length of the query is larger than 64, the behavior is undefined.
     #[must_use]
+    #[allow(clippy::inline_always)]
     #[inline(always)] // inline to gain loop optimization and pipeline advantages for elias fano
     pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
         debug_assert!(len <= WORD_SIZE);
