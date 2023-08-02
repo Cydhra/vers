@@ -245,6 +245,7 @@ impl EliasFanoVec {
 }
 
 /// A borrowing iterator over the values in an Elias-Fano encoded vector.
+/// This iterator is created by [`EliasFanoVec::iter`] and [`EliasFanoVec::into_iter`] on references.
 pub struct EliasFanoVecRefIter<'a> {
     ef: &'a EliasFanoVec,
     index: usize,
@@ -262,6 +263,7 @@ impl<'a> Iterator for EliasFanoVecRefIter<'a> {
 }
 
 /// An owning iterator over the values in an Elias-Fano encoded vector.
+/// This iterator is created by [`EliasFanoVec::into_iter`].
 pub struct EliasFanoVecIter {
     ef: EliasFanoVec,
     index: usize,
