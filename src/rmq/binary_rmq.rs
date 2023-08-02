@@ -8,14 +8,18 @@ use std::mem::size_of;
 /// This RMQ data structure pre-calculates some queries.
 /// The minimum element in intervals 2^k for all k is precalculated and each query is turned into
 /// two overlapping sub-queries. This leads to constant-time queries and O(n log n) space overhead.
+/// The pre-calculation is done in O(n log n) time.
+/// This RMQ data structure is slightly faster than the [fast RMQ][crate::rmq::fast_rmq::FastRmq]
+/// for small inputs, but has a much higher space overhead, which makes it slower for large inputs.
+/// It does not support input sizes exceeding 2^32 elements.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BinaryRmq {
     data: Vec<u64>,
 
     // store indices relative to start of range. There is no way to have ranges exceeding 2^32 bits
-    // for reasonable data sizes, because that would exceed 2^43 bits of memory for the input data
-    // alone.
+    // but since we have fast_rmq for larger inputs, which does not have any downsides at that point,
+    // we can just use u32 here (which gains cache efficiency for both implementations).
     results: Vec<u32>,
 }
 
