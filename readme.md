@@ -20,11 +20,24 @@ Such cases are documented and must be checked by the caller if they are possible
 
 This, and a few other rough spots concerning the API Guidelines, are the reason for the beta status.
 
+# Intrinsics
+This crate uses compiler intrinsics for bit-manipulation. The intrinsics are supported by
+all modern x86_64 CPUs, but not by other architectures. Since the data structures depend
+very heavily on these intrinsics, they are forcibly enabled, which means the crate will not
+compile on non-x86_64 architectures, and will not work correctly on very old x86_64 CPUs.
+
+The intrinsics in question are `popcnt` (supported since SSE4.2 resp. SSE4a on AMD, 2007-2008),
+`pdep` (supported with BMI2 since Intel Haswell resp. AMD Excavator, in hardware since AMD Zen 3, 2011-2013),
+and `tzcnt` (supported with BMI1 since Intel Haswell resp. AMD Jaguar, ca. 2013).
+
+Rust offers library functions for popcount and trailing zero count, but not for parallel deposit,
+which is why I cannot fall back to a software implementation for different architectures.
+
 ## Safety
-The library uses no unsafe code apart from CPU intrinsics, which was tested heavily.
-Since this library heavily relies on popcnt, pdep, and trailing zero count instructions,
-it will only work on x86_64 CPUs with these features.
-As mentioned above, it does not validate inputs and can therefore panic or produce unexpected results.
+This crate uses no unsafe code, with the only exception being compiler intrinsics for
+bit-manipulation. The intrinsics cannot fail with the provided inputs (provided they are
+supported by the target machine), so even if they were to be implemented incorrectly, no
+memory unsafety can occur (only incorrect results).
 
 ## Dependencies
 The library has no dependencies outside the Rust standard library.
