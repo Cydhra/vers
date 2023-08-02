@@ -228,11 +228,80 @@ impl EliasFanoVec {
         }
     }
 
+    /// Returns an iterator over the values in the vector.
+    pub fn iter(&self) -> impl Iterator<Item = u64> + '_ {
+        EliasFanoVecRefIter {
+            ef: self,
+            index: 0,
+        }
+    }
+
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
     /// that isn't used.
     #[must_use]
     pub fn heap_size(&self) -> usize {
         self.upper_vec.heap_size() + self.lower_vec.heap_size()
+    }
+}
+
+/// A borrowing iterator over the values in an Elias-Fano encoded vector.
+pub struct EliasFanoVecRefIter<'a> {
+    ef: &'a EliasFanoVec,
+    index: usize,
+}
+
+impl<'a> Iterator for EliasFanoVecRefIter<'a> {
+    type Item = u64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.ef.get(self.index).map(|v| {
+            self.index += 1;
+            v
+        })
+    }
+}
+
+/// An owning iterator over the values in an Elias-Fano encoded vector.
+pub struct EliasFanoVecIter {
+    ef: EliasFanoVec,
+    index: usize,
+}
+
+impl Iterator for EliasFanoVecIter {
+    type Item = u64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.ef.get(self.index).map(|v| {
+            self.index += 1;
+            v
+        })
+    }
+}
+
+impl IntoIterator for EliasFanoVec {
+    type Item = u64;
+    type IntoIter = EliasFanoVecIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        EliasFanoVecIter { ef: self, index: 0 }
+    }
+}
+
+impl<'a> IntoIterator for &'a EliasFanoVec {
+    type Item = u64;
+    type IntoIter = EliasFanoVecRefIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        EliasFanoVecRefIter { ef: self, index: 0 }
+    }
+}
+
+impl<'a> IntoIterator for &'a mut EliasFanoVec {
+    type Item = u64;
+    type IntoIter = EliasFanoVecRefIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        EliasFanoVecRefIter { ef: self, index: 0 }
     }
 }
 
@@ -397,6 +466,32 @@ mod tests {
             let elem = sequence[(&mut rng).sample(query_distribution)];
             let supposed = sequence.partition_point(|&n| n <= elem) - 1;
             assert_eq!(bad_ef_vec.pred(elem), sequence[supposed]);
+        }
+    }
+
+    #[test]
+    fn test_iter() {
+        let ef = EliasFanoVec::new(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+
+        // borrowing iter test
+        let mut iter = ef.iter();
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next(), Some(1));
+        assert_eq!(iter.next(), Some(2));
+        assert_eq!(iter.next(), Some(3));
+        assert_eq!(iter.next(), Some(4));
+        assert_eq!(iter.next(), Some(5));
+        assert_eq!(iter.next(), Some(6));
+        assert_eq!(iter.next(), Some(7));
+        assert_eq!(iter.next(), Some(8));
+        assert_eq!(iter.next(), None);
+        drop(iter); // end borrow for next test
+
+        // owning iter and into_iter test
+        let mut i = 0;
+        for elem in ef {
+            assert_eq!(elem, i);
+            i += 1;
         }
     }
 }
