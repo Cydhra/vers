@@ -4,21 +4,6 @@
 //!
 //! It implements [`iter`][EliasFanoVec::iter] and [`IntoIterator`][IntoIterator] to allow for
 //! iteration over the values in the vector.
-//!
-//! # Example
-//! ```rust
-//! use vers_vecs::EliasFanoVec;
-//!
-//! let mut elias_fano_vec = EliasFanoVec::from_slice(&[0, 9, 29, 109]);
-//!
-//! assert_eq!(elias_fano_vec.len(), 4);
-//! assert_eq!(elias_fano_vec.get_unchecked(0), 0);
-//! assert_eq!(elias_fano_vec.get_unchecked(3), 109);
-//!
-//! assert_eq!(elias_fano_vec.pred(9), 9);
-//! assert_eq!(elias_fano_vec.pred(10), 9);
-//! assert_eq!(elias_fano_vec.pred(420000), 109);
-//! ```
 
 use crate::BitVec;
 use crate::RsVec;
@@ -38,6 +23,21 @@ const BIN_SEARCH_THRESHOLD: usize = 4;
 /// # Predecessor Queries
 /// This data structure supports constant time predecessor queries on average.
 /// See [`EliasFanoVec::pred`] for more information.
+///
+/// # Example
+/// ```rust
+/// use vers_vecs::EliasFanoVec;
+///
+/// let mut elias_fano_vec = EliasFanoVec::from_slice(&[0, 9, 29, 109]);
+///
+/// assert_eq!(elias_fano_vec.len(), 4);
+/// assert_eq!(elias_fano_vec.get_unchecked(0), 0);
+/// assert_eq!(elias_fano_vec.get_unchecked(3), 109);
+///
+/// assert_eq!(elias_fano_vec.pred(9), 9);
+/// assert_eq!(elias_fano_vec.pred(10), 9);
+/// assert_eq!(elias_fano_vec.pred(420000), 109);
+/// ```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EliasFanoVec {
@@ -60,7 +60,10 @@ impl EliasFanoVec {
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub fn from_slice(data: &[u64]) -> Self {
-        debug_assert!(data.windows(2).all(|w| w[0] <= w[1]), "Data must be sorted in ascending order");
+        debug_assert!(
+            data.windows(2).all(|w| w[0] <= w[1]),
+            "Data must be sorted in ascending order"
+        );
 
         // calculate the largest element the vector needs to represent.
         // By limiting the universe size, we can limit the number of bits

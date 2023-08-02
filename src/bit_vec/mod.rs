@@ -1,19 +1,5 @@
 //! This module contains a simple [bit vector][BitVec] implementation with no overhead and a fast succinct
 //! bit vector implementation with [rank and select queries][fast_rs_vec::RsVec].
-//!
-//! # Example
-//! ```rust
-//! use vers_vecs::{BitVec, RsVec};
-//!
-//! let mut bit_vec = BitVec::new();
-//! bit_vec.append_bit(0u64);
-//! bit_vec.append_bit_u32(1u32);
-//! bit_vec.append_word(0b1010_1010_1010_1010u64); // appends exactly 64 bits
-//!
-//! assert_eq!(bit_vec.len(), 66);
-//! assert_eq!(bit_vec.get(0), Some(0u64));
-//! assert_eq!(bit_vec.get(1), Some(1u64));
-//! ```
 
 use std::mem::size_of;
 
@@ -24,6 +10,20 @@ const WORD_SIZE: usize = 64;
 
 /// A simple bit vector that does not support rank and select queries. It has a constant memory
 /// overhead of 32 bytes on the stack.
+///
+/// # Example
+/// ```rust
+/// use vers_vecs::{BitVec, RsVec};
+///
+/// let mut bit_vec = BitVec::new();
+/// bit_vec.append_bit(0u64);
+/// bit_vec.append_bit_u32(1u32);
+/// bit_vec.append_word(0b1010_1010_1010_1010u64); // appends exactly 64 bits
+///
+/// assert_eq!(bit_vec.len(), 66);
+/// assert_eq!(bit_vec.get(0), Some(0u64));
+/// assert_eq!(bit_vec.get(1), Some(1u64));
+/// ```
 #[derive(Clone, Debug, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BitVec {

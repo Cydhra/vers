@@ -1,18 +1,6 @@
 //! A fast and quasi-succinct range minimum query data structure. It is based on a linear RMQ
 //! data structure, but uses constant sized structures in place of logarithmic ones, which makes
 //! it faster at the cost of O(n log n) space overhead.
-//!
-//! # Example
-//! ```rust
-//! use vers_vecs::FastRmq;
-//!
-//! let data = vec![4, 10, 3, 11, 2, 12];
-//! let rmq = FastRmq::from_vec(data);
-//!
-//! assert_eq!(rmq.range_min(0, 1), 0);
-//! assert_eq!(rmq.range_min(0, 2), 2);
-//! assert_eq!(rmq.range_min(0, 3), 2);
-//! ```
 
 use std::arch::x86_64::_pdep_u64;
 use std::cmp::min_by;
@@ -74,11 +62,23 @@ struct Block {
     suffix_minima: SmallBitVector,
 }
 
-/// A data structure for fast range minimum queries with theoretically linear space overhead.
-/// In practice, the space overhead is O(n log n), because the block size is constant,
-/// however this increases speed and will only be a problem for incredibly large data sets.
+/// A data structure for fast range minimum queries based on a structure with theoretically linear space overhead.
+/// In practice, the space overhead is O(n log n), because of real-machine considerations.
+/// However, this increases speed and will only be a problem for incredibly large data sets.
 /// The data structure can handle up to 2^40 elements, after which some queries may cause
 /// panics.
+///
+/// # Example
+/// ```rust
+/// use vers_vecs::FastRmq;
+///
+/// let data = vec![4, 10, 3, 11, 2, 12];
+/// let rmq = FastRmq::from_vec(data);
+///
+/// assert_eq!(rmq.range_min(0, 1), 0);
+/// assert_eq!(rmq.range_min(0, 2), 2);
+/// assert_eq!(rmq.range_min(0, 3), 2);
+/// ```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FastRmq {

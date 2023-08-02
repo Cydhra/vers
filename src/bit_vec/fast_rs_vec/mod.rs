@@ -1,17 +1,5 @@
 //! A fast succinct bit vector implementation with rank and select queries. Rank computes in
 //! constant time, select on average in constant time, with a logarithmic worst case.
-//!
-//! # Example
-//! ```rust
-//! use vers_vecs::{BitVec, RsVec};
-//!
-//! let mut bit_vec = BitVec::new();
-//! bit_vec.append_word(u64::MAX);
-//!
-//! let rs_vec = RsVec::from_bit_vec(bit_vec);
-//! assert_eq!(rs_vec.rank1(64), 64);
-//! assert_eq!(rs_vec.select1(64), 64);
-//!```
 
 use super::WORD_SIZE;
 use crate::util::unroll;
@@ -69,6 +57,18 @@ struct SelectSuperBlockDescriptor {
 /// The bitvector is stored as a vector of `u64`s. The bit-vector stores meta-data for constant-time
 /// rank and select queries, which takes sub-linear additional space. The space overhead is
 /// 28 bits per 512 bits of user data (~5.47%).
+///
+/// # Example
+/// ```rust
+/// use vers_vecs::{BitVec, RsVec};
+///
+/// let mut bit_vec = BitVec::new();
+/// bit_vec.append_word(u64::MAX);
+///
+/// let rs_vec = RsVec::from_bit_vec(bit_vec);
+/// assert_eq!(rs_vec.rank1(64), 64);
+/// assert_eq!(rs_vec.select1(64), 64);
+///```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RsVec {

@@ -1,30 +1,30 @@
 //! This module contains a range minimum query data structure. It pre-computes the
 //! minimum element in intervals 2^k for all k and uses this information to answer queries in
 //! constant time. This uses O(n log n) space overhead.
-//!
-//! # Example
-//! ```rust
-//! use vers_vecs::BinaryRmq;
-//!
-//! let data = vec![4, 10, 3, 11, 2, 12];
-//! let rmq = BinaryRmq::from_vec(data);
-//!
-//! assert_eq!(rmq.range_min(0, 1), 0);
-//! assert_eq!(rmq.range_min(0, 2), 2);
-//! assert_eq!(rmq.range_min(0, 3), 2);
-//! ```
 
 use std::cmp::min_by;
 use std::mem::size_of;
 use std::ops::Deref;
 
-/// This RMQ data structure pre-calculates some queries.
+/// A Range Minimum Query data structure that pre-calculates some queries.
 /// The minimum element in intervals 2^k for all k is precalculated and each query is turned into
 /// two overlapping sub-queries. This leads to constant-time queries and O(n log n) space overhead.
 /// The pre-calculation is done in O(n log n) time.
 /// This RMQ data structure is slightly faster than the [fast RMQ][crate::rmq::fast_rmq::FastRmq]
 /// for small inputs, but has a much higher space overhead, which makes it slower for large inputs.
 /// It does not support input sizes exceeding 2^32 elements.
+///
+/// # Example
+/// ```rust
+/// use vers_vecs::BinaryRmq;
+///
+/// let data = vec![4, 10, 3, 11, 2, 12];
+/// let rmq = BinaryRmq::from_vec(data);
+///
+/// assert_eq!(rmq.range_min(0, 1), 0);
+/// assert_eq!(rmq.range_min(0, 2), 2);
+/// assert_eq!(rmq.range_min(0, 3), 2);
+/// ```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BinaryRmq {
