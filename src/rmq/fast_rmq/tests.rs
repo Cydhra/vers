@@ -45,7 +45,7 @@ fn test_fast_rmq() {
         numbers_vec.push(i as u64);
     }
 
-    let rmq = FastRmq::new(numbers_vec.clone());
+    let rmq = FastRmq::from_vec(numbers_vec.clone());
 
     for i in 0..L {
         for j in i..L {
@@ -70,7 +70,7 @@ fn test_fast_rmq_unsorted() {
         numbers_vec.push(rng.next_u64());
     }
 
-    let rmq = FastRmq::new(numbers_vec.clone());
+    let rmq = FastRmq::from_vec(numbers_vec.clone());
 
     for i in 0..L {
         for j in i..L {
@@ -88,7 +88,7 @@ fn test_fast_rmq_unsorted() {
 
 #[test]
 fn test_iter() {
-    let rmq = FastRmq::new(vec![1, 2, 3, 4, 5]);
+    let rmq = FastRmq::from_vec(vec![1, 2, 3, 4, 5]);
     let mut iter = rmq.iter();
     assert_eq!(iter.next(), Some(&1));
     assert_eq!(iter.next(), Some(&2));

@@ -81,7 +81,7 @@ impl FastRmq {
     /// O(n log n) and space overhead is O(n log n) with a fractional constant factor
     /// (see [`FastRmq`])
     #[must_use]
-    pub fn new(data: Vec<u64>) -> Self {
+    pub fn from_vec(data: Vec<u64>) -> Self {
         let mut block_minima = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);
         let mut block_min_indices = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);
         let mut blocks = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);

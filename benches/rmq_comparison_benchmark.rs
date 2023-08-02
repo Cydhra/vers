@@ -17,7 +17,7 @@ fn bench_rmq(b: &mut Criterion) {
             .collect::<Vec<u64>>();
         let sample = Uniform::new(0, sequence.len());
 
-        let rmq = vers_vecs::FastRmq::new(sequence.clone());
+        let rmq = vers_vecs::FastRmq::from_vec(sequence.clone());
         let ru_rmq = RmqMin::new(&sequence.iter().map(|x| *x as usize).collect::<Vec<_>>());
         let creates_rmq = range_minimum_query::Rmq::from_iter(sequence);
 
