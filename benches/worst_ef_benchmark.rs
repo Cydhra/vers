@@ -23,7 +23,7 @@ fn bench_ef(b: &mut Criterion) {
             .take(l)
             .collect::<Vec<u64>>();
         sequence.sort_unstable();
-        let uniform_ef_vec = EliasFanoVec::new(&sequence);
+        let uniform_ef_vec = EliasFanoVec::from_slice(&sequence);
 
         // query random values from the actual sequences, to be equivalent to the worst case
         // benchmark below
@@ -47,7 +47,7 @@ fn bench_ef(b: &mut Criterion) {
             .collect::<Vec<u64>>();
         sequence_top.sort_unstable();
         sequence.append(&mut sequence_top);
-        let bad_ef_vec = EliasFanoVec::new(&sequence);
+        let bad_ef_vec = EliasFanoVec::from_slice(&sequence);
 
         // query random values from the actual sequences, to force long searches in the lower vec
         group.bench_with_input(BenchmarkId::new("clustered input", l), &l, |b, _| {

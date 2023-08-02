@@ -19,7 +19,7 @@ fn bench_ef(b: &mut Criterion) {
             .collect::<Vec<u64>>();
         sequence.sort_unstable();
 
-        let ef_vec = EliasFanoVec::new(&sequence);
+        let ef_vec = EliasFanoVec::from_slice(&sequence);
         let mut comparison_ef_vec =
             EliasFano::new(sequence[sequence.len() - 1], sequence.len() as u64);
         comparison_ef_vec.compress(sequence.iter());

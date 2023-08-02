@@ -4,7 +4,7 @@ use rand::{thread_rng, Rng};
 
 #[test]
 fn test_elias_fano() {
-    let ef = EliasFanoVec::new(&vec![0, 1, 4, 7]);
+    let ef = EliasFanoVec::from_slice(&vec![0, 1, 4, 7]);
 
     assert_eq!(ef.len(), 4);
     assert_eq!(ef.get_unchecked(0), 0);
@@ -23,21 +23,21 @@ fn test_elias_fano() {
 // but the result is the last element before the bounds.
 #[test]
 fn test_edge_case() {
-    let ef = EliasFanoVec::new(&vec![0, 1, u64::MAX - 10, u64::MAX - 1]);
+    let ef = EliasFanoVec::from_slice(&vec![0, 1, u64::MAX - 10, u64::MAX - 1]);
     assert_eq!(ef.pred(u64::MAX - 11), 1);
 }
 
 // test a query that is way larger than any element in the vector
 #[test]
 fn test_large_query() {
-    let ef = EliasFanoVec::new(&vec![0, 1, 2, 3]);
+    let ef = EliasFanoVec::from_slice(&vec![0, 1, 2, 3]);
     assert_eq!(ef.pred(u64::MAX), 3);
 }
 
 // test whether duplicates are handled correctly by predecessor queries and reconstruction
 #[test]
 fn test_duplicates() {
-    let ef = EliasFanoVec::new(&vec![0, 0, 0, 1, 1, 1, 2, 2, 2]);
+    let ef = EliasFanoVec::from_slice(&vec![0, 0, 0, 1, 1, 1, 2, 2, 2]);
     assert_eq!(ef.pred(0), 0);
     assert_eq!(ef.pred(1), 1);
     assert_eq!(ef.pred(2), 2);
@@ -59,7 +59,7 @@ fn test_randomized_elias_fano() {
     }
     seq.sort_unstable();
 
-    let ef = EliasFanoVec::new(&seq);
+    let ef = EliasFanoVec::from_slice(&seq);
 
     assert_eq!(ef.len(), seq.len());
 
@@ -107,7 +107,7 @@ fn test_clustered_ef() {
         seq.push(i);
     }
 
-    let ef = EliasFanoVec::new(&seq);
+    let ef = EliasFanoVec::from_slice(&seq);
     for (i, &x) in seq.iter().enumerate() {
         assert_eq!(ef.get_unchecked(i), x, "expected {:b}", x);
         assert_eq!(ef.pred(x), x);
@@ -150,7 +150,7 @@ fn cluster_test(l: usize) {
         .collect::<Vec<u64>>();
     sequence_top.sort_unstable();
     sequence.append(&mut sequence_top);
-    let bad_ef_vec = EliasFanoVec::new(&sequence);
+    let bad_ef_vec = EliasFanoVec::from_slice(&sequence);
 
     // query random values from the actual sequences, to force long searches in the lower vec
     for _ in 0..1000 {
@@ -162,7 +162,7 @@ fn cluster_test(l: usize) {
 
 #[test]
 fn test_iter() {
-    let ef = EliasFanoVec::new(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    let ef = EliasFanoVec::from_slice(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
 
     // borrowing iter test
     let mut iter = ef.iter();
