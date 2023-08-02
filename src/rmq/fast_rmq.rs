@@ -5,6 +5,7 @@
 use std::arch::x86_64::_pdep_u64;
 use std::cmp::min_by;
 use std::mem::size_of;
+use std::ops::Deref;
 
 use crate::rmq::binary_rmq::BinaryRmq;
 
@@ -237,6 +238,17 @@ impl FastRmq {
     }
 }
 
+/// Implements Deref to delegate to the underlying data structure. This allows the user to use
+/// indexing syntax on the RMQ data structure to access the underlying data, as well as iterators,
+/// etc.
+impl Deref for FastRmq {
+    type Target = Vec<u64>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -325,5 +337,17 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_iter() {
+        let rmq = FastRmq::new(vec![1, 2, 3, 4, 5]);
+        let mut iter = rmq.iter();
+        assert_eq!(iter.next(), Some(&1));
+        assert_eq!(iter.next(), Some(&2));
+        assert_eq!(iter.next(), Some(&3));
+        assert_eq!(iter.next(), Some(&4));
+        assert_eq!(iter.next(), Some(&5));
+        assert_eq!(iter.next(), None);
     }
 }

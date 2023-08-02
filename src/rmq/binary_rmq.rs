@@ -4,6 +4,7 @@
 
 use std::cmp::min_by;
 use std::mem::size_of;
+use std::ops::Deref;
 
 /// This RMQ data structure pre-calculates some queries.
 /// The minimum element in intervals 2^k for all k is precalculated and each query is turned into
@@ -111,12 +112,24 @@ impl BinaryRmq {
     }
 }
 
+/// Implements Deref to delegate to the underlying data structure. This allows the user to use
+/// indexing syntax on the RMQ data structure to access the underlying data, as well as iterators,
+/// etc.
+impl Deref for BinaryRmq {
+    type Target = Vec<u64>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::rmq::binary_rmq::BinaryRmq;
 
     #[test]
     fn small_naive_rmq_test() {
-        let rmq = super::BinaryRmq::new(vec![9, 6, 10, 4, 0, 8, 3, 7, 1, 2, 5]);
+        let rmq = BinaryRmq::new(vec![9, 6, 10, 4, 0, 8, 3, 7, 1, 2, 5]);
 
         assert_eq!(rmq.range_min(0, 0), 0);
         assert_eq!(rmq.range_min(0, 1), 1);
@@ -126,5 +139,17 @@ mod tests {
         assert_eq!(rmq.range_min(5, 9), 8);
         assert_eq!(rmq.range_min(9, 10), 9);
         assert_eq!(rmq.range_min(0, 10), 4);
+    }
+
+    #[test]
+    fn test_iter() {
+        let rmq = BinaryRmq::new(vec![1, 2, 3, 4, 5]);
+        let mut iter = rmq.iter();
+        assert_eq!(iter.next(), Some(&1));
+        assert_eq!(iter.next(), Some(&2));
+        assert_eq!(iter.next(), Some(&3));
+        assert_eq!(iter.next(), Some(&4));
+        assert_eq!(iter.next(), Some(&5));
+        assert_eq!(iter.next(), None);
     }
 }
