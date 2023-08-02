@@ -1,5 +1,16 @@
 //! A fast succinct bit vector implementation with rank and select queries. Rank computes in
 //! constant time, select on average in constant time, with a logarithmic worst case.
+//!
+//! # Example
+//! ```rust
+//! use vers_vecs::{BitVec, RsVec};
+//!
+//! let mut bit_vec = BitVec::new();
+//! bit_vec.append_word(u64::MAX);
+//!
+//! let rs_vec = RsVec::from_bit_vec(bit_vec);
+//! assert_eq!(rs_vec.rank1(64), 64);
+//!```
 
 use super::WORD_SIZE;
 use crate::util::unroll;
