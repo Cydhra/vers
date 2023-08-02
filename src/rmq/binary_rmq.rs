@@ -60,7 +60,6 @@ impl BinaryRmq {
                         results[(j + offset) * row_length + i] as usize + (j + offset)
                     }
                 } else {
-                    // TODO check if all -1 offsets are correct.
                     if data.len() - offset - 1 > j {
                         if data[results[j * row_length + i] as usize + j]
                             < data[results[(data.len() - offset - 1) * row_length + i - 1] as usize
@@ -126,9 +125,10 @@ impl Deref for BinaryRmq {
 #[cfg(test)]
 mod tests {
     use crate::rmq::binary_rmq::BinaryRmq;
+    use rand::RngCore;
 
     #[test]
-    fn small_naive_rmq_test() {
+    fn small_test() {
         let rmq = BinaryRmq::new(vec![9, 6, 10, 4, 0, 8, 3, 7, 1, 2, 5]);
 
         assert_eq!(rmq.range_min(0, 0), 0);
@@ -139,6 +139,32 @@ mod tests {
         assert_eq!(rmq.range_min(5, 9), 8);
         assert_eq!(rmq.range_min(9, 10), 9);
         assert_eq!(rmq.range_min(0, 10), 4);
+    }
+
+    #[test]
+    fn randomized_test() {
+        let mut rng = rand::thread_rng();
+        const L: usize = 100;
+
+        let mut numbers_vec = Vec::with_capacity(L);
+        for _ in 0..L {
+            numbers_vec.push(rng.next_u64());
+        }
+
+        let rmq = BinaryRmq::new(numbers_vec.clone());
+
+        for i in 0..L {
+            for j in i..L {
+                let min = numbers_vec[i..=j].iter().min().unwrap();
+                assert_eq!(
+                    numbers_vec[rmq.range_min(i, j)],
+                    *min,
+                    "i = {}, j = {}",
+                    i,
+                    j
+                );
+            }
+        }
     }
 
     #[test]
