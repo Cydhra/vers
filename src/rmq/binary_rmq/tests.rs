@@ -3,7 +3,7 @@ use rand::RngCore;
 
 #[test]
 fn small_test() {
-    let rmq = BinaryRmq::new(vec![9, 6, 10, 4, 0, 8, 3, 7, 1, 2, 5]);
+    let rmq = BinaryRmq::from_vec(vec![9, 6, 10, 4, 0, 8, 3, 7, 1, 2, 5]);
 
     assert_eq!(rmq.range_min(0, 0), 0);
     assert_eq!(rmq.range_min(0, 1), 1);
@@ -25,7 +25,7 @@ fn randomized_test() {
         numbers_vec.push(rng.next_u64());
     }
 
-    let rmq = BinaryRmq::new(numbers_vec.clone());
+    let rmq = BinaryRmq::from_vec(numbers_vec.clone());
 
     for i in 0..L {
         for j in i..L {
@@ -43,7 +43,7 @@ fn randomized_test() {
 
 #[test]
 fn test_iter() {
-    let rmq = BinaryRmq::new(vec![1, 2, 3, 4, 5]);
+    let rmq = BinaryRmq::from_vec(vec![1, 2, 3, 4, 5]);
     let mut iter = rmq.iter();
     assert_eq!(iter.next(), Some(&1));
     assert_eq!(iter.next(), Some(&2));

@@ -1,4 +1,4 @@
-//! This module contains the implementation of the binary RMQ data structure. It pre-computes the
+//! This module contains a range minimum query data structure. It pre-computes the
 //! minimum element in intervals 2^k for all k and uses this information to answer queries in
 //! constant time. This uses O(n log n) space overhead.
 
@@ -28,7 +28,7 @@ impl BinaryRmq {
     /// Create a new RMQ data structure for the given data. This uses O(n log n) space and
     /// precalculates the minimum element in intervals 2^k for all k for all elements.
     #[must_use]
-    pub fn new(data: Vec<u64>) -> Self {
+    pub fn from_vec(data: Vec<u64>) -> Self {
         // the results are stored in a one-dimensional array, where the k'th element of each row i is
         // the index of the minimum element in the interval [i, i + 2^k). The length of the row is
         // ceil(log2(data.len())) + 1, which wastes 1/2 + 1/4 + 1/8... = 1 * log n words of memory,

@@ -129,7 +129,7 @@ impl FastRmq {
 
         Self {
             data,
-            block_minima: BinaryRmq::new(block_minima),
+            block_minima: BinaryRmq::from_vec(block_minima),
             block_min_indices,
             blocks,
         }
