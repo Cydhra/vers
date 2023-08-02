@@ -3,7 +3,7 @@
 //! queries.
 
 use crate::BitVec;
-use crate::{RsVec, RsVectorBuilder};
+use crate::RsVec;
 use std::cmp::max;
 
 /// We use linear search for small 1-blocks in the upper vector because it is generally more memory-
@@ -66,7 +66,7 @@ impl EliasFanoVec {
         }
 
         Self {
-            upper_vec: RsVectorBuilder::from_bit_vec(upper_vec),
+            upper_vec: RsVec::from_bit_vec(upper_vec),
             lower_vec,
             universe_zero,
             universe_max: data[data.len() - 1],

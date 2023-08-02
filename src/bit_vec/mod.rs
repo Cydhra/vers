@@ -62,7 +62,7 @@ impl BitVec {
         }
     }
 
-    /// Append a bit from a quad-word. The least significant bit is appended to the bit vector.
+    /// Append a bit from a u64. The least significant bit is appended to the bit vector.
     /// All other bits are ignored.
     pub fn append_bit(&mut self, bit: u64) {
         if self.len % WORD_SIZE == 0 {
@@ -72,7 +72,20 @@ impl BitVec {
         self.len += 1;
     }
 
-    /// Append a word to the bit vector. The least significant bit is appended first.
+    /// Append a bit from a u32. The least significant bit is appended to the bit vector.
+    /// All other bits are ignored.
+    pub fn append_bit_u32(&mut self, bit: u32) {
+        self.append_bit(bit as u64);
+    }
+
+    /// Append a bit from a u8. The least significant bit is appended to the bit vector.
+    /// All other bits are ignored.
+    pub fn append_bit_u8(&mut self, bit: u8) {
+        self.append_bit(bit as u64);
+    }
+
+    /// Append a word to the bit vector. The bits are appended in little endian order (i.e. the first
+    /// bit of the word is appended first).
     pub fn append_word(&mut self, word: u64) {
         if self.len % WORD_SIZE == 0 {
             self.data.push(word);
@@ -83,10 +96,18 @@ impl BitVec {
         self.len += WORD_SIZE;
     }
 
-    /// Append multiple bits to the bit vector. The least significant bit is appended first.
+    /// Append multiple bits to the bit vector. The bits are appended in little-endian order
+    /// (i.e. the least significant bit is appended first).
     /// The number of bits to append is given by `len`. The bits are taken from the least
     /// significant bits of `bits`. All other bits are ignored.
+    ///
+    /// # Panics
+    /// Panics if `len` is larger than 64.
     pub fn append_bits(&mut self, mut bits: u64, len: usize) {
+        if len > 64 {
+            panic!("Cannot append more than 64 bits");
+        }
+
         bits &= (1 << len) - 1;
 
         if self.len % WORD_SIZE == 0 {
@@ -114,14 +135,12 @@ impl BitVec {
     }
 
     /// Flip the bit at the given position. If the position is larger than the length of the
-    /// vector, an error is returned. Otherwise an empty result is returned.
-    pub fn flip_bit(&mut self, pos: usize) -> Result<(), &str> {
+    /// vector, the function panics.
+    pub fn flip_bit(&mut self, pos: usize) {
         if pos >= self.len {
-            Err("Index out of bounds")
-        } else {
-            self.flip_bit_unchecked(pos);
-            Ok(())
+            panic!("Index out of bounds")
         }
+        self.flip_bit_unchecked(pos);
     }
 
     /// Flip the bit at the given position. If the position is larger than the length of the

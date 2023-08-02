@@ -1,23 +1,22 @@
 use super::*;
-use crate::RsVectorBuilder;
 use rand::distributions::{Distribution, Uniform};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
 #[test]
 fn test_append_bit() {
-    let mut bv = RsVectorBuilder::new();
-    bv.append_bit(0u8);
-    bv.append_bit(1u8);
-    bv.append_bit(1u8);
-    let bv = bv.build();
+    let mut bv = BitVec::new();
+    bv.append_bit_u8(0u8);
+    bv.append_bit_u8(1u8);
+    bv.append_bit_u8(1u8);
+    let bv = RsVec::from_bit_vec(bv);
 
     assert_eq!(bv.data[..1], vec![0b110]);
 }
 
 #[test]
 fn test_random_data_rank() {
-    let mut bv = RsVectorBuilder::with_capacity(LENGTH);
+    let mut bv = BitVec::with_capacity(LENGTH);
     let mut rng = StdRng::from_seed([
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
@@ -26,10 +25,10 @@ fn test_random_data_rank() {
     static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
 
     for _ in 0..LENGTH {
-        bv.append_bit(sample.sample(&mut rng) as u8);
+        bv.append_bit(sample.sample(&mut rng));
     }
 
-    let bv = bv.build();
+    let bv = RsVec::from_bit_vec(bv);
 
     assert_eq!(bv.len(), LENGTH);
 
@@ -62,14 +61,14 @@ fn test_random_data_rank() {
 
 #[test]
 fn test_append_bit_long() {
-    let mut bv = RsVectorBuilder::new();
+    let mut bv = BitVec::new();
     let len = SUPER_BLOCK_SIZE + 1;
     for _ in 0..len {
-        bv.append_bit(0u8);
-        bv.append_bit(1u8);
+        bv.append_bit_u8(0u8);
+        bv.append_bit_u8(1u8);
     }
 
-    let bv = bv.build();
+    let bv = RsVec::from_bit_vec(bv);
 
     assert_eq!(bv.len(), len * 2);
     assert_eq!(bv.rank0(2 * len - 1), len);
@@ -78,14 +77,14 @@ fn test_append_bit_long() {
 
 #[test]
 fn test_rank() {
-    let mut bv = RsVectorBuilder::default();
-    bv.append_bit(0u8);
-    bv.append_bit(1u8);
-    bv.append_bit(1u8);
-    bv.append_bit(0u8);
-    bv.append_bit(1u8);
-    bv.append_bit(1u8);
-    let bv = bv.build();
+    let mut bv = BitVec::default();
+    bv.append_bit_u8(0u8);
+    bv.append_bit_u8(1u8);
+    bv.append_bit_u8(1u8);
+    bv.append_bit_u8(0u8);
+    bv.append_bit_u8(1u8);
+    bv.append_bit_u8(1u8);
+    let bv = RsVec::from_bit_vec(bv);
 
     // first bit must always have rank 0
     assert_eq!(bv.rank0(0), 0);
@@ -99,12 +98,12 @@ fn test_rank() {
 
 #[test]
 fn test_multi_words_rank() {
-    let mut bv = RsVectorBuilder::default();
+    let mut bv = BitVec::default();
     bv.append_word(0);
-    bv.append_bit(0u8);
-    bv.append_bit(1u8);
-    bv.append_bit(1u8);
-    let bv = bv.build();
+    bv.append_bit_u8(0u8);
+    bv.append_bit_u8(1u8);
+    bv.append_bit_u8(1u8);
+    let bv = RsVec::from_bit_vec(bv);
 
     assert_eq!(bv.rank0(63), 63);
     assert_eq!(bv.rank0(64), 64);
@@ -114,12 +113,12 @@ fn test_multi_words_rank() {
 
 #[test]
 fn test_only_zeros_rank() {
-    let mut bv = RsVectorBuilder::default();
+    let mut bv = BitVec::default();
     for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
         bv.append_word(0);
     }
-    bv.append_bit(0u8);
-    let bv = bv.build();
+    bv.append_bit_u8(0u8);
+    let bv = RsVec::from_bit_vec(bv);
 
     assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE + 1);
 
@@ -131,12 +130,12 @@ fn test_only_zeros_rank() {
 
 #[test]
 fn test_only_ones_rank() {
-    let mut bv = RsVectorBuilder::default();
+    let mut bv = BitVec::default();
     for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
         bv.append_word(u64::MAX);
     }
-    bv.append_bit(1u8);
-    let bv = bv.build();
+    bv.append_bit_u8(1u8);
+    let bv = RsVec::from_bit_vec(bv);
 
     assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE + 1);
 
@@ -148,9 +147,9 @@ fn test_only_ones_rank() {
 
 #[test]
 fn test_simple_select() {
-    let mut bv = RsVectorBuilder::default();
+    let mut bv = BitVec::default();
     bv.append_word(0b10110);
-    let bv = bv.build();
+    let bv = RsVec::from_bit_vec(bv);
     assert_eq!(bv.select0(0), 0);
     assert_eq!(bv.select1(1), 2);
     assert_eq!(bv.select0(1), 3);
@@ -158,11 +157,11 @@ fn test_simple_select() {
 
 #[test]
 fn test_multi_words_select() {
-    let mut bv = RsVectorBuilder::default();
+    let mut bv = BitVec::default();
     bv.append_word(0);
     bv.append_word(0);
     bv.append_word(0b10110);
-    let bv = bv.build();
+    let bv = RsVec::from_bit_vec(bv);
     assert_eq!(bv.select1(0), 129);
     assert_eq!(bv.select1(1), 130);
     assert_eq!(bv.select0(32), 32);
@@ -172,12 +171,12 @@ fn test_multi_words_select() {
 
 #[test]
 fn test_only_zeros_select() {
-    let mut bv = RsVectorBuilder::default();
+    let mut bv = BitVec::default();
     for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
         bv.append_word(0);
     }
-    bv.append_bit(0u8);
-    let bv = bv.build();
+    bv.append_bit_u8(0u8);
+    let bv = RsVec::from_bit_vec(bv);
 
     assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE + 1);
 
@@ -188,13 +187,13 @@ fn test_only_zeros_select() {
 
 #[test]
 fn test_only_ones_select() {
-    let mut bv = RsVectorBuilder::default();
+    let mut bv = BitVec::default();
 
     for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
         bv.append_word(u64::MAX);
     }
-    bv.append_bit(1u8);
-    let bv = bv.build();
+    bv.append_bit_u8(1u8);
+    let bv = RsVec::from_bit_vec(bv);
 
     assert_eq!(bv.len(), 2 * SUPER_BLOCK_SIZE + 1);
 
@@ -205,7 +204,7 @@ fn test_only_ones_select() {
 
 #[test]
 fn random_data_select() {
-    let mut bv = RsVectorBuilder::with_capacity(LENGTH);
+    let mut bv = BitVec::with_capacity(LENGTH);
     let mut rng = StdRng::from_seed([
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
@@ -214,10 +213,10 @@ fn random_data_select() {
     static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
 
     for _ in 0..LENGTH {
-        bv.append_bit(sample.sample(&mut rng) as u8);
+        bv.append_bit_u8(sample.sample(&mut rng) as u8);
     }
 
-    let bv = bv.build();
+    let bv = RsVec::from_bit_vec(bv);
 
     assert_eq!(bv.len(), LENGTH);
 
@@ -262,24 +261,24 @@ fn random_data_select() {
 
 #[test]
 fn test_total_ranks() {
-    let mut bv = RsVectorBuilder::default();
+    let mut bv = BitVec::default();
     bv.append_word(0b10110);
     bv.append_word(0b10110);
     bv.append_word(0b10110);
     bv.append_word(0b10110);
-    let bv = bv.build();
+    let bv = RsVec::from_bit_vec(bv);
     assert_eq!(bv.rank0, 4 * 61);
     assert_eq!(bv.rank1, 4 * 3);
 
-    let mut bv = RsVectorBuilder::default();
+    let mut bv = BitVec::default();
     for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
         bv.append_word(0b10110);
     }
-    bv.append_bit(0u8);
-    bv.append_bit(1u8);
-    bv.append_bit(0u8);
+    bv.append_bit_u8(0u8);
+    bv.append_bit_u8(1u8);
+    bv.append_bit_u8(0u8);
 
-    let bv = bv.build();
+    let bv = RsVec::from_bit_vec(bv);
 
     assert_eq!(bv.rank0, 2 * (SUPER_BLOCK_SIZE / WORD_SIZE) * 61 + 2);
     assert_eq!(bv.rank1, 2 * (SUPER_BLOCK_SIZE / WORD_SIZE) * 3 + 1);
@@ -287,10 +286,10 @@ fn test_total_ranks() {
 
 #[test]
 fn test_large_query() {
-    let mut bv = RsVectorBuilder::default();
-    bv.append_bit(1u8);
-    bv.append_bit(0u8);
-    let bv = bv.build();
+    let mut bv = BitVec::default();
+    bv.append_bit_u8(1u8);
+    bv.append_bit_u8(0u8);
+    let bv = RsVec::from_bit_vec(bv);
 
     assert_eq!(bv.rank0(10), 1);
     assert_eq!(bv.rank1(10), 1);

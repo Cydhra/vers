@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use rand::thread_rng;
 use rsdict::RsDict;
-use vers_vecs::RsVectorBuilder;
+use vers_vecs::{BitVec, RsVec};
 
 mod common;
 
@@ -28,17 +28,17 @@ fn bench_ef(b: &mut Criterion) {
 
         // construct a vector with only one select block and put its last one bit at the end
         // of the vector
-        let mut bit_vec_builder = RsVectorBuilder::with_capacity(l / 64);
+        let mut bit_vec = BitVec::with_capacity(l / 64);
         for _ in 0..(1usize << 13) / 64 - 1 {
-            bit_vec_builder.append_word(u64::MAX);
+            bit_vec.append_word(u64::MAX);
         }
-        bit_vec_builder.append_word(u64::MAX >> 1);
+        bit_vec.append_word(u64::MAX >> 1);
 
         for _ in 0..(l - (1 << 13)) / 64 - 1 {
-            bit_vec_builder.append_word(0);
+            bit_vec.append_word(0);
         }
-        bit_vec_builder.append_word(2);
-        let bit_vec = bit_vec_builder.build();
+        bit_vec.append_word(2);
+        let bit_vec = RsVec::from_bit_vec(bit_vec);
 
         group.bench_with_input(BenchmarkId::new("worst case input", l), &l, |b, _| {
             b.iter(|| black_box(bit_vec.select1((1 << 13) - 1)))

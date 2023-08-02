@@ -3,7 +3,7 @@
 use criterion::PlotConfiguration;
 use rand::distributions::{Distribution, Uniform};
 use rand::prelude::ThreadRng;
-use vers_vecs::{RsVec, RsVectorBuilder};
+use vers_vecs::{BitVec, RsVec};
 
 pub const SIZES: [usize; 10] = [
     1 << 8,
@@ -21,12 +21,12 @@ pub const SIZES: [usize; 10] = [
 pub fn construct_vers_vec(rng: &mut ThreadRng, len: usize) -> RsVec {
     let sample = Uniform::new(0, u64::MAX);
 
-    let mut bit_vec = RsVectorBuilder::new();
+    let mut bit_vec = BitVec::new();
     for _ in 0..len / 64 {
         bit_vec.append_word(sample.sample(rng));
     }
 
-    bit_vec.build()
+    RsVec::from_bit_vec(bit_vec)
 }
 
 pub fn fill_random_vec(rng: &mut ThreadRng, len: usize) -> Vec<u64> {

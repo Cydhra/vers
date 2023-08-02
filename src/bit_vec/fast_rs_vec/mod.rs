@@ -71,6 +71,128 @@ pub struct RsVec {
 }
 
 impl RsVec {
+    /// Build an [`RsVec`] from a [`BitVec`]. This will consume the [`BitVec`]. Since [`RsVec`]s are
+    /// immutable, this is the only way to construct an [`RsVec`].
+    #[must_use]
+    pub fn from_bit_vec(mut vec: BitVec) -> RsVec {
+        // Construct the block descriptor meta data. Each block descriptor contains the number of
+        // zeros in the super-block, up to but excluding the block.
+        let mut blocks = Vec::with_capacity(vec.len() / BLOCK_SIZE + 1);
+        let mut super_blocks = Vec::with_capacity(vec.len() / SUPER_BLOCK_SIZE + 1);
+        let mut select_blocks = Vec::new();
+
+        // sentinel value
+        select_blocks.push(SelectSuperBlockDescriptor {
+            index_0: 0,
+            index_1: 0,
+        });
+
+        let mut total_zeros: usize = 0;
+        let mut current_zeros: usize = 0;
+        let mut last_zero_select_block: usize = 0;
+        let mut last_one_select_block: usize = 0;
+
+        for (idx, &word) in vec.data.iter().enumerate() {
+            // if we moved past a block boundary, append the block information for the previous
+            // block and reset the counter if we moved past a super-block boundary.
+            if idx % (BLOCK_SIZE / WORD_SIZE) == 0 {
+                if idx % (SUPER_BLOCK_SIZE / WORD_SIZE) == 0 {
+                    total_zeros += current_zeros;
+                    current_zeros = 0;
+                    super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
+                }
+
+                // this cannot overflow because a super block isn't 2^16 bits long
+                #[allow(clippy::cast_possible_truncation)]
+                blocks.push(BlockDescriptor {
+                    zeros: current_zeros as u16,
+                });
+            }
+
+            // count the zeros in the current word and add them to the counter
+            // the last word may contain padding zeros, which should not be counted,
+            // but since we do not append the last block descriptor, this is not a problem
+            let new_zeros = word.count_zeros() as usize;
+            let all_zeros = total_zeros + current_zeros + new_zeros;
+            if all_zeros / SELECT_BLOCK_SIZE > (total_zeros + current_zeros) / SELECT_BLOCK_SIZE {
+                if all_zeros / SELECT_BLOCK_SIZE == select_blocks.len() {
+                    select_blocks.push(SelectSuperBlockDescriptor {
+                        index_0: super_blocks.len() - 1,
+                        index_1: 0,
+                    });
+                } else {
+                    select_blocks[all_zeros / SELECT_BLOCK_SIZE].index_0 = super_blocks.len() - 1;
+                }
+
+                last_zero_select_block += 1;
+            }
+
+            let total_bits = (idx + 1) * WORD_SIZE;
+            let all_ones = total_bits - all_zeros;
+            if all_ones / SELECT_BLOCK_SIZE
+                > (idx * WORD_SIZE - total_zeros - current_zeros) / SELECT_BLOCK_SIZE
+            {
+                if all_ones / SELECT_BLOCK_SIZE == select_blocks.len() {
+                    select_blocks.push(SelectSuperBlockDescriptor {
+                        index_0: 0,
+                        index_1: super_blocks.len() - 1,
+                    });
+                } else {
+                    select_blocks[all_ones / SELECT_BLOCK_SIZE].index_1 = super_blocks.len() - 1;
+                }
+
+                last_one_select_block += 1;
+            }
+
+            current_zeros += new_zeros;
+        }
+
+        // insert dummy select blocks at the end that just report the same index like the last real
+        // block, so the bound check for binary search doesn't overflow
+        // this is technically the incorrect value, but since all valid queries will be smaller,
+        // this will only tell select to stay in the current super block, which is correct.
+        // we cannot use a real value here, because this would change the size of the super-block
+        if last_zero_select_block == select_blocks.len() - 1 {
+            select_blocks.push(SelectSuperBlockDescriptor {
+                index_0: select_blocks[last_zero_select_block].index_0,
+                index_1: 0,
+            });
+        } else {
+            debug_assert!(select_blocks[last_zero_select_block + 1].index_0 == 0);
+            select_blocks[last_zero_select_block + 1].index_0 =
+                select_blocks[last_zero_select_block].index_0;
+        }
+        if last_one_select_block == select_blocks.len() - 1 {
+            select_blocks.push(SelectSuperBlockDescriptor {
+                index_0: 0,
+                index_1: select_blocks[last_one_select_block].index_1,
+            });
+        } else {
+            debug_assert!(select_blocks[last_one_select_block + 1].index_1 == 0);
+            select_blocks[last_one_select_block + 1].index_1 =
+                select_blocks[last_one_select_block].index_1;
+        }
+
+        // pad the internal vector to be block-aligned, so SIMD operations don't try to read
+        // past the end of the vector. Note that this does not affect the content of the vector,
+        // because those bits are not considered part of the vector.
+        while vec.data.len() % (BLOCK_SIZE / WORD_SIZE) != 0 {
+            vec.data.push(0);
+        }
+
+        RsVec {
+            data: vec.data,
+            len: vec.len,
+            blocks,
+            super_blocks,
+            select_blocks,
+            // the last block may contain padding zeros, which should not be counted
+            rank0: total_zeros + current_zeros - ((WORD_SIZE - (vec.len % WORD_SIZE)) % WORD_SIZE),
+            rank1: vec.len
+                - (total_zeros + current_zeros - ((WORD_SIZE - (vec.len % WORD_SIZE)) % WORD_SIZE)),
+        }
+    }
+
     #[target_feature(enable = "popcnt")]
     unsafe fn naive_rank0(&self, pos: usize) -> usize {
         self.rank(true, pos)
@@ -392,179 +514,6 @@ impl RsVec {
             + self.blocks.len() * size_of::<BlockDescriptor>()
             + self.super_blocks.len() * size_of::<SuperBlockDescriptor>()
             + self.select_blocks.len() * size_of::<SelectSuperBlockDescriptor>()
-    }
-}
-
-/// A builder for `FastBitVector`. This is used to efficiently construct a `BitVector` by appending
-/// bits to it. Once all bits have been appended, the `BitVector` can be built using the `build`
-/// method. If the number of bits to be appended is known in advance, it is recommended to use
-/// `with_capacity` to avoid re-allocations. If bits are already available in little endian u64
-/// words, those words can be appended using `append_word`.
-#[derive(Clone, Debug, Default)]
-pub struct RsVectorBuilder {
-    vec: BitVec,
-}
-
-impl RsVectorBuilder {
-    /// Create a new empty `BitVectorBuilder`.
-    #[must_use]
-    pub fn new() -> RsVectorBuilder {
-        RsVectorBuilder::default()
-    }
-
-    /// Create a new empty `BitVectorBuilder` with the specified initial capacity to avoid
-    /// re-allocations. The capacity is measured in bits
-    #[must_use]
-    pub fn with_capacity(capacity: usize) -> RsVectorBuilder {
-        RsVectorBuilder {
-            vec: BitVec::with_capacity(capacity),
-        }
-    }
-
-    /// Append a bit to the vector.
-    pub fn append_bit<T>(&mut self, bit: T)
-    where
-        T: Into<u64>,
-    {
-        self.vec.append_bit(bit.into());
-    }
-
-    /// Append a word to the vector. The word is assumed to be in little endian, i.e. the least
-    /// significant bit is the first bit.
-    pub fn append_word(&mut self, word: u64) {
-        self.vec.append_word(word);
-    }
-}
-
-/// A trait to be implemented for each bit vector type to specify how it is built from a
-/// `BitVectorBuilder`.
-impl RsVectorBuilder {
-    /// Build the `BitVector` from all bits that have been appended so far. This will consume the
-    /// `BitVectorBuilder`.
-    #[must_use]
-    pub fn build(self) -> RsVec {
-        Self::from_bit_vec(self.vec)
-    }
-
-    /// Build a `BitVector` from a `BitVec`. This will consume the `BitVec`.
-    #[must_use]
-    pub fn from_bit_vec(mut vec: BitVec) -> RsVec {
-        // Construct the block descriptor meta data. Each block descriptor contains the number of
-        // zeros in the super-block, up to but excluding the block.
-        let mut blocks = Vec::with_capacity(vec.len() / BLOCK_SIZE + 1);
-        let mut super_blocks = Vec::with_capacity(vec.len() / SUPER_BLOCK_SIZE + 1);
-        let mut select_blocks = Vec::new();
-
-        // sentinel value
-        select_blocks.push(SelectSuperBlockDescriptor {
-            index_0: 0,
-            index_1: 0,
-        });
-
-        let mut total_zeros: usize = 0;
-        let mut current_zeros: usize = 0;
-        let mut last_zero_select_block: usize = 0;
-        let mut last_one_select_block: usize = 0;
-
-        for (idx, &word) in vec.data.iter().enumerate() {
-            // if we moved past a block boundary, append the block information for the previous
-            // block and reset the counter if we moved past a super-block boundary.
-            if idx % (BLOCK_SIZE / WORD_SIZE) == 0 {
-                if idx % (SUPER_BLOCK_SIZE / WORD_SIZE) == 0 {
-                    total_zeros += current_zeros;
-                    current_zeros = 0;
-                    super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
-                }
-
-                // this cannot overflow because a super block isn't 2^16 bits long
-                #[allow(clippy::cast_possible_truncation)]
-                blocks.push(BlockDescriptor {
-                    zeros: current_zeros as u16,
-                });
-            }
-
-            // count the zeros in the current word and add them to the counter
-            // the last word may contain padding zeros, which should not be counted,
-            // but since we do not append the last block descriptor, this is not a problem
-            let new_zeros = word.count_zeros() as usize;
-            let all_zeros = total_zeros + current_zeros + new_zeros;
-            if all_zeros / SELECT_BLOCK_SIZE > (total_zeros + current_zeros) / SELECT_BLOCK_SIZE {
-                if all_zeros / SELECT_BLOCK_SIZE == select_blocks.len() {
-                    select_blocks.push(SelectSuperBlockDescriptor {
-                        index_0: super_blocks.len() - 1,
-                        index_1: 0,
-                    });
-                } else {
-                    select_blocks[all_zeros / SELECT_BLOCK_SIZE].index_0 = super_blocks.len() - 1;
-                }
-
-                last_zero_select_block += 1;
-            }
-
-            let total_bits = (idx + 1) * WORD_SIZE;
-            let all_ones = total_bits - all_zeros;
-            if all_ones / SELECT_BLOCK_SIZE
-                > (idx * WORD_SIZE - total_zeros - current_zeros) / SELECT_BLOCK_SIZE
-            {
-                if all_ones / SELECT_BLOCK_SIZE == select_blocks.len() {
-                    select_blocks.push(SelectSuperBlockDescriptor {
-                        index_0: 0,
-                        index_1: super_blocks.len() - 1,
-                    });
-                } else {
-                    select_blocks[all_ones / SELECT_BLOCK_SIZE].index_1 = super_blocks.len() - 1;
-                }
-
-                last_one_select_block += 1;
-            }
-
-            current_zeros += new_zeros;
-        }
-
-        // insert dummy select blocks at the end that just report the same index like the last real
-        // block, so the bound check for binary search doesn't overflow
-        // this is technically the incorrect value, but since all valid queries will be smaller,
-        // this will only tell select to stay in the current super block, which is correct.
-        // we cannot use a real value here, because this would change the size of the super-block
-        if last_zero_select_block == select_blocks.len() - 1 {
-            select_blocks.push(SelectSuperBlockDescriptor {
-                index_0: select_blocks[last_zero_select_block].index_0,
-                index_1: 0,
-            });
-        } else {
-            debug_assert!(select_blocks[last_zero_select_block + 1].index_0 == 0);
-            select_blocks[last_zero_select_block + 1].index_0 =
-                select_blocks[last_zero_select_block].index_0;
-        }
-        if last_one_select_block == select_blocks.len() - 1 {
-            select_blocks.push(SelectSuperBlockDescriptor {
-                index_0: 0,
-                index_1: select_blocks[last_one_select_block].index_1,
-            });
-        } else {
-            debug_assert!(select_blocks[last_one_select_block + 1].index_1 == 0);
-            select_blocks[last_one_select_block + 1].index_1 =
-                select_blocks[last_one_select_block].index_1;
-        }
-
-        // pad the internal vector to be block-aligned, so SIMD operations don't try to read
-        // past the end of the vector. Note that this does not affect the content of the vector,
-        // because those bits are not considered part of the vector.
-        while vec.data.len() % (BLOCK_SIZE / WORD_SIZE) != 0 {
-            vec.data.push(0);
-        }
-
-        RsVec {
-            data: vec.data,
-            len: vec.len,
-            blocks,
-            super_blocks,
-            select_blocks,
-            // the last block may contain padding zeros, which should not be counted
-            rank0: total_zeros + current_zeros - ((WORD_SIZE - (vec.len % WORD_SIZE)) % WORD_SIZE),
-            rank1: vec.len
-                - (total_zeros + current_zeros - ((WORD_SIZE - (vec.len % WORD_SIZE)) % WORD_SIZE)),
-        }
     }
 }
 
