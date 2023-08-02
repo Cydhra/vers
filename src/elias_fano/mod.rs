@@ -37,7 +37,7 @@ impl EliasFanoVec {
     /// word length of elements to the minimum required to represent the universe bound.
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
-    pub fn new(data: &Vec<u64>) -> Self {
+    pub fn new(data: &[u64]) -> Self {
         // calculate the largest element the vector needs to represent.
         // By limiting the universe size, we can limit the number of bits
         // required to represent each element, and also spread the elements out more evenly through
