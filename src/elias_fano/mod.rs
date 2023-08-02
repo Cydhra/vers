@@ -35,9 +35,15 @@ impl EliasFanoVec {
     /// Create a new Elias-Fano vector by compressing the given data. The data must be sorted in
     /// ascending order. The resulting vector is immutable, which will be exploited by limiting the
     /// word length of elements to the minimum required to represent the universe bound.
+    ///
+    /// # Panics
+    /// The function might panic if the input data is not in ascending order.
+    /// Alternatively, it might produce a data structure which contains garbage data.
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub fn from_slice(data: &[u64]) -> Self {
+        debug_assert!(data.windows(2).all(|w| w[0] <= w[1]), "Data must be sorted in ascending order");
+
         // calculate the largest element the vector needs to represent.
         // By limiting the universe size, we can limit the number of bits
         // required to represent each element, and also spread the elements out more evenly through
