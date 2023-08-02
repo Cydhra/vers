@@ -18,7 +18,7 @@ fn bench_ef(b: &mut Criterion) {
             .collect::<Vec<u64>>();
         sequence.sort_unstable();
         let ef_vec = EliasFanoVec::new(&sequence);
-        let pred_sample = Uniform::new(ef_vec.get(0), u64::MAX);
+        let pred_sample = Uniform::new(ef_vec.get_unchecked(0), u64::MAX);
 
         group.bench_with_input(BenchmarkId::new("predecessor", l), &l, |b, _| {
             b.iter_batched(

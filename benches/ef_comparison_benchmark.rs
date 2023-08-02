@@ -29,7 +29,7 @@ fn bench_ef(b: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("vers vector", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng),
-                |e| black_box(ef_vec.get(e)),
+                |e| black_box(ef_vec.get_unchecked(e)),
                 BatchSize::SmallInput,
             )
         });

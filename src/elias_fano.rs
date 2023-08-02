@@ -87,10 +87,23 @@ impl EliasFanoVec {
         self.len() == 0
     }
 
+    /// Returns the element at the given index, or `None` if the index exceeds the length of the
+    /// vector.
+    pub fn get(&self, index: usize) -> Option<u64> {
+        if index >= self.len() {
+            return None;
+        }
+
+        Some(self.get_unchecked(index))
+    }
+
     /// Returns the element at the given index.
+    ///
+    /// # Panics
+    /// If the index exceeds the length of the vector, the function will panic.
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
-    pub fn get(&self, index: usize) -> u64 {
+    pub fn get_unchecked(&self, index: usize) -> u64 {
         let upper = self.upper_vec.select1(index) - index - 1;
         let lower = self
             .lower_vec
@@ -111,7 +124,7 @@ impl EliasFanoVec {
     pub fn pred(&self, n: u64) -> u64 {
         // bound the query to the universe size
         if n > self.universe_max {
-            return self.get(self.len() - 1);
+            return self.get_unchecked(self.len() - 1);
         }
 
         if n < self.universe_zero {
@@ -211,7 +224,7 @@ impl EliasFanoVec {
             // return the largest element directly in front of the calculated bounds. This is
             // done when the vector does not contain an element with the query's most significant
             // bit prefix, or when the element at the lower bound is larger than the query.
-            self.get(lower_bound_lower_index - 1)
+            self.get_unchecked(lower_bound_lower_index - 1)
         }
     }
 
@@ -234,10 +247,10 @@ mod tests {
         let ef = EliasFanoVec::new(&vec![0, 1, 4, 7]);
 
         assert_eq!(ef.len(), 4);
-        assert_eq!(ef.get(0), 0);
-        assert_eq!(ef.get(1), 1);
-        assert_eq!(ef.get(2), 4);
-        assert_eq!(ef.get(3), 7);
+        assert_eq!(ef.get_unchecked(0), 0);
+        assert_eq!(ef.get_unchecked(1), 1);
+        assert_eq!(ef.get_unchecked(2), 4);
+        assert_eq!(ef.get_unchecked(3), 7);
 
         assert_eq!(ef.pred(0), 0);
         assert_eq!(ef.pred(1), 1);
@@ -269,10 +282,10 @@ mod tests {
         assert_eq!(ef.pred(1), 1);
         assert_eq!(ef.pred(2), 2);
 
-        assert_eq!(ef.get(2), 0);
-        assert_eq!(ef.get(3), 1);
-        assert_eq!(ef.get(5), 1);
-        assert_eq!(ef.get(8), 2);
+        assert_eq!(ef.get_unchecked(2), 0);
+        assert_eq!(ef.get_unchecked(3), 1);
+        assert_eq!(ef.get_unchecked(5), 1);
+        assert_eq!(ef.get_unchecked(8), 2);
     }
 
     // a randomized test to catch edge cases. If the test fails, efforts should be made to
@@ -291,7 +304,7 @@ mod tests {
         assert_eq!(ef.len(), seq.len());
 
         for (i, &v) in seq.iter().enumerate() {
-            assert_eq!(ef.get(i), v);
+            assert_eq!(ef.get_unchecked(i), v);
         }
 
         for _ in 0..1000 {
@@ -336,7 +349,7 @@ mod tests {
 
         let ef = EliasFanoVec::new(&seq);
         for (i, &x) in seq.iter().enumerate() {
-            assert_eq!(ef.get(i), x, "expected {:b}", x);
+            assert_eq!(ef.get_unchecked(i), x, "expected {:b}", x);
             assert_eq!(ef.pred(x), x);
         }
 
