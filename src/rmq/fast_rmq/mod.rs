@@ -1,6 +1,18 @@
 //! A fast and quasi-succinct range minimum query data structure. It is based on a linear RMQ
 //! data structure, but uses constant sized structures in place of logarithmic ones, which makes
 //! it faster at the cost of O(n log n) space overhead.
+//!
+//! # Example
+//! ```rust
+//! use vers_vecs::FastRmq;
+//!
+//! let data = vec![4, 10, 3, 11, 2, 12];
+//! let rmq = FastRmq::from_vec(data);
+//!
+//! assert_eq!(rmq.range_min(0, 1), 0);
+//! assert_eq!(rmq.range_min(0, 2), 2);
+//! assert_eq!(rmq.range_min(0, 3), 2);
+//! ```
 
 use std::arch::x86_64::_pdep_u64;
 use std::cmp::min_by;

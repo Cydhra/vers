@@ -1,6 +1,24 @@
 //! Elias-Fano encoding for sorted vectors of u64 values. It reduces the space required to represent
 //! all numbers (compression ratio dependent on data) and allows for constant time predecessor
 //! queries.
+//!
+//! It implements [`iter`][EliasFanoVec::iter] and [`IntoIterator`][IntoIterator] to allow for
+//! iteration over the values in the vector.
+//!
+//! # Example
+//! ```rust
+//! use vers_vecs::EliasFanoVec;
+//!
+//! let mut elias_fano_vec = EliasFanoVec::from_slice(&[0, 9, 29, 109]);
+//!
+//! assert_eq!(elias_fano_vec.len(), 4);
+//! assert_eq!(elias_fano_vec.get_unchecked(0), 0);
+//! assert_eq!(elias_fano_vec.get_unchecked(3), 109);
+//!
+//! assert_eq!(elias_fano_vec.pred(9), 9);
+//! assert_eq!(elias_fano_vec.pred(10), 9);
+//! assert_eq!(elias_fano_vec.pred(420000), 109);
+//! ```
 
 use crate::BitVec;
 use crate::RsVec;
@@ -34,7 +52,7 @@ pub struct EliasFanoVec {
 impl EliasFanoVec {
     /// Create a new Elias-Fano vector by compressing the given data. The data must be sorted in
     /// ascending order. The resulting vector is immutable, which will be exploited by limiting the
-    /// word length of elements to the minimum required to represent the universe bound.
+    /// word length of elements to the minimum required to represent all elements.
     ///
     /// # Panics
     /// The function might panic if the input data is not in ascending order.
@@ -122,7 +140,6 @@ impl EliasFanoVec {
     /// If the query is smaller than the smallest element in the vector,
     /// `u64::MAX` is returned.
     ///
-    /// # Runtime
     /// This query runs in constant time on average. The worst case runtime is logarithmic in the
     /// number of elements in the vector. The worst case occurs when values in the vector are very
     /// dense with only very few elements that are much larger than most.

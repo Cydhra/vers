@@ -1,6 +1,18 @@
 //! This module contains a range minimum query data structure. It pre-computes the
 //! minimum element in intervals 2^k for all k and uses this information to answer queries in
 //! constant time. This uses O(n log n) space overhead.
+//!
+//! # Example
+//! ```rust
+//! use vers_vecs::BinaryRmq;
+//!
+//! let data = vec![4, 10, 3, 11, 2, 12];
+//! let rmq = BinaryRmq::from_vec(data);
+//!
+//! assert_eq!(rmq.range_min(0, 1), 0);
+//! assert_eq!(rmq.range_min(0, 2), 2);
+//! assert_eq!(rmq.range_min(0, 3), 2);
+//! ```
 
 use std::cmp::min_by;
 use std::mem::size_of;

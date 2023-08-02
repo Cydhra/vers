@@ -19,8 +19,7 @@ use crate::BitVec;
 use core::arch::x86_64::_pdep_u64;
 use std::mem::size_of;
 
-/// Size of a block in the bitvector. The size is deliberately chosen to fit one block into a
-/// AVX256 register, so that we can use SIMD instructions to speed up rank and select queries.
+/// Size of a block in the bitvector.
 const BLOCK_SIZE: usize = 512;
 
 /// Size of a super block in the bitvector. Super-blocks exist to decrease the memory overhead
