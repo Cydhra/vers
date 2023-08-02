@@ -98,8 +98,8 @@ impl EliasFanoVec {
         ((upper << self.lower_len) as u64 | lower) + self.universe_zero
     }
 
-    /// Returns the largest element that is smaller than or equal to the given element.
-    /// If the given element is smaller than the smallest element in the vector,
+    /// Returns the largest element that is smaller than or equal to the query.
+    /// If the query is smaller than the smallest element in the vector,
     /// `u64::MAX` is returned.
     ///
     /// # Runtime
