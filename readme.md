@@ -84,7 +84,7 @@ An increase in the near-constant runtime can be observed for input sizes exceedi
 ![Elias-Fano Randomized](images/elias_fano_randomized.svg)
 
 Another benchmark for worst-case input distributions shows that Vers' implementation is still only a factor slower than
-on average inputs and asymptotically better beginning in the low megabytes.
+on average inputs and asymptotically better than binary search.
 
 ![Elias-Fano Worst Case](images/elias_fano_worst_case.svg)
 
