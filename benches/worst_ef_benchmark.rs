@@ -57,6 +57,14 @@ fn bench_ef(b: &mut Criterion) {
                 BatchSize::SmallInput,
             )
         });
+
+        group.bench_with_input(BenchmarkId::new("bin search", l), &l, |b, _| {
+            b.iter_batched(
+                || sequence[query_distribution.sample(&mut rng)],
+                |e| black_box(sequence.partition_point(|&x| x <= e) - 1),
+                BatchSize::SmallInput,
+            )
+        });
     }
     group.finish();
 }
