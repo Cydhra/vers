@@ -18,7 +18,7 @@ fn simple_bit_vec_test() {
     bv.flip_bit(1);
     (0..64).for_each(|i| assert_eq!(bv.get(i), Some(0), "mismatch after flip at {}", i));
 
-    bv.truncate(64);
+    bv.drop_last(64);
     assert_eq!(bv.len(), 1);
     assert_eq!(bv.get(0), Some(0));
     assert_eq!(bv.get(1), None);

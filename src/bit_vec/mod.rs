@@ -79,7 +79,7 @@ impl BitVec {
     }
 
     /// Drop the last n bits from the bit vector.
-    pub fn truncate(&mut self, n: usize) {
+    pub fn drop_last(&mut self, n: usize) {
         self.len -= n;
         if self.len / WORD_SIZE > 0 {
             self.data.truncate(self.len / WORD_SIZE);
