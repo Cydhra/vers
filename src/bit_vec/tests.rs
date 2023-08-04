@@ -72,3 +72,39 @@ fn drop_last_test() {
     assert_eq!(bv.len(), 0);
     assert_eq!(bv.data.len(), 0);
 }
+
+#[test]
+fn drop_and_append_word_test() {
+    let mut bv = BitVec::from_ones(64);
+    bv.drop_last(32);
+    bv.append_word(0);
+
+    assert_eq!(bv.len(), 96);
+    (0..32).for_each(|i| assert_eq!(bv.get(i), Some(1), "mismatch at {}", i));
+    (32..96).for_each(|i| assert_eq!(bv.get(i), Some(0), "mismatch at {}", i));
+}
+
+#[test]
+fn drop_and_append_stride_test() {
+    let mut bv = BitVec::from_ones(64);
+    bv.drop_last(32);
+    bv.append_bits(0, 64);
+
+    assert_eq!(bv.len(), 96);
+    (0..32).for_each(|i| assert_eq!(bv.get(i), Some(1), "mismatch at {}", i));
+    (32..96).for_each(|i| assert_eq!(bv.get(i), Some(0), "mismatch at {}", i));
+}
+
+#[test]
+fn drop_and_append_bit_test() {
+    let mut bv = BitVec::from_ones(64);
+    bv.drop_last(32);
+    bv.append(false);
+    bv.append_bit(0);
+    bv.append_bit_u8(0);
+    bv.append_bit_u32(0);
+
+    assert_eq!(bv.len(), 36);
+    (0..32).for_each(|i| assert_eq!(bv.get(i), Some(1), "mismatch at {}", i));
+    (32..36).for_each(|i| assert_eq!(bv.get(i), Some(0), "mismatch at {}", i));
+}
