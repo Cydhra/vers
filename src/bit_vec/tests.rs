@@ -117,3 +117,12 @@ fn append_and_drop_test() {
     assert_eq!(bv.len(), 1000 + 64 - 420);
     (0..1000 + 64 - 420).for_each(|i| assert_eq!(bv.get(i), Some(0), "mismatch at {}", i));
 }
+
+#[test]
+fn test_drop_all_append() {
+    let mut bv = BitVec::from_zeros(100);
+    bv.drop_last(1000);
+    bv.append_word(u64::MAX);
+    assert_eq!(bv.len(), 64);
+    (0..64).for_each(|i| assert_eq!(bv.get(i), Some(1), "mismatch at {}", i));
+}
