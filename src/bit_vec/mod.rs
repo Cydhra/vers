@@ -74,6 +74,8 @@ impl BitVec {
         }
         if bit {
             self.data[self.len / WORD_SIZE] |= 1 << (self.len % WORD_SIZE);
+        } else {
+            self.data[self.len / WORD_SIZE] &= !(1 << (self.len % WORD_SIZE));
         }
         self.len += 1;
     }
@@ -104,7 +106,12 @@ impl BitVec {
         if self.len % WORD_SIZE == 0 {
             self.data.push(0);
         }
-        self.data[self.len / WORD_SIZE] |= (bit % 2) << (self.len % WORD_SIZE);
+        if bit % 2 == 1 {
+            self.data[self.len / WORD_SIZE] |= 1 << (self.len % WORD_SIZE);
+        } else {
+            self.data[self.len / WORD_SIZE] &= !(1 << (self.len % WORD_SIZE));
+        }
+
         self.len += 1;
     }
 
@@ -126,7 +133,10 @@ impl BitVec {
         if self.len % WORD_SIZE == 0 {
             self.data.push(word);
         } else {
+            // zero out the unused bits before or-ing the new one, to ensure no garbage data remains
+            self.data[self.len / WORD_SIZE] &= !(u64::MAX << (self.len % WORD_SIZE));
             self.data[self.len / WORD_SIZE] |= word << (self.len % WORD_SIZE);
+
             self.data.push(word >> (WORD_SIZE - self.len % WORD_SIZE));
         }
         self.len += WORD_SIZE;
@@ -149,6 +159,8 @@ impl BitVec {
         if self.len % WORD_SIZE == 0 {
             self.data.push(bits);
         } else {
+            // zero out the unused bits before or-ing the new one, to ensure no garbage data remains
+            self.data[self.len / WORD_SIZE] &= !(u64::MAX << (self.len % WORD_SIZE));
             self.data[self.len / WORD_SIZE] |= bits << (self.len % WORD_SIZE);
 
             if self.len % WORD_SIZE + len > WORD_SIZE {
