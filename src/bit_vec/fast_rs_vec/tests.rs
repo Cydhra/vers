@@ -322,3 +322,57 @@ fn test_empty_vec() {
     assert_eq!(rs_vec.select0(0), 0);
     assert_eq!(rs_vec.select1(0), 0);
 }
+
+#[test]
+fn test_block_boundaries() {
+    fn test_ranks(mut bv: BitVec) {
+        bv.flip_bit(10);
+        bv.flip_bit(11);
+        bv.flip_bit(bv.len() - 11);
+        bv.flip_bit(bv.len() - 10);
+        let rs_vec = RsVec::from_bit_vec(bv);
+
+        assert_eq!(rs_vec.rank0(10), 10);
+        assert_eq!(rs_vec.rank0(11), 10);
+
+        assert_eq!(rs_vec.rank1(10), 0);
+        assert_eq!(rs_vec.rank1(11), 1);
+
+        assert_eq!(rs_vec.rank1(rs_vec.len() - 2), 4);
+        assert_eq!(rs_vec.rank1(rs_vec.len() - 1), 4);
+        assert_eq!(rs_vec.rank1(rs_vec.len()), 4);
+
+        assert_eq!(rs_vec.rank0(rs_vec.len() - 2), rs_vec.len() - 6);
+        assert_eq!(rs_vec.rank0(rs_vec.len() - 1), rs_vec.len() - 5);
+        assert_eq!(rs_vec.rank0(rs_vec.len()), rs_vec.len() - 4);
+
+        assert_eq!(rs_vec.select1(0), 10);
+        assert_eq!(rs_vec.select1(1), 11);
+        assert_eq!(rs_vec.select1(2), rs_vec.len() - 11);
+        assert_eq!(rs_vec.select1(3), rs_vec.len() - 10);
+    }
+
+    let bv = BitVec::from_zeros(BLOCK_SIZE - 1);
+    test_ranks(bv);
+
+    let bv = BitVec::from_zeros(BLOCK_SIZE);
+    test_ranks(bv);
+
+    let bv = BitVec::from_zeros(BLOCK_SIZE + 1);
+    test_ranks(bv);
+
+    let bv = BitVec::from_zeros(SUPER_BLOCK_SIZE - 1);
+    test_ranks(bv);
+
+    let bv = BitVec::from_zeros(SUPER_BLOCK_SIZE);
+    test_ranks(bv);
+
+    let bv = BitVec::from_zeros(SUPER_BLOCK_SIZE + 1);
+    test_ranks(bv);
+
+    let bv = BitVec::from_zeros(SUPER_BLOCK_SIZE + 10);
+    test_ranks(bv);
+
+    let bv = BitVec::from_zeros(SUPER_BLOCK_SIZE + 11);
+    test_ranks(bv);
+}
