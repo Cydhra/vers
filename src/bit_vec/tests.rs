@@ -56,3 +56,22 @@ fn test_illegal_queries() {
     });
     assert!(result.is_err());
 }
+
+#[test]
+fn drop_last_test() {
+    let mut bv = BitVec::from_ones(128);
+    bv.drop_last(65);
+    assert_eq!(bv.len(), 63);
+    assert_eq!(bv.data.len(), 1);
+    (0..63).for_each(|i| assert_eq!(bv.get(i), Some(1), "mismatch at {}", i));
+
+    bv.append_bits(0, 8);
+    assert_eq!(bv.len(), 71);
+    assert_eq!(bv.data.len(), 2);
+    (0..63).for_each(|i| assert_eq!(bv.get(i), Some(1), "mismatch after append at {}", i));
+    (63..71).for_each(|i| assert_eq!(bv.get(i), Some(0), "mismatch of appended bits at {}", i));
+
+    bv.drop_last(128);
+    assert_eq!(bv.len(), 0);
+    assert_eq!(bv.data.len(), 0);
+}

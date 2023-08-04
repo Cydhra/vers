@@ -78,12 +78,24 @@ impl BitVec {
         self.len += 1;
     }
 
-    /// Drop the last n bits from the bit vector.
+    /// Drop the last n bits from the bit vector. If more bits are dropped than the bit vector
+    /// contains, the bit vector is cleared.
     pub fn drop_last(&mut self, n: usize) {
-        self.len -= n;
-        if self.len / WORD_SIZE > 0 {
-            self.data.truncate(self.len / WORD_SIZE);
+        if n > self.len {
+            self.data.clear();
+            self.len = 0;
+            return;
         }
+
+        let new_limb_count = (self.len - n + WORD_SIZE - 1) / WORD_SIZE;
+
+        // cut off limbs that we no longer need
+        if new_limb_count < self.data.len() {
+            self.data.truncate(new_limb_count);
+        }
+
+        // update bit vector length
+        self.len -= n;
     }
 
     /// Append a bit from a u64. The least significant bit is appended to the bit vector.
