@@ -108,3 +108,12 @@ fn drop_and_append_bit_test() {
     (0..32).for_each(|i| assert_eq!(bv.get(i), Some(1), "mismatch at {}", i));
     (32..36).for_each(|i| assert_eq!(bv.get(i), Some(0), "mismatch at {}", i));
 }
+
+#[test]
+fn append_and_drop_test() {
+    let mut bv = BitVec::from_zeros(1000);
+    bv.append_word(420);
+    bv.drop_last(420);
+    assert_eq!(bv.len(), 1000 + 64 - 420);
+    (0..1000 + 64 - 420).for_each(|i| assert_eq!(bv.get(i), Some(0), "mismatch at {}", i));
+}
