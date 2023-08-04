@@ -67,7 +67,8 @@ impl BitVec {
         Self { data, len }
     }
 
-    /// Append a bit to the bit vector.
+    /// Append a bit to the bit vector. The bit is given as a boolean, where `true` means 1 and
+    /// `false` means 0.
     pub fn append(&mut self, bit: bool) {
         if self.len % WORD_SIZE == 0 {
             self.data.push(0);
@@ -152,6 +153,7 @@ impl BitVec {
     pub fn append_bits(&mut self, mut bits: u64, len: usize) {
         assert!(len <= 64, "Cannot append more than 64 bits");
 
+        // zero out garbage data
         if len < 64 {
             bits &= (1 << len) - 1;
         }
@@ -257,6 +259,9 @@ impl BitVec {
 
     /// Return multiple bits at the given position. The number of bits to return is given by `len`.
     /// At most 64 bits can be returned.
+    ///
+    /// This function is always inlined, because it gains a lot from loop optimization and
+    /// can utilize the processor pre-fetcher better if it is.
     ///
     /// # Panics
     /// If the position is larger than the length of the vector,

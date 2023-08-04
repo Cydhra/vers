@@ -52,6 +52,12 @@ fn test_illegal_queries() {
         bv.flip_bit(129)
     });
     assert!(result.is_err());
+
+    let result = std::panic::catch_unwind(|| {
+        let mut bv = BitVec::from_zeros(128);
+        bv.append_bits(0, 65);
+    });
+    assert!(result.is_err());
 }
 
 #[test]
