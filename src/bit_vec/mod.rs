@@ -8,8 +8,8 @@ pub mod fast_rs_vec;
 /// Size of a word in bitvectors. All vectors operate on 64-bit words.
 const WORD_SIZE: usize = 64;
 
-/// A simple bit vector that does not support rank and select queries. It has a constant memory
-/// overhead of 32 bytes on the stack.
+/// A simple bit vector that does not support rank and select queries. It stores bits densely
+/// in 64 bit limbs. The last limb may be partially filled. Other than that, there is no overhead.
 ///
 /// # Example
 /// ```rust
@@ -53,6 +53,16 @@ impl BitVec {
         let mut data = vec![0; len / WORD_SIZE];
         if len % WORD_SIZE != 0 {
             data.push(0);
+        }
+        Self { data, len }
+    }
+
+    /// Create a new bit vector with all ones and the given length. The length is measured in bits.
+    #[must_use]
+    pub fn from_ones(len: usize) -> Self {
+        let mut data = vec![1; len / WORD_SIZE];
+        if len % WORD_SIZE != 0 {
+            data.push((1 << len) - 1);
         }
         Self { data, len }
     }
@@ -250,3 +260,6 @@ impl BitVec {
         self.data.len() * size_of::<u64>()
     }
 }
+
+#[cfg(test)]
+mod tests;
