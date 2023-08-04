@@ -30,6 +30,8 @@ fn test_alloc_ones() {
     assert_eq!(bv.len(), 42);
     assert_eq!(bv.data.len(), 1);
 
+    (0..42).for_each(|i| assert_eq!(bv.get(i), Some(1), "mismatch at {}", i));
+
     // test that unused bits are still zero, because this is what the data structure assumes
     assert_eq!(bv.data[0] >> 42, 0);
 }

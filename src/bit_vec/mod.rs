@@ -60,7 +60,7 @@ impl BitVec {
     /// Create a new bit vector with all ones and the given length. The length is measured in bits.
     #[must_use]
     pub fn from_ones(len: usize) -> Self {
-        let mut data = vec![1; len / WORD_SIZE];
+        let mut data = vec![u64::MAX; len / WORD_SIZE];
         if len % WORD_SIZE != 0 {
             data.push((1 << len) - 1);
         }
