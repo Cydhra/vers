@@ -46,6 +46,7 @@ struct SuperBlockDescriptor {
 
 /// Meta-data for the select query. Each entry i in the select vector contains the indices to find
 /// the i * `SELECT_BLOCK_SIZE`'th 0- and 1-bit in the bitvector. Those indices may be very far apart.
+/// The indices do not point into the bit-vector, but into the select-block vector.
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct SelectSuperBlockDescriptor {
@@ -187,6 +188,7 @@ impl RsVec {
         // pad the internal vector to be block-aligned, so SIMD operations don't try to read
         // past the end of the vector. Note that this does not affect the content of the vector,
         // because those bits are not considered part of the vector.
+        // Note further, that currently no SIMD implementation exists.
         while vec.data.len() % (BLOCK_SIZE / WORD_SIZE) != 0 {
             vec.data.push(0);
         }
@@ -436,7 +438,7 @@ impl RsVec {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     ///
-    /// # Compatability
+    /// # Compatibility
     /// This function forcibly enables the `popcnt` x86 CPU feature.
     #[must_use]
     pub fn rank0(&self, pos: usize) -> usize {
@@ -451,7 +453,7 @@ impl RsVec {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     ///
-    /// # Compatability
+    /// # Compatibility
     /// This function forcibly enables the `popcnt` x86 CPU feature.
     #[must_use]
     pub fn rank1(&self, pos: usize) -> usize {
@@ -462,7 +464,9 @@ impl RsVec {
     /// The following holds:
     /// ``select0(rank0(pos)) == pos``
     ///
-    /// # Compatability
+    /// If the rank is larger than the number of 0-bits in the vector, the vector length is returned.
+    ///
+    /// # Compatibility
     /// This function forcibly enables the `bmi2` x86 CPU feature. If this feature is not available
     /// on the CPU, this function will not work.
     #[must_use]
@@ -474,7 +478,9 @@ impl RsVec {
     /// The following holds:
     /// ``select1(rank1(pos)) == pos``
     ///
-    /// # Compatability
+    /// If the rank is larger than the number of 1-bits in the bit-vector, the vector length is returned.
+    ///
+    /// # Compatibility
     /// This function forcibly enables the `bmi2` x86 CPU feature. If this feature is not available
     /// on the CPU, this function will not work.
     #[must_use]
@@ -508,8 +514,9 @@ impl RsVec {
 
     /// Return the bit at the given position. The bit takes the least significant
     /// bit of the returned u64 word.
-    /// If the position is larger than the length of the vector,
-    /// the behavior is undefined (the function will either return 0 or panic).
+    ///
+    /// # Panics
+    /// This function may panic if `pos >= self.len()` (alternatively, it may return garbage).
     #[must_use]
     pub fn get_unchecked(&self, pos: usize) -> u64 {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
