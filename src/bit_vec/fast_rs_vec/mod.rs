@@ -289,9 +289,9 @@ impl RsVec {
         block_index * BLOCK_SIZE
             + index_counter
             + _pdep_u64(
-                1 << rank,
-                !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-            )
+            1 << rank,
+            !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+        )
             .trailing_zeros() as usize
     }
 
@@ -306,7 +306,7 @@ impl RsVec {
 
         if self.super_blocks.len() > (super_block + 1)
             && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
-                <= rank
+            <= rank
         {
             let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
 
@@ -322,7 +322,7 @@ impl RsVec {
             // linear search for super block that contains the rank
             while self.super_blocks.len() > (super_block + 1)
                 && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
-                    <= rank
+                <= rank
             {
                 super_block += 1;
             }
@@ -368,9 +368,9 @@ impl RsVec {
         block_index * BLOCK_SIZE
             + index_counter
             + _pdep_u64(
-                1 << rank,
-                self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-            )
+            1 << rank,
+            self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+        )
             .trailing_zeros() as usize
     }
 
@@ -382,16 +382,15 @@ impl RsVec {
         #[allow(clippy::collapsible_else_if)]
         // readability and more obvious where dead branch elimination happens
         if zero {
-            if pos > self.len() {
+            if pos >= self.len() {
                 return self.rank0;
             }
         } else {
-            if pos > self.len() {
+            if pos >= self.len() {
                 return self.rank1;
             }
         }
 
-        #[allow(unused_variables)]
         let index = pos / WORD_SIZE;
         let block_index = pos / BLOCK_SIZE;
         let super_block_index = pos / SUPER_BLOCK_SIZE;

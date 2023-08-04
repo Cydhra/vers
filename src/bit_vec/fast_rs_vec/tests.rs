@@ -311,3 +311,14 @@ fn test_large_selects() {
     assert_eq!(rs_vec.select1(64), 65); // select1(64) is not in the vector
     assert_eq!(rs_vec.select1(65), 65); // select1(65) is not in the vector
 }
+
+#[test]
+fn test_empty_vec() {
+    let bv = BitVec::new();
+    let rs_vec = RsVec::from_bit_vec(bv);
+    assert_eq!(rs_vec.len(), 0);
+    assert_eq!(rs_vec.rank0(0), 0);
+    assert_eq!(rs_vec.rank1(0), 0);
+    assert_eq!(rs_vec.select0(0), 0);
+    assert_eq!(rs_vec.select1(0), 0);
+}
