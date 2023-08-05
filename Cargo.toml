@@ -9,6 +9,9 @@ repository = "https://github.com/Cydhra/vers"
 license = "MIT OR Apache-2.0"
 keywords = ["succinct", "bit-vector", "elias-fano", "rmq", "sequence"]
 categories = ["data-structures", "algorithms"]
+exclude = [
+    "images/*",
+]
 
 [dependencies]
 serde = { version = "1.0", optional = true, features = ["derive"] }
