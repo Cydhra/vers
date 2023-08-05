@@ -5,7 +5,7 @@
 use std::arch::x86_64::_pdep_u64;
 use std::cmp::min_by;
 use std::mem::size_of;
-use std::ops::{Deref, Range, RangeInclusive};
+use std::ops::{Bound, Deref, RangeBounds};
 
 use crate::rmq::binary_rmq::BinaryRmq;
 
@@ -147,14 +147,30 @@ impl FastRmq {
         }
     }
 
-    /// Convenience function for [`range_min`] using a half-open [range][`Range`].
-    pub fn range_min_with_range(&self, range: Range<usize>) -> usize {
-        self.range_min(range.start, range.end - 1)
-    }
+    /// Convenience function for [`FastRmq::range_min`] for using range operators.
+    /// The range is clamped to the length of the data structure, so this function will not panic.
+    ///
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::FastRmq;
+    /// let rmq = FastRmq::from_vec(vec![5, 4, 3, 2, 1]);
+    /// assert_eq!(rmq.range_min_with_range(0..3), 2);
+    /// assert_eq!(rmq.range_min_with_range(0..=3), 3);
+    /// ```
+    #[must_use]
+    pub fn range_min_with_range<T: RangeBounds<usize>>(&self, range: T) -> usize {
+        let start = match range.start_bound() {
+            Bound::Included(i) => *i,
+            Bound::Excluded(i) => *i + 1,
+            Bound::Unbounded => 0,
+        }.clamp(0, self.len() - 1);
 
-    /// Convenience function for [`range_min`] using a closed [range][`RangeInclusive`].
-    pub fn range_min_with_range_inclusive(&self, range: RangeInclusive<usize>) -> usize {
-        self.range_min(*range.start(), *range.end())
+        let end = match range.end_bound() {
+            Bound::Included(i) => *i,
+            Bound::Excluded(i) => *i - 1,
+            Bound::Unbounded => self.len() - 1,
+        }.clamp(0, self.len() - 1);
+        self.range_min(start, end)
     }
 
     /// Returns the index of the minimum element in the range [i, j] in O(1) time.

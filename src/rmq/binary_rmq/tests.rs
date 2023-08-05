@@ -52,3 +52,11 @@ fn test_iter() {
     assert_eq!(iter.next(), Some(&5));
     assert_eq!(iter.next(), None);
 }
+
+#[test]
+fn test_range_operators() {
+    let rmq = BinaryRmq::from_vec(vec![5, 4, 3, 2, 1]);
+    assert_eq!(rmq.range_min(0, 3), 3);
+    assert_eq!(rmq.range_min_with_range(0..3), 2);
+    assert_eq!(rmq.range_min_with_range(0..=3), 3);
+}

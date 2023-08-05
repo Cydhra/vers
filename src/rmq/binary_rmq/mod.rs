@@ -3,8 +3,9 @@
 //! constant time. This uses O(n log n) space overhead.
 
 use std::cmp::min_by;
+use std::collections::Bound;
 use std::mem::size_of;
-use std::ops::Deref;
+use std::ops::{Deref, RangeBounds};
 
 /// A Range Minimum Query data structure that pre-calculates some queries.
 /// The minimum element in intervals 2^k for all k is precalculated and each query is turned into
@@ -101,8 +102,33 @@ impl BinaryRmq {
         Self { data, results }
     }
 
-    /// Calculates the index of the minimum element in the range [i, j]. This has a constant query
-    /// time. The range is inclusive.
+    /// Convenience function for [`BinaryRmq::range_min`] for using range operators.
+    /// The range is clamped to the length of the data structure, so this function will not panic.
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::BinaryRmq;
+    /// let rmq = BinaryRmq::from_vec(vec![5, 4, 3, 2, 1]);
+    /// assert_eq!(rmq.range_min_with_range(0..3), 2);
+    /// assert_eq!(rmq.range_min_with_range(0..=3), 3);
+    /// ```
+    #[must_use]
+    pub fn range_min_with_range<T: RangeBounds<usize>>(&self, range: T) -> usize {
+        let start = match range.start_bound() {
+            Bound::Included(i) => *i,
+            Bound::Excluded(i) => *i + 1,
+            Bound::Unbounded => 0,
+        }.clamp(0, self.len() - 1);
+
+        let end = match range.end_bound() {
+            Bound::Included(i) => *i,
+            Bound::Excluded(i) => *i - 1,
+            Bound::Unbounded => self.len() - 1,
+        }.clamp(0, self.len() - 1);
+        self.range_min(start, end)
+    }
+
+    /// Returns the index of the minimum element in the range [i, j] in O(1) time.
+    /// This has a constant query time. The range is inclusive.
     ///
     /// # Panics
     /// Calling this function with i > j will produce either a panic or an incorrect result.
