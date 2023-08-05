@@ -4,6 +4,9 @@
 //!
 //! It implements [`iter`][EliasFanoVec::iter] and [`IntoIterator`][IntoIterator] to allow for
 //! iteration over the values in the vector.
+//!
+//! Beside compression, it also offers expected constant-time predecessor and successor queries
+//! (compare to expected logarithmic time for sorted sequences with binary search or search trees).
 
 use crate::BitVec;
 use crate::RsVec;
@@ -20,9 +23,9 @@ const BIN_SEARCH_THRESHOLD: usize = 4;
 /// The space requirement for this structure is thus linear in the number of elements with a small
 /// constant factor (smaller than one, unless the required word length is close to 64 bit).
 ///
-/// # Predecessor Queries
-/// This data structure supports constant time predecessor queries on average.
-/// See [`EliasFanoVec::pred`] for more information.
+/// # Predecessor/Successor Queries
+/// This data structure supports (on average) constant time predecessor/successor queries.
+/// See [`EliasFanoVec::pred`] and [`EliasFanoVec::succ`] for more information.
 ///
 /// # Example
 /// ```rust
@@ -424,6 +427,10 @@ impl<'a> Iterator for EliasFanoVecRefIter<'a> {
             v
         })
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.ef.len - self.index, Some(self.ef.len - self.index))
+    }
 }
 
 /// An owning iterator over the values in an Elias-Fano encoded vector.
@@ -441,6 +448,10 @@ impl Iterator for EliasFanoVecIter {
             self.index += 1;
             v
         })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.ef.len - self.index, Some(self.ef.len - self.index))
     }
 }
 
