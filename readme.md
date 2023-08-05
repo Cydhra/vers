@@ -9,16 +9,16 @@ I've decided to publish it.
 ## Data Structures
 - a bit-vector with no overhead.
 - a succinct bit-vector supporting fast rank and select queries.
-- an Elias-Fano encoding of monotone sequences; supporting constant time predecessor queries.
+- an Elias-Fano encoding of monotone sequences; supporting constant time predecessor/successor queries.
 - two Range Minimum Query vector structures for constant-time range minimum queries.
 
 ## Beta Status
-I published this library as 0.1.0 as a beta release.
+I published this library as 0.2.0 as a beta release.
 The implementation is tested, benchmarked, optimized, and documented.
-However, I currently ignore many edge-cases, like illegal inputs.
-Such cases are documented and must be checked by the caller if they are possible.
-
-This, and a few other rough spots concerning the API Guidelines, are the reason for the beta status.
+Compared to 0.1.0, I polished the API and added a few convenience functions.
+Functions also validate their inputs now, and the documentation includes examples and panic sections.
+Elias-Fano now supports successor queries next to its predecessor queries.
+I plan to release this into 1.0.0 in the near future, probably without significant changes.
 
 # Intrinsics
 This crate uses compiler intrinsics for bit-manipulation. The intrinsics are supported by
@@ -80,13 +80,26 @@ to find the predecessor.
 The x-axis is the number of elements in the sequence.
 An increase in the near-constant runtime can be observed for input sizes exceeding the L3 cache size 
 (64 MB).
+As expected, predecessor and successor queries are the same speed and much faster than binary search.
 
 ![Elias-Fano Randomized](images/elias_fano_randomized.svg)
 
 Another benchmark for worst-case input distributions shows that Vers' implementation is still only a factor slower than
 on average inputs and asymptotically better than binary search.
+I did not include the successor query in this benchmark, since it is identical to the predecessor query.
 
 ![Elias-Fano Worst Case](images/elias_fano_worst_case.svg)
+
+There is an Elias-Fano implementation in the [elias-fano](https://crates.io/crates/elias-fano) crate,
+which does not support predecessor/successor queries, but I benchmarked the access times for elements at a given index.
+Vers outperforms the crate by a significant margin.
+It should be noted that the elias-fano crate is inefficient with random order access, so I benchmarked in-order access
+as well.
+The x-axis is the number of elements in the sequence, the y-axis is the time for accessing one element.
+Scales are logarithmic.
+
+![Elias-Fano comparison with randomized query order](images/elias_fano_comparison_random.svg)
+![Elias-Fano comparison with in-order query order](images/elias_fano_comparison_in_order.svg)
 
 ### Range Minimum Query
 The Range Minimum Query implementations are compared against the 
