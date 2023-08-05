@@ -203,10 +203,19 @@ fn test_custom_iter_behavior() {
     let ef = EliasFanoVec::from_slice(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
     assert_eq!(ef.iter().skip(2).next(), Some(2));
     assert_eq!(ef.iter().count(), 9);
+    assert_eq!(ef.iter().skip(2).count(), 7);
     assert_eq!(ef.iter().last(), Some(8));
     assert_eq!(ef.iter().nth(2), Some(2));
     assert_eq!(ef.iter().nth(10), None);
     assert_eq!(ef.iter().skip(3).min(), Some(3));
+
+    assert_eq!(ef.clone().into_iter().skip(2).next(), Some(2));
+    assert_eq!(ef.clone().into_iter().count(), 9);
+    assert_eq!(ef.clone().into_iter().skip(2).count(), 7);
+    assert_eq!(ef.clone().into_iter().last(), Some(8));
+    assert_eq!(ef.clone().into_iter().nth(2), Some(2));
+    assert_eq!(ef.clone().into_iter().nth(10), None);
+    assert_eq!(ef.clone().into_iter().skip(3).min(), Some(3));
 }
 
 #[test]
