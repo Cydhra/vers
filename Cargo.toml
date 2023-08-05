@@ -7,7 +7,7 @@ description = "A collection of succinct data structures supported by fast implem
 readme = "readme.md"
 repository = "https://github.com/Cydhra/vers"
 license = "MIT OR Apache-2.0"
-keywords = ["succinct", "bit-vector", "elias-fano", "rmq", "predecessor"]
+keywords = ["succinct", "bit-vector", "elias-fano", "rmq", "sequence"]
 categories = ["data-structures", "algorithms"]
 
 [dependencies]
