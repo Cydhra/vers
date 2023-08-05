@@ -199,6 +199,17 @@ fn test_iter() {
 }
 
 #[test]
+fn test_custom_iter_behavior() {
+    let ef = EliasFanoVec::from_slice(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    assert_eq!(ef.iter().skip(2).next(), Some(2));
+    assert_eq!(ef.iter().count(), 9);
+    assert_eq!(ef.iter().last(), Some(8));
+    assert_eq!(ef.iter().nth(2), Some(2));
+    assert_eq!(ef.iter().nth(10), None);
+    assert_eq!(ef.iter().skip(3).min(), Some(3));
+}
+
+#[test]
 fn test_successor() {
     let ef = EliasFanoVec::from_slice(&vec![0, 1, 4, 7]);
     for i in 0..ef.upper_vec.len() {

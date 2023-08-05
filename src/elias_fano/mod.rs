@@ -11,6 +11,7 @@
 use crate::BitVec;
 use crate::RsVec;
 use std::cmp::max;
+use std::num::NonZeroUsize;
 
 /// We use linear search for small 1-blocks in the upper vector because it is generally more memory-
 /// friendly. But for large clusters this takes too long, so we switch to binary search.
@@ -418,6 +419,22 @@ pub struct EliasFanoVecRefIter<'a> {
     index: usize,
 }
 
+impl EliasFanoVecRefIter<'_> {
+    /// Advances the iterator by `n` elements. Returns an error if the iterator does not have
+    /// enough elements left. Does not call `next` internally.
+    /// This method is currently being added to the iterator trait, see
+    /// [this issue](https://github.com/rust-lang/rust/issues/77404).
+    /// As soon as it is stabilized, this method will be removed and replaced with a custom
+    /// implementation in the iterator impl.
+    fn advance_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
+        if self.index + n > self.ef.len {
+            return Err(NonZeroUsize::new(n - (self.ef.len - self.index)).unwrap());
+        }
+        self.index += n;
+        Ok(())
+    }
+}
+
 impl<'a> Iterator for EliasFanoVecRefIter<'a> {
     type Item = u64;
 
@@ -428,8 +445,59 @@ impl<'a> Iterator for EliasFanoVecRefIter<'a> {
         })
     }
 
+    /// Returns the number of elements that this iterator will iterate over. The size is
+    /// precise.
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.ef.len - self.index, Some(self.ef.len - self.index))
+    }
+
+    /// Returns the exact number of elements that this iterator would iterate over. Does not
+    /// call `next` internally.
+    fn count(self) -> usize
+    where
+        Self: Sized,
+    {
+        self.ef.len - self.index
+    }
+
+    /// Returns the last element of the iterator. Does not call `next` internally.
+    fn last(self) -> Option<Self::Item>
+    where
+        Self: Sized,
+    {
+        if self.ef.is_empty() {
+            // return none so we don't overflow the subtraction
+            return None;
+        }
+
+        Some(self.ef.get_unchecked(self.ef.len - 1))
+    }
+
+    /// Returns the nth element of the iterator. Does not call `next` internally, but advances
+    /// the iterator by `n` elements.
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.advance_by(n).ok()?;
+        self.next()
+    }
+
+    /// Returns the minimum remaining element of the iterator.
+    /// Operates in constant time, because elias fano vectors are sorted.
+    fn min(mut self) -> Option<Self::Item>
+    where
+        Self: Sized,
+        Self::Item: Ord,
+    {
+        self.next()
+    }
+
+    /// Returns the maximum remaining element of the iterator. Operates in constant time,
+    /// because elias fano vectors are sorted.
+    fn max(self) -> Option<Self::Item>
+    where
+        Self: Sized,
+        Self::Item: Ord,
+    {
+        self.last()
     }
 }
 
@@ -438,6 +506,22 @@ impl<'a> Iterator for EliasFanoVecRefIter<'a> {
 pub struct EliasFanoVecIter {
     ef: EliasFanoVec,
     index: usize,
+}
+
+impl EliasFanoVecIter {
+    /// Advances the iterator by `n` elements. Returns an error if the iterator does not have
+    /// enough elements left. Does not call `next` internally.
+    /// This method is currently being added to the iterator trait, see
+    /// [this issue](https://github.com/rust-lang/rust/issues/77404).
+    /// As soon as it is stabilized, this method will be removed and replaced with a custom
+    /// implementation in the iterator impl.
+    fn advance_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
+        if self.index + n > self.ef.len {
+            return Err(NonZeroUsize::new(n - (self.ef.len - self.index)).unwrap());
+        }
+        self.index += n;
+        Ok(())
+    }
 }
 
 impl Iterator for EliasFanoVecIter {
@@ -450,8 +534,59 @@ impl Iterator for EliasFanoVecIter {
         })
     }
 
+    /// Returns the number of elements that this iterator will iterate over. The size is
+    /// precise.
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.ef.len - self.index, Some(self.ef.len - self.index))
+    }
+
+    /// Returns the exact number of elements that this iterator would iterate over. Does not
+    /// call `next` internally.
+    fn count(self) -> usize
+    where
+        Self: Sized,
+    {
+        self.ef.len - self.index
+    }
+
+    /// Returns the last element of the iterator. Does not call `next` internally.
+    fn last(self) -> Option<Self::Item>
+    where
+        Self: Sized,
+    {
+        if self.ef.is_empty() {
+            // return none so we don't overflow the subtraction
+            return None;
+        }
+
+        Some(self.ef.get_unchecked(self.ef.len - 1))
+    }
+
+    /// Returns the nth element of the iterator. Does not call `next` internally, but advances
+    /// the iterator by `n` elements.
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.advance_by(n).ok()?;
+        self.next()
+    }
+
+    /// Returns the minimum remaining element of the iterator.
+    /// Operates in constant time, because elias fano vectors are sorted.
+    fn min(mut self) -> Option<Self::Item>
+    where
+        Self: Sized,
+        Self::Item: Ord,
+    {
+        self.next()
+    }
+
+    /// Returns the maximum remaining element of the iterator. Operates in constant time,
+    /// because elias fano vectors are sorted.
+    fn max(self) -> Option<Self::Item>
+    where
+        Self: Sized,
+        Self::Item: Ord,
+    {
+        self.last()
     }
 }
 
