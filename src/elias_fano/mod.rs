@@ -15,7 +15,7 @@ use std::cmp::max;
 /// case and for worst case.
 const BIN_SEARCH_THRESHOLD: usize = 4;
 
-/// An elias-fano encoded vector of u64 values. The vector is immutable, which will be exploited by
+/// An elias-fano encoded vector of u64 values. The vector is immutable, which is exploited by
 /// limiting the word length of elements to the minimum required to represent all elements.
 /// The space requirement for this structure is thus linear in the number of elements with a small
 /// constant factor (smaller than one, unless the required word length is close to 64 bit).
@@ -170,11 +170,6 @@ impl EliasFanoVec {
         let lower_bound_upper_index = self.upper_vec.select0(upper_query);
         let lower_bound_lower_index = lower_bound_upper_index - upper_query;
 
-        // get the first value from the lower vector that corresponds to the query prefix
-        let mut lower_candidate = self
-            .lower_vec
-            .get_bits_unchecked(lower_bound_lower_index * self.lower_len, self.lower_len);
-
         // calculate the upper part of the result. This only works if the next value in the upper
         // vector is set, otherwise the there is no value in the entire vector with this bit-prefix,
         // and we need to search the largest prefix smaller than the query.
@@ -184,79 +179,86 @@ impl EliasFanoVec {
         // query, we need to search for the block of values before the current prefix and return its
         // last element.
         if self.upper_vec.get_unchecked(lower_bound_upper_index + 1) > 0
-            && (result_upper | lower_candidate) <= n
         {
-            // search for the largest element in the lower vector that is smaller than the query.
-            // Abort the search once the upper vector contains another zero, as this marks the end
-            // of the block of values with the same upper prefix.
-            let mut cursor = 1;
-            while self
-                .upper_vec
-                .get_unchecked(lower_bound_upper_index + cursor + 1)
-                > 0
-            {
-                let next_candidate = self.lower_vec.get_bits_unchecked(
-                    (lower_bound_lower_index + cursor) * self.lower_len,
-                    self.lower_len,
-                );
+            // get the first value from the lower vector that corresponds to the query prefix
+            let mut lower_candidate = self
+                .lower_vec
+                .get_bits_unchecked(lower_bound_lower_index * self.lower_len, self.lower_len);
 
-                // if we found a value that is larger than the query, return the previous value
-                if next_candidate > lower_query {
-                    return (result_upper | lower_candidate) + self.universe_zero;
-                } else if next_candidate == lower_query {
-                    return (result_upper | next_candidate) + self.universe_zero;
-                }
+            if (result_upper | lower_candidate) <= n {
+                // search for the largest element in the lower vector that is smaller than the query.
+                // Abort the search once the upper vector contains another zero, as this marks the end
+                // of the block of values with the same upper prefix.
+                let mut cursor = 1;
+                while self
+                    .upper_vec
+                    .get_unchecked(lower_bound_upper_index + cursor + 1)
+                    > 0
+                {
+                    let next_candidate = self.lower_vec.get_bits_unchecked(
+                        (lower_bound_lower_index + cursor) * self.lower_len,
+                        self.lower_len,
+                    );
 
-                lower_candidate = next_candidate;
-                cursor += 1;
-
-                // if linear search takes too long, we can use select0 to find the next zero in the
-                // upper vector, and then use binary search
-                if cursor == BIN_SEARCH_THRESHOLD {
-                    let block_end = self.upper_vec.select0(upper_query + 1) - upper_query - 2;
-                    let mut upper_bound = block_end;
-                    let mut lower_bound = lower_bound_lower_index + cursor - 1;
-
-                    // binary search the largest element smaller than the query
-                    while lower_bound < upper_bound - 1 {
-                        let middle = lower_bound + ((upper_bound - lower_bound) >> 1);
-
-                        let middle_candidate = self
-                            .lower_vec
-                            .get_bits_unchecked(middle * self.lower_len, self.lower_len);
-
-                        if middle_candidate > lower_query {
-                            upper_bound = middle;
-                        } else if middle_candidate == lower_query {
-                            return (result_upper | middle_candidate) + self.universe_zero;
-                        } else {
-                            lower_candidate = middle_candidate;
-                            lower_bound = middle;
-                        }
+                    // if we found a value that is larger than the query, return the previous value
+                    if next_candidate > lower_query {
+                        return (result_upper | lower_candidate) + self.universe_zero;
+                    } else if next_candidate == lower_query {
+                        return (result_upper | next_candidate) + self.universe_zero;
                     }
 
-                    // check the last element in the binary search interval is smaller than the query,
-                    // if it is in the 1-block
-                    if lower_bound < block_end {
-                        let check_candidate = self
-                            .lower_vec
-                            .get_bits_unchecked((lower_bound + 1) * self.lower_len, self.lower_len);
+                    lower_candidate = next_candidate;
+                    cursor += 1;
 
-                        if check_candidate <= lower_query {
-                            return (result_upper | check_candidate) + self.universe_zero;
+                    // if linear search takes too long, we can use select0 to find the next zero in the
+                    // upper vector, and then use binary search
+                    if cursor == BIN_SEARCH_THRESHOLD {
+                        let block_end = self.upper_vec.select0(upper_query + 1) - upper_query - 2;
+                        let mut upper_bound = block_end;
+                        let mut lower_bound = lower_bound_lower_index + cursor - 1;
+
+                        // binary search the largest element smaller than the query
+                        while lower_bound < upper_bound - 1 {
+                            let middle = lower_bound + ((upper_bound - lower_bound) >> 1);
+
+                            let middle_candidate = self
+                                .lower_vec
+                                .get_bits_unchecked(middle * self.lower_len, self.lower_len);
+
+                            if middle_candidate > lower_query {
+                                upper_bound = middle;
+                            } else if middle_candidate == lower_query {
+                                return (result_upper | middle_candidate) + self.universe_zero;
+                            } else {
+                                lower_candidate = middle_candidate;
+                                lower_bound = middle;
+                            }
                         }
-                    }
 
-                    break;
+                        // check the last element in the binary search interval is smaller than the query,
+                        // if it is in the 1-block
+                        if lower_bound < block_end {
+                            let check_candidate = self
+                                .lower_vec
+                                .get_bits_unchecked((lower_bound + 1) * self.lower_len, self.lower_len);
+
+                            if check_candidate <= lower_query {
+                                return (result_upper | check_candidate) + self.universe_zero;
+                            }
+                        }
+
+                        break;
+                    }
                 }
+
+                return (result_upper | lower_candidate) + self.universe_zero;
             }
-            (result_upper | lower_candidate) + self.universe_zero
-        } else {
-            // return the largest element directly in front of the calculated bounds. This is
-            // done when the vector does not contain an element with the query's most significant
-            // bit prefix, or when the element at the lower bound is larger than the query.
-            self.get_unchecked(lower_bound_lower_index - 1)
         }
+
+        // return the largest element directly in front of the calculated bounds. This is
+        // done when the vector does not contain an element with the query's most significant
+        // bit prefix, or when the element at the lower bound is larger than the query.
+        self.get_unchecked(lower_bound_lower_index - 1)
     }
 
     /// Returns an iterator over the values in the vector.
