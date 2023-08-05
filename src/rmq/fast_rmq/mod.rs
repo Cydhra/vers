@@ -5,7 +5,7 @@
 use std::arch::x86_64::_pdep_u64;
 use std::cmp::min_by;
 use std::mem::size_of;
-use std::ops::Deref;
+use std::ops::{Deref, Range, RangeInclusive};
 
 use crate::rmq::binary_rmq::BinaryRmq;
 
@@ -147,8 +147,19 @@ impl FastRmq {
         }
     }
 
-    /// Returns the minimum element in the range [i, j] in O(1) time. Runtime may still vary for different
-    /// ranges, but is independent of the size of the data structure and bound by a constant for all
+    /// Convenience function for [`range_min`] using a half-open [range][`Range`].
+    pub fn range_min_with_range(&self, range: Range<usize>) -> usize {
+        self.range_min(range.start, range.end - 1)
+    }
+
+    /// Convenience function for [`range_min`] using a closed [range][`RangeInclusive`].
+    pub fn range_min_with_range_inclusive(&self, range: RangeInclusive<usize>) -> usize {
+        self.range_min(*range.start(), *range.end())
+    }
+
+    /// Returns the index of the minimum element in the range [i, j] in O(1) time.
+    /// Runtime may still vary for different ranges,
+    /// but is independent of the size of the data structure and bounded by a constant for all
     /// possible ranges. The range is inclusive.
     ///
     /// # Panics
