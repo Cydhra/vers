@@ -122,13 +122,15 @@ impl BinaryRmq {
             Bound::Included(i) => *i,
             Bound::Excluded(i) => *i + 1,
             Bound::Unbounded => 0,
-        }.clamp(0, self.len() - 1);
+        }
+        .clamp(0, self.len() - 1);
 
         let end = match range.end_bound() {
             Bound::Included(i) => *i,
             Bound::Excluded(i) => *i - 1,
             Bound::Unbounded => self.len() - 1,
-        }.clamp(0, self.len() - 1);
+        }
+        .clamp(0, self.len() - 1);
         self.range_min(start, end)
     }
 
