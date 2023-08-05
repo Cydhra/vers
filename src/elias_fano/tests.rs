@@ -277,3 +277,14 @@ fn test_randomized_elias_fano_successor() {
         assert_eq!(succ, seq[seq.partition_point(|&x| x <= random_splitter)]);
     }
 }
+
+#[test]
+fn test_empty_ef_vec() {
+    let ef = EliasFanoVec::from_slice(&vec![]);
+    assert_eq!(ef.len(), 0);
+    assert_eq!(ef.succ(0), 0);
+    assert_eq!(ef.succ(u64::MAX), 0);
+    assert_eq!(ef.pred(0), u64::MAX);
+    assert_eq!(ef.pred(u64::MAX), u64::MAX);
+    assert_eq!(ef.get(0), None);
+}

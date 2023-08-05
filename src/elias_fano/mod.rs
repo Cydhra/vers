@@ -60,6 +60,17 @@ impl EliasFanoVec {
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub fn from_slice(data: &[u64]) -> Self {
+        if data.len() == 0 {
+            return Self {
+                upper_vec: RsVec::from_bit_vec(BitVec::new()),
+                lower_vec: BitVec::new(),
+                universe_zero: 0,
+                universe_max: 0,
+                lower_len: 0,
+                len: 0,
+            };
+        }
+
         debug_assert!(
             data.windows(2).all(|w| w[0] <= w[1]),
             "Data must be sorted in ascending order"
@@ -150,12 +161,12 @@ impl EliasFanoVec {
     #[allow(clippy::cast_possible_truncation)]
     pub fn pred(&self, n: u64) -> u64 {
         // bound the query to the universe size
-        if n > self.universe_max {
-            return self.get_unchecked(self.len() - 1);
+        if n < self.universe_zero || self.len() == 0 {
+            return u64::MAX;
         }
 
-        if n < self.universe_zero {
-            return u64::MAX;
+        if n > self.universe_max {
+            return self.get_unchecked(self.len() - 1);
         }
 
         let n = n - self.universe_zero;
@@ -272,7 +283,7 @@ impl EliasFanoVec {
     #[allow(clippy::cast_possible_truncation)]
     pub fn succ(&self, n: u64) -> u64 {
         // bound the query to the universe size
-        if n > self.universe_max {
+        if n > self.universe_max || self.len == 0 {
             return 0;
         }
 
