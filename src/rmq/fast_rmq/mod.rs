@@ -148,7 +148,8 @@ impl FastRmq {
     }
 
     /// Convenience function for [`FastRmq::range_min`] for using range operators.
-    /// The range is clamped to the length of the data structure, so this function will not panic.
+    /// The range is clamped to the length of the data structure, sso this function will not panic,
+    /// unless called on an empty data structure, because that does not have a valid index.
     ///
     /// # Example
     /// ```rust
@@ -157,6 +158,9 @@ impl FastRmq {
     /// assert_eq!(rmq.range_min_with_range(0..3), 2);
     /// assert_eq!(rmq.range_min_with_range(0..=3), 3);
     /// ```
+    ///
+    /// # Panics
+    /// This function will panic if the data structure is empty.
     #[must_use]
     pub fn range_min_with_range<T: RangeBounds<usize>>(&self, range: T) -> usize {
         let start = match range.start_bound() {
