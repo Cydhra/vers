@@ -1,9 +1,8 @@
 //! This module contains a simple [bit vector][BitVec] implementation with no overhead and a fast succinct
 //! bit vector implementation with [rank and select queries][fast_rs_vec::RsVec].
 
-use std::iter::FusedIterator;
+use crate::util::impl_iterator;
 use std::mem::size_of;
-use std::num::NonZeroUsize;
 
 pub mod fast_rs_vec;
 
@@ -284,16 +283,6 @@ impl BitVec {
         }
     }
 
-    /// Returns an iterator over the individual bits in the vector. The iterator yields
-    /// `u64` words where the least significant bit is the individual bit in the vector.
-    /// All other bits are set to 0.
-    pub fn iter(&self) -> impl Iterator<Item = u64> + '_ {
-        BitVecRefIter {
-            vec: self,
-            index: 0,
-        }
-    }
-
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
     /// that isn't used.
     #[must_use]
@@ -302,197 +291,7 @@ impl BitVec {
     }
 }
 
-/// An iterator over the individual bits in an `RsVec`.
-/// The iterator yields  `u64` words where the least significant bit is the individual bit in the
-/// vector. All other bits are set to 0.
-pub struct BitVecRefIter<'a> {
-    vec: &'a BitVec,
-    index: usize,
-}
-
-impl<'a> BitVecRefIter<'a> {
-    /// Advances the iterator by `n` elements. Returns an error if the iterator does not have
-    /// enough elements left. Does not call `next` internally.
-    /// This method is currently being added to the iterator trait, see
-    /// [this issue](https://github.com/rust-lang/rust/issues/77404).
-    /// As soon as it is stabilized, this method will be removed and replaced with a custom
-    /// implementation in the iterator impl.
-    fn advance_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
-        if self.index + n > self.vec.len {
-            return Err(NonZeroUsize::new(n - (self.vec.len - self.index)).unwrap());
-        }
-        self.index += n;
-        Ok(())
-    }
-}
-
-impl<'a> Iterator for BitVecRefIter<'a> {
-    type Item = u64;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.vec.get(self.index).map(|v| {
-            self.index += 1;
-            v
-        })
-    }
-
-    /// Returns the number of elements that this iterator will iterate over. The size is
-    /// precise.
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.vec.len - self.index, Some(self.vec.len - self.index))
-    }
-
-    /// Returns the exact number of elements that this iterator would iterate over. Does not
-    /// call `next` internally.
-    fn count(self) -> usize
-    where
-        Self: Sized,
-    {
-        self.vec.len - self.index
-    }
-
-    /// Returns the last element of the iterator. Does not call `next` internally.
-    fn last(self) -> Option<Self::Item>
-    where
-        Self: Sized,
-    {
-        if self.vec.is_empty() {
-            // return none so we don't overflow the subtraction
-            return None;
-        }
-
-        Some(self.vec.get_unchecked(self.vec.len - 1))
-    }
-
-    /// Returns the nth element of the iterator. Does not call `next` internally, but advances
-    /// the iterator by `n` elements.
-    fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        self.advance_by(n).ok()?;
-        self.next()
-    }
-}
-
-impl<'a> ExactSizeIterator for BitVecRefIter<'a> {
-    fn len(&self) -> usize {
-        self.vec.len - self.index
-    }
-}
-
-impl<'a> FusedIterator for BitVecRefIter<'a> {}
-
-/// An iterator over the individual bits in an `RsVec`.
-/// The iterator yields  `u64` words where the least significant bit is the individual bit in the
-/// vector. All other bits are set to 0.
-pub struct BitVecIter {
-    vec: BitVec,
-    index: usize,
-}
-
-impl BitVecIter {
-    /// Advances the iterator by `n` elements. Returns an error if the iterator does not have
-    /// enough elements left. Does not call `next` internally.
-    /// This method is currently being added to the iterator trait, see
-    /// [this issue](https://github.com/rust-lang/rust/issues/77404).
-    /// As soon as it is stabilized, this method will be removed and replaced with a custom
-    /// implementation in the iterator impl.
-    fn advance_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
-        if self.index + n > self.vec.len {
-            return Err(NonZeroUsize::new(n - (self.vec.len - self.index)).unwrap());
-        }
-        self.index += n;
-        Ok(())
-    }
-}
-
-impl Iterator for BitVecIter {
-    type Item = u64;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.vec.get(self.index).map(|v| {
-            self.index += 1;
-            v
-        })
-    }
-
-    /// Returns the number of elements that this iterator will iterate over. The size is
-    /// precise.
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.vec.len - self.index, Some(self.vec.len - self.index))
-    }
-
-    /// Returns the exact number of elements that this iterator would iterate over. Does not
-    /// call `next` internally.
-    fn count(self) -> usize
-    where
-        Self: Sized,
-    {
-        self.vec.len - self.index
-    }
-
-    /// Returns the last element of the iterator. Does not call `next` internally.
-    fn last(self) -> Option<Self::Item>
-    where
-        Self: Sized,
-    {
-        if self.vec.is_empty() {
-            // return none so we don't overflow the subtraction
-            return None;
-        }
-
-        Some(self.vec.get_unchecked(self.vec.len - 1))
-    }
-
-    /// Returns the nth element of the iterator. Does not call `next` internally, but advances
-    /// the iterator by `n` elements.
-    fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        self.advance_by(n).ok()?;
-        self.next()
-    }
-}
-
-impl ExactSizeIterator for BitVecIter {
-    fn len(&self) -> usize {
-        self.vec.len - self.index
-    }
-}
-
-impl FusedIterator for BitVecIter {}
-
-impl IntoIterator for BitVec {
-    type Item = u64;
-    type IntoIter = BitVecIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        BitVecIter {
-            vec: self,
-            index: 0,
-        }
-    }
-}
-
-impl<'a> IntoIterator for &'a BitVec {
-    type Item = u64;
-    type IntoIter = BitVecRefIter<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        BitVecRefIter {
-            vec: self,
-            index: 0,
-        }
-    }
-}
-
-impl<'a> IntoIterator for &'a mut BitVec {
-    type Item = u64;
-    type IntoIter = BitVecRefIter<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        BitVecRefIter {
-            vec: self,
-            index: 0,
-        }
-    }
-}
+impl_iterator! { BitVec, BitVecIter, BitVecRefIter }
 
 #[cfg(test)]
 mod tests;
