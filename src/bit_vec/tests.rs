@@ -152,7 +152,37 @@ fn test_iter() {
     assert_eq!(iter.next(), Some(0));
     assert_eq!(iter.next(), Some(0));
     assert_eq!(iter.next(), None);
-    drop(iter); // end borrow for next test
+    assert_eq!(iter.next(), None);
+
+    let mut iter = bv.iter();
+    assert_eq!(iter.next_back(), Some(0));
+    assert_eq!(iter.next_back(), Some(0));
+    assert_eq!(iter.next_back(), Some(0));
+    assert_eq!(iter.next_back(), Some(0));
+    assert_eq!(iter.next_back(), Some(1));
+    assert_eq!(iter.next_back(), Some(0));
+    assert_eq!(iter.next_back(), Some(1));
+    assert_eq!(iter.next_back(), Some(0));
+    assert_eq!(iter.next_back(), Some(1));
+    assert_eq!(iter.next_back(), Some(0));
+    assert_eq!(iter.next_back(), None);
+    assert_eq!(iter.next_back(), None);
+
+    let mut iter = bv.iter();
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next_back(), Some(0));
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next_back(), Some(0));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next_back(), Some(0));
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next_back(), Some(0));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next_back(), Some(1));
+    assert_eq!(iter.next_back(), None);
+    assert_eq!(iter.next_back(), None);
+    assert_eq!(iter.next(), None);
+    assert_eq!(iter.next(), None);
 }
 
 #[test]
