@@ -6,6 +6,7 @@ use crate::util::unroll;
 use crate::BitVec;
 use core::arch::x86_64::_pdep_u64;
 use std::mem::size_of;
+use std::num::NonZeroUsize;
 
 /// Size of a block in the bitvector.
 const BLOCK_SIZE: usize = 512;
@@ -521,6 +522,13 @@ impl RsVec {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
     }
 
+    /// Returns an iterator over the individual bits in the vector. The iterator yields
+    /// `u64` words where the least significant bit is the individual bit in the vector.
+    /// All other bits are set to 0.
+    pub fn iter(&self) -> impl Iterator<Item = u64> + '_ {
+        RsVecRefIter { rs: self, index: 0 }
+    }
+
     /// Returns the number of bytes used on the heap for this vector. This does not include
     /// allocated space that is not used (e.g. by the allocation behavior of `Vec`).
     #[must_use]
@@ -529,6 +537,173 @@ impl RsVec {
             + self.blocks.len() * size_of::<BlockDescriptor>()
             + self.super_blocks.len() * size_of::<SuperBlockDescriptor>()
             + self.select_blocks.len() * size_of::<SelectSuperBlockDescriptor>()
+    }
+}
+
+/// An iterator over the individual bits in an `RsVec`.
+/// The iterator yields  `u64` words where the least significant bit is the individual bit in the
+/// vector. All other bits are set to 0.
+pub struct RsVecRefIter<'a> {
+    rs: &'a RsVec,
+    index: usize,
+}
+
+impl<'a> RsVecRefIter<'a> {
+    /// Advances the iterator by `n` elements. Returns an error if the iterator does not have
+    /// enough elements left. Does not call `next` internally.
+    /// This method is currently being added to the iterator trait, see
+    /// [this issue](https://github.com/rust-lang/rust/issues/77404).
+    /// As soon as it is stabilized, this method will be removed and replaced with a custom
+    /// implementation in the iterator impl.
+    fn advance_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
+        if self.index + n > self.rs.len {
+            return Err(NonZeroUsize::new(n - (self.rs.len - self.index)).unwrap());
+        }
+        self.index += n;
+        Ok(())
+    }
+}
+
+impl<'a> Iterator for RsVecRefIter<'a> {
+    type Item = u64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.rs.get(self.index).map(|v| {
+            self.index += 1;
+            v
+        })
+    }
+
+    /// Returns the number of elements that this iterator will iterate over. The size is
+    /// precise.
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.rs.len - self.index, Some(self.rs.len - self.index))
+    }
+
+    /// Returns the exact number of elements that this iterator would iterate over. Does not
+    /// call `next` internally.
+    fn count(self) -> usize
+    where
+        Self: Sized,
+    {
+        self.rs.len - self.index
+    }
+
+    /// Returns the last element of the iterator. Does not call `next` internally.
+    fn last(self) -> Option<Self::Item>
+    where
+        Self: Sized,
+    {
+        if self.rs.is_empty() {
+            // return none so we don't overflow the subtraction
+            return None;
+        }
+
+        Some(self.rs.get_unchecked(self.rs.len - 1))
+    }
+
+    /// Returns the nth element of the iterator. Does not call `next` internally, but advances
+    /// the iterator by `n` elements.
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.advance_by(n).ok()?;
+        self.next()
+    }
+}
+
+/// An iterator over the individual bits in an `RsVec`.
+/// The iterator yields  `u64` words where the least significant bit is the individual bit in the
+/// vector. All other bits are set to 0.
+pub struct RsVecIter {
+    rs: RsVec,
+    index: usize,
+}
+
+impl RsVecIter {
+    /// Advances the iterator by `n` elements. Returns an error if the iterator does not have
+    /// enough elements left. Does not call `next` internally.
+    /// This method is currently being added to the iterator trait, see
+    /// [this issue](https://github.com/rust-lang/rust/issues/77404).
+    /// As soon as it is stabilized, this method will be removed and replaced with a custom
+    /// implementation in the iterator impl.
+    fn advance_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
+        if self.index + n > self.rs.len {
+            return Err(NonZeroUsize::new(n - (self.rs.len - self.index)).unwrap());
+        }
+        self.index += n;
+        Ok(())
+    }
+}
+
+impl Iterator for RsVecIter {
+    type Item = u64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.rs.get(self.index).map(|v| {
+            self.index += 1;
+            v
+        })
+    }
+
+    /// Returns the number of elements that this iterator will iterate over. The size is
+    /// precise.
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.rs.len - self.index, Some(self.rs.len - self.index))
+    }
+
+    /// Returns the exact number of elements that this iterator would iterate over. Does not
+    /// call `next` internally.
+    fn count(self) -> usize
+    where
+        Self: Sized,
+    {
+        self.rs.len - self.index
+    }
+
+    /// Returns the last element of the iterator. Does not call `next` internally.
+    fn last(self) -> Option<Self::Item>
+    where
+        Self: Sized,
+    {
+        if self.rs.is_empty() {
+            // return none so we don't overflow the subtraction
+            return None;
+        }
+
+        Some(self.rs.get_unchecked(self.rs.len - 1))
+    }
+
+    /// Returns the nth element of the iterator. Does not call `next` internally, but advances
+    /// the iterator by `n` elements.
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.advance_by(n).ok()?;
+        self.next()
+    }
+}
+
+impl IntoIterator for RsVec {
+    type Item = u64;
+    type IntoIter = RsVecIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        RsVecIter { rs: self, index: 0 }
+    }
+}
+
+impl<'a> IntoIterator for &'a RsVec {
+    type Item = u64;
+    type IntoIter = RsVecRefIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        RsVecRefIter { rs: self, index: 0 }
+    }
+}
+
+impl<'a> IntoIterator for &'a mut RsVec {
+    type Item = u64;
+    type IntoIter = RsVecRefIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        RsVecRefIter { rs: self, index: 0 }
     }
 }
 

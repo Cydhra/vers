@@ -376,3 +376,49 @@ fn test_block_boundaries() {
     let bv = BitVec::from_zeros(SUPER_BLOCK_SIZE + 11);
     test_ranks(bv);
 }
+
+#[test]
+fn test_iter() {
+    let mut bv = BitVec::from_zeros(10);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    let rs = RsVec::from_bit_vec(bv);
+
+    let mut iter = rs.iter();
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), None);
+    drop(iter); // end borrow for next test
+}
+
+#[test]
+fn test_custom_iter_behavior() {
+    let mut bv = BitVec::from_zeros(10);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    let rs = RsVec::from_bit_vec(bv);
+
+    assert_eq!(rs.iter().skip(2).next(), Some(0));
+    assert_eq!(rs.iter().count(), 10);
+    assert_eq!(rs.iter().skip(2).count(), 8);
+    assert_eq!(rs.iter().last(), Some(0));
+    assert_eq!(rs.iter().nth(3), Some(1));
+    assert_eq!(rs.iter().nth(12), None);
+
+    assert_eq!(rs.clone().into_iter().skip(2).next(), Some(0));
+    assert_eq!(rs.clone().into_iter().count(), 10);
+    assert_eq!(rs.clone().into_iter().skip(2).count(), 8);
+    assert_eq!(rs.clone().into_iter().last(), Some(0));
+    assert_eq!(rs.clone().into_iter().nth(3), Some(1));
+    assert_eq!(rs.clone().into_iter().nth(12), None);
+}
