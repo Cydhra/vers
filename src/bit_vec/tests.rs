@@ -132,3 +132,48 @@ fn test_drop_all_append() {
     assert_eq!(bv.len(), 64);
     (0..64).for_each(|i| assert_eq!(bv.get(i), Some(1), "mismatch at {}", i));
 }
+
+
+#[test]
+fn test_iter() {
+    let mut bv = BitVec::from_zeros(10);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+
+    let mut iter = bv.iter();
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), None);
+    drop(iter); // end borrow for next test
+}
+
+#[test]
+fn test_custom_iter_behavior() {
+    let mut bv = BitVec::from_zeros(10);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+
+    assert_eq!(bv.iter().skip(2).next(), Some(0));
+    assert_eq!(bv.iter().count(), 10);
+    assert_eq!(bv.iter().skip(2).count(), 8);
+    assert_eq!(bv.iter().last(), Some(0));
+    assert_eq!(bv.iter().nth(3), Some(1));
+    assert_eq!(bv.iter().nth(12), None);
+
+    assert_eq!(bv.clone().into_iter().skip(2).next(), Some(0));
+    assert_eq!(bv.clone().into_iter().count(), 10);
+    assert_eq!(bv.clone().into_iter().skip(2).count(), 8);
+    assert_eq!(bv.clone().into_iter().last(), Some(0));
+    assert_eq!(bv.clone().into_iter().nth(3), Some(1));
+    assert_eq!(bv.clone().into_iter().nth(12), None);
+}
