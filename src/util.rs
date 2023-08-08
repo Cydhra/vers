@@ -2,6 +2,14 @@ macro_rules! gen_iter_impl {
     ($($life:lifetime, )? $name:ident, $type:ty, $item:ty; $({ $($function_defs:tt)* })*) => {
         impl $(<$life>)? $name $(<$life>)? {
             fn new(vec: $(&$life)? $type) -> Self {
+                if vec.is_empty() {
+                    return Self {
+                        vec,
+                        index: 0,
+                        back_index: None,
+                    };
+                }
+
                 let last = vec.len - 1;
                 Self {
                     vec,
@@ -18,10 +26,15 @@ macro_rules! gen_iter_impl {
             /// implementation in the iterator impl.
             fn advance_by(&mut self, n: usize) -> Result<(), std::num::NonZeroUsize> {
                 if Some(self.index + n) > self.back_index {
-                    return Err(std::num::NonZeroUsize::new(n - (self.vec.len - self.index)).unwrap());
+                    if Some(self.index) > self.back_index {
+                        Err(std::num::NonZeroUsize::new(n).unwrap())
+                    } else {
+                        Err(std::num::NonZeroUsize::new(n - (self.back_index.unwrap_or(0) - self.index)).unwrap())
+                    }
+                } else {
+                    self.index += n;
+                    Ok(())
                 }
-                self.index += n;
-                Ok(())
             }
 
             /// Advances the back iterator by `n` elements. Returns an error if the iterator does not have

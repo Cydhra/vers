@@ -206,3 +206,13 @@ fn test_custom_iter_behavior() {
     assert_eq!(bv.clone().into_iter().nth(3), Some(1));
     assert_eq!(bv.clone().into_iter().nth(12), None);
 }
+
+#[test]
+fn test_empty_iter() {
+    let bv = BitVec::from_zeros(0);
+    let mut iter = bv.iter();
+    assert!(iter.next().is_none());
+    assert!(iter.next_back().is_none());
+    assert!(iter.nth(20).is_none());
+    assert!(iter.nth_back(20).is_none());
+}

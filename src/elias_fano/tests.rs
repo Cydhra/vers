@@ -258,6 +258,16 @@ fn test_custom_iter_behavior() {
 }
 
 #[test]
+fn test_empty_iter() {
+    let ef = EliasFanoVec::from_slice(&vec![]);
+    let mut iter = ef.iter();
+    assert!(iter.next().is_none());
+    assert!(iter.next_back().is_none());
+    assert!(iter.nth(20).is_none());
+    assert!(iter.nth_back(20).is_none());
+}
+
+#[test]
 fn test_successor() {
     let ef = EliasFanoVec::from_slice(&vec![0, 1, 4, 7]);
     for i in 0..ef.upper_vec.len() {

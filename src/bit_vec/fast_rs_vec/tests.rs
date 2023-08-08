@@ -460,3 +460,14 @@ fn test_custom_iter_behavior() {
     assert_eq!(iter.next(), Some(0));
     assert_eq!(iter.count(), 0);
 }
+
+#[test]
+fn test_empty_iter() {
+    let bv = BitVec::from_zeros(0);
+    let rs = RsVec::from_bit_vec(bv);
+    let mut iter = rs.iter();
+    assert!(iter.next().is_none());
+    assert!(iter.next_back().is_none());
+    assert!(iter.nth(20).is_none());
+    assert!(iter.nth_back(20).is_none());
+}
