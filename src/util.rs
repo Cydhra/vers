@@ -142,8 +142,9 @@ macro_rules! unroll {
 
 /// Internal macro to implement iterators for the vector types.
 /// This macro accepts more patterns than it should, but it isn't exported.
-/// The macro accepts the name of the vector type as its only mandatory argument.
-/// It optionally accepts an entire unrestricted token tree, which it will paste into the
+/// The macro accepts the name of the vector type as its first mandatory argument.
+/// It then expects two identifiers for the two iterator types.
+/// It then optionally accepts an entire unrestricted token tree, which it will paste into the
 /// Iterator implementation.
 /// This is useful for implementing functions that are only available on certain vector types.
 /// Misuse of this token tree will result in compile errors regarding the Iterator trait.
