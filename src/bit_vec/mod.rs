@@ -1,6 +1,7 @@
 //! This module contains a simple [bit vector][BitVec] implementation with no overhead and a fast succinct
 //! bit vector implementation with [rank and select queries][fast_rs_vec::RsVec].
 
+use std::iter::FusedIterator;
 use std::mem::size_of;
 use std::num::NonZeroUsize;
 
@@ -287,7 +288,10 @@ impl BitVec {
     /// `u64` words where the least significant bit is the individual bit in the vector.
     /// All other bits are set to 0.
     pub fn iter(&self) -> impl Iterator<Item = u64> + '_ {
-        BitVecRefIter { vec: self, index: 0 }
+        BitVecRefIter {
+            vec: self,
+            index: 0,
+        }
     }
 
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
@@ -341,16 +345,16 @@ impl<'a> Iterator for BitVecRefIter<'a> {
     /// Returns the exact number of elements that this iterator would iterate over. Does not
     /// call `next` internally.
     fn count(self) -> usize
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         self.vec.len - self.index
     }
 
     /// Returns the last element of the iterator. Does not call `next` internally.
     fn last(self) -> Option<Self::Item>
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         if self.vec.is_empty() {
             // return none so we don't overflow the subtraction
@@ -373,6 +377,8 @@ impl<'a> ExactSizeIterator for BitVecRefIter<'a> {
         self.vec.len - self.index
     }
 }
+
+impl<'a> FusedIterator for BitVecRefIter<'a> {}
 
 /// An iterator over the individual bits in an `RsVec`.
 /// The iterator yields  `u64` words where the least significant bit is the individual bit in the
@@ -417,16 +423,16 @@ impl Iterator for BitVecIter {
     /// Returns the exact number of elements that this iterator would iterate over. Does not
     /// call `next` internally.
     fn count(self) -> usize
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         self.vec.len - self.index
     }
 
     /// Returns the last element of the iterator. Does not call `next` internally.
     fn last(self) -> Option<Self::Item>
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         if self.vec.is_empty() {
             // return none so we don't overflow the subtraction
@@ -450,12 +456,17 @@ impl ExactSizeIterator for BitVecIter {
     }
 }
 
+impl FusedIterator for BitVecIter {}
+
 impl IntoIterator for BitVec {
     type Item = u64;
     type IntoIter = BitVecIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        BitVecIter { vec: self, index: 0 }
+        BitVecIter {
+            vec: self,
+            index: 0,
+        }
     }
 }
 
@@ -464,7 +475,10 @@ impl<'a> IntoIterator for &'a BitVec {
     type IntoIter = BitVecRefIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        BitVecRefIter { vec: self, index: 0 }
+        BitVecRefIter {
+            vec: self,
+            index: 0,
+        }
     }
 }
 
@@ -473,7 +487,10 @@ impl<'a> IntoIterator for &'a mut BitVec {
     type IntoIter = BitVecRefIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        BitVecRefIter { vec: self, index: 0 }
+        BitVecRefIter {
+            vec: self,
+            index: 0,
+        }
     }
 }
 

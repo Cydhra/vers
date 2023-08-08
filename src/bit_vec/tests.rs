@@ -133,7 +133,6 @@ fn test_drop_all_append() {
     (0..64).for_each(|i| assert_eq!(bv.get(i), Some(1), "mismatch at {}", i));
 }
 
-
 #[test]
 fn test_iter() {
     let mut bv = BitVec::from_zeros(10);

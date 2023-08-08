@@ -5,6 +5,7 @@ use super::WORD_SIZE;
 use crate::util::unroll;
 use crate::BitVec;
 use core::arch::x86_64::_pdep_u64;
+use std::iter::FusedIterator;
 use std::mem::size_of;
 use std::num::NonZeroUsize;
 
@@ -616,6 +617,8 @@ impl<'a> ExactSizeIterator for RsVecRefIter<'a> {
     }
 }
 
+impl<'a> FusedIterator for RsVecRefIter<'a> {}
+
 /// An iterator over the individual bits in an `RsVec`.
 /// The iterator yields  `u64` words where the least significant bit is the individual bit in the
 /// vector. All other bits are set to 0.
@@ -691,6 +694,8 @@ impl ExactSizeIterator for RsVecIter {
         self.rs.len - self.index
     }
 }
+
+impl FusedIterator for RsVecIter {}
 
 impl IntoIterator for RsVec {
     type Item = u64;

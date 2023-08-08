@@ -11,6 +11,7 @@
 use crate::BitVec;
 use crate::RsVec;
 use std::cmp::max;
+use std::iter::FusedIterator;
 use std::num::NonZeroUsize;
 
 /// We use linear search for small 1-blocks in the upper vector because it is generally more memory-
@@ -507,6 +508,8 @@ impl<'a> ExactSizeIterator for EliasFanoVecRefIter<'a> {
     }
 }
 
+impl<'a> FusedIterator for EliasFanoVecRefIter<'a> {}
+
 /// An owning iterator over the values in an Elias-Fano encoded vector.
 /// This iterator is created by [`EliasFanoVec::into_iter`].
 pub struct EliasFanoVecIter {
@@ -601,6 +604,8 @@ impl ExactSizeIterator for EliasFanoVecIter {
         self.ef.len - self.index
     }
 }
+
+impl FusedIterator for EliasFanoVecIter {}
 
 impl IntoIterator for EliasFanoVec {
     type Item = u64;
