@@ -501,6 +501,12 @@ impl<'a> Iterator for EliasFanoVecRefIter<'a> {
     }
 }
 
+impl<'a> ExactSizeIterator for EliasFanoVecRefIter<'a> {
+    fn len(&self) -> usize {
+        self.ef.len - self.index
+    }
+}
+
 /// An owning iterator over the values in an Elias-Fano encoded vector.
 /// This iterator is created by [`EliasFanoVec::into_iter`].
 pub struct EliasFanoVecIter {
@@ -587,6 +593,12 @@ impl Iterator for EliasFanoVecIter {
         Self::Item: Ord,
     {
         self.last()
+    }
+}
+
+impl ExactSizeIterator for EliasFanoVecIter {
+    fn len(&self) -> usize {
+        self.ef.len - self.index
     }
 }
 

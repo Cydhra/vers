@@ -610,6 +610,12 @@ impl<'a> Iterator for RsVecRefIter<'a> {
     }
 }
 
+impl<'a> ExactSizeIterator for RsVecRefIter<'a> {
+    fn len(&self) -> usize {
+        self.rs.len - self.index
+    }
+}
+
 /// An iterator over the individual bits in an `RsVec`.
 /// The iterator yields  `u64` words where the least significant bit is the individual bit in the
 /// vector. All other bits are set to 0.
@@ -677,6 +683,12 @@ impl Iterator for RsVecIter {
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
         self.advance_by(n).ok()?;
         self.next()
+    }
+}
+
+impl ExactSizeIterator for RsVecIter {
+    fn len(&self) -> usize {
+        self.rs.len - self.index
     }
 }
 
