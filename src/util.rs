@@ -25,11 +25,15 @@ macro_rules! gen_iter_impl {
             /// As soon as it is stabilized, this method will be removed and replaced with a custom
             /// implementation in the iterator impl.
             fn advance_by(&mut self, n: usize) -> Result<(), std::num::NonZeroUsize> {
-                if Some(self.index + n) > self.back_index {
+                if n == 0 {
+                    return Ok(());
+                }
+
+                if Some(self.index + n - 1) > self.back_index {
                     if Some(self.index) > self.back_index {
                         Err(std::num::NonZeroUsize::new(n).unwrap())
                     } else {
-                        Err(std::num::NonZeroUsize::new(n - (self.back_index.unwrap_or(0) - self.index)).unwrap())
+                        Err(std::num::NonZeroUsize::new(n - (self.back_index.as_ref().unwrap_or(&usize::MAX).wrapping_sub(self.index).wrapping_add(1))).unwrap())
                     }
                 } else {
                     self.index += n;
@@ -44,15 +48,27 @@ macro_rules! gen_iter_impl {
             /// As soon as it is stabilized, this method will be removed and replaced with a custom
             /// implementation in the iterator impl.
             fn advance_back_by(&mut self, n: usize) -> Result<(), std::num::NonZeroUsize> {
-                if let Some(back_index) = self.back_index {
-                    if back_index < n {
-                        return Err(std::num::NonZeroUsize::new(n - back_index).unwrap());
-                    }
-                    self.back_index = Some(back_index - n);
-                    Ok(())
-                } else {
-                    Err(std::num::NonZeroUsize::new(n).unwrap())
+                if n == 0 {
+                    return Ok(());
                 }
+
+                // special case this, because otherwise back_index might be None and we would panic
+                if self.is_iter_empty() {
+                    return Err(std::num::NonZeroUsize::new(n).unwrap());
+                }
+
+                // since the cursors point to unconsumed items, we need to add 1
+                let remaining = *self.back_index.as_ref().unwrap() - self.index + 1;
+                if remaining < n {
+                    return Err(std::num::NonZeroUsize::new(n - remaining).unwrap());
+                }
+                self.back_index = if self.back_index >= Some(n) { self.back_index.map(|b| b - n) } else { None };
+                Ok(())
+            }
+
+            fn is_iter_empty(&self) -> bool {
+                // this is legal because Ord is behaving as expected on Option
+                Some(self.index) > self.back_index
             }
         }
 
@@ -60,7 +76,7 @@ macro_rules! gen_iter_impl {
             type Item = $item;
 
             fn next(&mut self) -> Option<Self::Item> {
-                if Some(self.index) > self.back_index {
+                if self.is_iter_empty() {
                     return None;
                 }
                 self.vec.get(self.index).map(|v| {
@@ -72,7 +88,7 @@ macro_rules! gen_iter_impl {
             /// Returns the number of elements that this iterator will iterate over. The size is
             /// precise.
             fn size_hint(&self) -> (usize, Option<usize>) {
-                ((*self.back_index.as_ref().unwrap()).wrapping_sub(self.index).wrapping_add(1), Some((*self.back_index.as_ref().unwrap()).wrapping_sub(self.index).wrapping_add(1)))
+                (self.len(), Some(self.len()))
             }
 
             /// Returns the exact number of elements that this iterator would iterate over. Does not
@@ -81,7 +97,7 @@ macro_rules! gen_iter_impl {
             where
                 Self: Sized,
             {
-                (*self.back_index.as_ref().unwrap()).wrapping_sub(self.index).wrapping_add(1)
+                self.len()
             }
 
             /// Returns the last element of the iterator. Does not call `next` internally.
@@ -89,12 +105,7 @@ macro_rules! gen_iter_impl {
             where
                 Self: Sized,
             {
-                if self.vec.is_empty() {
-                    // return none so we don't overflow the subtraction
-                    return None;
-                }
-
-                if Some(self.index) > self.back_index {
+                if self.is_iter_empty() {
                     return None;
                 }
 
@@ -113,7 +124,8 @@ macro_rules! gen_iter_impl {
 
         impl $(<$life>)? std::iter::ExactSizeIterator for $name $(<$life>)? {
             fn len(&self) -> usize {
-                (*self.back_index.as_ref().unwrap()).wrapping_sub(self.index).wrapping_add(1)
+                // intentionally overflowing calculations to avoid branches on empty iterator
+                (*self.back_index.as_ref().unwrap_or(&usize::MAX)).wrapping_sub(self.index).wrapping_add(1)
             }
         }
 
@@ -183,6 +195,8 @@ macro_rules! impl_iterator {
         pub struct $own {
             vec: $type,
             index: usize,
+            // back index is none, iff it points to element -1 (i.e. element 0 has been consumed by
+            // a call to next_back()). It can be Some(..) even if the iterator is empty
             back_index: Option<usize>,
         }
 
@@ -201,6 +215,8 @@ macro_rules! impl_iterator {
         pub struct $bor<'a> {
             vec: &'a $type,
             index: usize,
+            // back index is none, iff it points to element -1 (i.e. element 0 has been consumed by
+            // a call to next_back()). It can be Some(..) even if the iterator is empty
             back_index: Option<usize>,
         }
 

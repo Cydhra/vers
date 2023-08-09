@@ -192,6 +192,17 @@ fn test_custom_iter_behavior() {
     bv.flip_bit(3);
     bv.flip_bit(5);
 
+    assert!(bv.iter().advance_by(10).is_ok());
+    assert!(bv.iter().advance_back_by(10).is_ok());
+    assert!(bv.iter().advance_by(11).is_err());
+    assert!(bv.iter().advance_back_by(11).is_err());
+
+    let mut iter = bv.iter();
+    assert!(iter.advance_by(5).is_ok());
+    assert!(iter.advance_back_by(6).is_err());
+    assert!(iter.advance_by(6).is_err());
+    assert!(iter.advance_back_by(5).is_ok());
+
     assert_eq!(bv.iter().skip(2).next(), Some(0));
     assert_eq!(bv.iter().count(), 10);
     assert_eq!(bv.iter().skip(2).count(), 8);
@@ -211,8 +222,34 @@ fn test_custom_iter_behavior() {
 fn test_empty_iter() {
     let bv = BitVec::from_zeros(0);
     let mut iter = bv.iter();
+    assert_eq!(iter.clone().count(), 0);
+
     assert!(iter.next().is_none());
     assert!(iter.next_back().is_none());
     assert!(iter.nth(20).is_none());
     assert!(iter.nth_back(20).is_none());
+    assert!(iter.advance_by(0).is_ok());
+    assert!(iter.advance_back_by(0).is_ok());
+    assert!(iter.advance_by(100).is_err());
+    assert!(iter.advance_back_by(100).is_err());
+
+    let bv = BitVec::from_zeros(1);
+    let mut iter = bv.iter();
+    assert_eq!(iter.clone().count(), 1);
+    assert!(iter.advance_by(1).is_ok());
+    assert_eq!(iter.clone().count(), 0);
+    assert!(iter.advance_by(0).is_ok());
+    assert!(iter.advance_back_by(0).is_ok());
+    assert!(iter.advance_by(1).is_err());
+    assert!(iter.advance_back_by(1).is_err());
+
+    let bv = BitVec::from_ones(1);
+    let mut iter = bv.iter();
+    assert_eq!(iter.clone().count(), 1);
+    assert!(iter.advance_back_by(1).is_ok());
+    assert_eq!(iter.clone().count(), 0);
+    assert!(iter.advance_back_by(0).is_ok());
+    assert!(iter.advance_by(0).is_ok());
+    assert!(iter.advance_back_by(1).is_err());
+    assert!(iter.advance_by(1).is_err());
 }

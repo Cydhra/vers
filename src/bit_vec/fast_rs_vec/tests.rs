@@ -438,6 +438,17 @@ fn test_custom_iter_behavior() {
     bv.flip_bit(5);
     let rs = RsVec::from_bit_vec(bv);
 
+    assert!(rs.iter().advance_by(10).is_ok());
+    assert!(rs.iter().advance_back_by(10).is_ok());
+    assert!(rs.iter().advance_by(11).is_err());
+    assert!(rs.iter().advance_back_by(11).is_err());
+
+    let mut iter = rs.iter();
+    assert!(iter.advance_by(5).is_ok());
+    assert!(iter.advance_back_by(6).is_err());
+    assert!(iter.advance_by(6).is_err());
+    assert!(iter.advance_back_by(5).is_ok());
+
     assert_eq!(rs.iter().skip(2).next(), Some(0));
     assert_eq!(rs.iter().count(), 10);
     assert_eq!(rs.iter().skip(2).count(), 8);
@@ -466,8 +477,36 @@ fn test_empty_iter() {
     let bv = BitVec::from_zeros(0);
     let rs = RsVec::from_bit_vec(bv);
     let mut iter = rs.iter();
+    assert_eq!(iter.clone().count(), 0);
+
     assert!(iter.next().is_none());
     assert!(iter.next_back().is_none());
     assert!(iter.nth(20).is_none());
     assert!(iter.nth_back(20).is_none());
+    assert!(iter.advance_by(0).is_ok());
+    assert!(iter.advance_back_by(0).is_ok());
+    assert!(iter.advance_by(100).is_err());
+    assert!(iter.advance_back_by(100).is_err());
+
+    let bv = BitVec::from_zeros(1);
+    let rs = RsVec::from_bit_vec(bv);
+    let mut iter = rs.iter();
+    assert_eq!(iter.clone().count(), 1);
+    assert!(iter.advance_by(1).is_ok());
+    assert_eq!(iter.clone().count(), 0);
+    assert!(iter.advance_by(0).is_ok());
+    assert!(iter.advance_back_by(0).is_ok());
+    assert!(iter.advance_by(1).is_err());
+    assert!(iter.advance_back_by(1).is_err());
+
+    let bv = BitVec::from_ones(1);
+    let rs = RsVec::from_bit_vec(bv);
+    let mut iter = rs.iter();
+    assert_eq!(iter.clone().count(), 1);
+    assert!(iter.advance_back_by(1).is_ok());
+    assert_eq!(iter.clone().count(), 0);
+    assert!(iter.advance_back_by(0).is_ok());
+    assert!(iter.advance_by(0).is_ok());
+    assert!(iter.advance_back_by(1).is_err());
+    assert!(iter.advance_by(1).is_err());
 }

@@ -240,6 +240,17 @@ fn test_custom_iter_behavior() {
     assert_eq!(ef.iter().nth(10), None);
     assert_eq!(ef.iter().skip(3).min(), Some(3));
 
+    assert!(ef.iter().advance_by(9).is_ok());
+    assert!(ef.iter().advance_back_by(9).is_ok());
+    assert!(ef.iter().advance_by(10).is_err());
+    assert!(ef.iter().advance_back_by(10).is_err());
+
+    let mut iter = ef.iter();
+    assert!(iter.advance_by(5).is_ok());
+    assert!(iter.advance_back_by(6).is_err());
+    assert!(iter.advance_by(6).is_err());
+    assert!(iter.advance_back_by(4).is_ok());
+
     assert_eq!(ef.clone().into_iter().skip(2).next(), Some(2));
     assert_eq!(ef.clone().into_iter().count(), 9);
     assert_eq!(ef.clone().into_iter().skip(2).count(), 7);
@@ -261,10 +272,36 @@ fn test_custom_iter_behavior() {
 fn test_empty_iter() {
     let ef = EliasFanoVec::from_slice(&vec![]);
     let mut iter = ef.iter();
+    assert_eq!(iter.clone().count(), 0);
+
     assert!(iter.next().is_none());
     assert!(iter.next_back().is_none());
     assert!(iter.nth(20).is_none());
     assert!(iter.nth_back(20).is_none());
+    assert!(iter.advance_by(0).is_ok());
+    assert!(iter.advance_back_by(0).is_ok());
+    assert!(iter.advance_by(100).is_err());
+    assert!(iter.advance_back_by(100).is_err());
+
+    let ef = EliasFanoVec::from_slice(&vec![0]);
+    let mut iter = ef.iter();
+    assert_eq!(iter.clone().count(), 1);
+    assert!(iter.advance_by(1).is_ok());
+    assert_eq!(iter.clone().count(), 0);
+    assert!(iter.advance_by(0).is_ok());
+    assert!(iter.advance_back_by(0).is_ok());
+    assert!(iter.advance_by(1).is_err());
+    assert!(iter.advance_back_by(1).is_err());
+
+    let ef = EliasFanoVec::from_slice(&vec![1]);
+    let mut iter = ef.iter();
+    assert_eq!(iter.clone().count(), 1);
+    assert!(iter.advance_back_by(1).is_ok());
+    assert_eq!(iter.clone().count(), 0);
+    assert!(iter.advance_back_by(0).is_ok());
+    assert!(iter.advance_by(0).is_ok());
+    assert!(iter.advance_back_by(1).is_err());
+    assert!(iter.advance_by(1).is_err());
 }
 
 #[test]
