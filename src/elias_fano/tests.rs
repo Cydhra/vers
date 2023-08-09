@@ -266,6 +266,14 @@ fn test_custom_iter_behavior() {
     assert_eq!(iter.clone().count(), 0);
     assert_eq!(iter.next(), None);
     assert_eq!(iter.next_back(), None);
+
+    let mut iter = ef.iter();
+    assert!(iter.advance_by(5).is_ok());
+    assert!(iter.advance_back_by(2).is_ok());
+    assert_eq!(iter.clone().collect::<Vec<_>>(), vec![5, 6]);
+    assert_eq!(iter.clone().max(), Some(6));
+    assert_eq!(iter.clone().min(), Some(5));
+    assert_eq!(iter.clone().rev().collect::<Vec<_>>(), vec![6, 5]);
 }
 
 #[test]

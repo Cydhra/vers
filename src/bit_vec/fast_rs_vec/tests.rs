@@ -470,6 +470,12 @@ fn test_custom_iter_behavior() {
     assert_eq!(iter.clone().count(), 1);
     assert_eq!(iter.next(), Some(0));
     assert_eq!(iter.count(), 0);
+
+    let mut iter = rs.iter();
+    assert!(iter.advance_by(2).is_ok());
+    assert!(iter.advance_back_by(4).is_ok());
+    assert_eq!(iter.clone().collect::<Vec<_>>(), vec![0, 1, 0, 1]);
+    assert_eq!(iter.clone().rev().collect::<Vec<_>>(), vec![1, 0, 1, 0]);
 }
 
 #[test]
