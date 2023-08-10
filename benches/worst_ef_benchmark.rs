@@ -30,7 +30,7 @@ fn bench_ef(b: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("uniform input", l), &l, |b, _| {
             b.iter_batched(
                 || sequence[query_distribution.sample(&mut rng)],
-                |e| black_box(uniform_ef_vec.pred(e)),
+                |e| black_box(uniform_ef_vec.predecessor_unchecked(e)),
                 BatchSize::SmallInput,
             )
         });
@@ -53,7 +53,7 @@ fn bench_ef(b: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("clustered input", l), &l, |b, _| {
             b.iter_batched(
                 || sequence[query_distribution.sample(&mut rng)],
-                |e| black_box(bad_ef_vec.pred(e)),
+                |e| black_box(bad_ef_vec.predecessor_unchecked(e)),
                 BatchSize::SmallInput,
             )
         });

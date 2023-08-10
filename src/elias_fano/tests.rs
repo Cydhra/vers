@@ -12,11 +12,11 @@ fn test_elias_fano() {
     assert_eq!(ef.get_unchecked(2), 4);
     assert_eq!(ef.get_unchecked(3), 7);
 
-    assert_eq!(ef.pred(0), 0);
-    assert_eq!(ef.pred(1), 1);
-    assert_eq!(ef.pred(2), 1);
-    assert_eq!(ef.pred(5), 4);
-    assert_eq!(ef.pred(8), 7);
+    assert_eq!(ef.predecessor_unchecked(0), 0);
+    assert_eq!(ef.predecessor_unchecked(1), 1);
+    assert_eq!(ef.predecessor_unchecked(2), 1);
+    assert_eq!(ef.predecessor_unchecked(5), 4);
+    assert_eq!(ef.predecessor_unchecked(8), 7);
 }
 
 // test the edge case in which the predecessor query doesn't find bounds around the result,
@@ -24,23 +24,23 @@ fn test_elias_fano() {
 #[test]
 fn test_edge_case() {
     let ef = EliasFanoVec::from_slice(&vec![0, 1, u64::MAX - 10, u64::MAX - 1]);
-    assert_eq!(ef.pred(u64::MAX - 11), 1);
+    assert_eq!(ef.predecessor_unchecked(u64::MAX - 11), 1);
 }
 
 // test a query that is way larger than any element in the vector
 #[test]
 fn test_large_query() {
     let ef = EliasFanoVec::from_slice(&vec![0, 1, 2, 3]);
-    assert_eq!(ef.pred(u64::MAX), 3);
+    assert_eq!(ef.predecessor_unchecked(u64::MAX), 3);
 }
 
 // test whether duplicates are handled correctly by predecessor queries and reconstruction
 #[test]
 fn test_duplicates() {
     let ef = EliasFanoVec::from_slice(&vec![0, 0, 0, 1, 1, 1, 2, 2, 2]);
-    assert_eq!(ef.pred(0), 0);
-    assert_eq!(ef.pred(1), 1);
-    assert_eq!(ef.pred(2), 2);
+    assert_eq!(ef.predecessor_unchecked(0), 0);
+    assert_eq!(ef.predecessor_unchecked(1), 1);
+    assert_eq!(ef.predecessor_unchecked(2), 2);
 
     assert_eq!(ef.get_unchecked(2), 0);
     assert_eq!(ef.get_unchecked(3), 1);
@@ -75,7 +75,7 @@ fn test_randomized_elias_fano() {
             random_splitter = rng.gen();
         }
 
-        let pred = ef.pred(random_splitter);
+        let pred = ef.predecessor_unchecked(random_splitter);
         assert!(seq.iter().filter(|&&x| x == pred).count() >= 1);
 
         assert_eq!(
@@ -110,8 +110,8 @@ fn test_clustered_ef() {
     let ef = EliasFanoVec::from_slice(&seq);
     for (i, &x) in seq.iter().enumerate() {
         assert_eq!(ef.get_unchecked(i), x, "expected {:b}", x);
-        assert_eq!(ef.pred(x), x);
-        assert_eq!(ef.succ(x), x);
+        assert_eq!(ef.predecessor_unchecked(x), x);
+        assert_eq!(ef.successor_unchecked(x), x);
     }
 
     for (x, p) in [
@@ -122,7 +122,7 @@ fn test_clustered_ef() {
         (500001001, 500000999),
         (500002000, 500000999),
     ] {
-        assert_eq!(ef.pred(x), p);
+        assert_eq!(ef.predecessor_unchecked(x), p);
     }
 
     for (x, s) in [
@@ -131,7 +131,7 @@ fn test_clustered_ef() {
         (1000000, 500000000),
         (499999999, 500000000),
     ] {
-        assert_eq!(ef.succ(x), s);
+        assert_eq!(ef.successor_unchecked(x), s);
     }
 }
 
@@ -167,8 +167,11 @@ fn cluster_test(l: usize) {
         let elem = sequence[(&mut rng).sample(query_distribution)];
         let supposed = sequence.partition_point(|&n| n <= elem) - 1;
         let supposed_succ = sequence.partition_point(|&n| n < elem);
-        assert_eq!(bad_ef_vec.pred(elem), sequence[supposed]);
-        assert_eq!(bad_ef_vec.succ(elem), sequence[supposed_succ]);
+        assert_eq!(bad_ef_vec.predecessor_unchecked(elem), sequence[supposed]);
+        assert_eq!(
+            bad_ef_vec.successor_unchecked(elem),
+            sequence[supposed_succ]
+        );
     }
 }
 
@@ -315,47 +318,38 @@ fn test_empty_iter() {
 #[test]
 fn test_successor() {
     let ef = EliasFanoVec::from_slice(&vec![0, 1, 4, 7]);
-    for i in 0..ef.upper_vec.len() {
-        print!("{}", ef.upper_vec.get_unchecked(i));
-    }
-    println!();
-    for i in 0..ef.lower_vec.len() {
-        print!("{}", ef.lower_vec.get_unchecked(i));
-    }
-    println!();
-
     assert_eq!(ef.len(), 4);
 
-    assert_eq!(ef.succ(0), 0);
-    assert_eq!(ef.succ(1), 1);
-    assert_eq!(ef.succ(2), 4);
-    assert_eq!(ef.succ(5), 7);
-    assert_eq!(ef.succ(8), 0);
+    assert_eq!(ef.successor_unchecked(0), 0);
+    assert_eq!(ef.successor_unchecked(1), 1);
+    assert_eq!(ef.successor_unchecked(2), 4);
+    assert_eq!(ef.successor_unchecked(5), 7);
+    assert_eq!(ef.successor(8), None);
 }
 
 #[test]
 fn test_edge_case_successor() {
     let ef = EliasFanoVec::from_slice(&vec![0, 1, u64::MAX - 10, u64::MAX - 1]);
-    assert_eq!(ef.succ(2), u64::MAX - 10);
-    assert_eq!(ef.succ(u64::MAX - 11), u64::MAX - 10);
-    assert_eq!(ef.succ(u64::MAX - 10), u64::MAX - 10);
-    assert_eq!(ef.succ(u64::MAX - 9), u64::MAX - 1);
+    assert_eq!(ef.successor_unchecked(2), u64::MAX - 10);
+    assert_eq!(ef.successor_unchecked(u64::MAX - 11), u64::MAX - 10);
+    assert_eq!(ef.successor_unchecked(u64::MAX - 10), u64::MAX - 10);
+    assert_eq!(ef.successor_unchecked(u64::MAX - 9), u64::MAX - 1);
 }
 
 #[test]
 fn test_large_query_successor() {
     let ef = EliasFanoVec::from_slice(&vec![0, 1, 2, 3]);
-    assert_eq!(ef.succ(u64::MAX), 0);
+    assert_eq!(ef.successor(u64::MAX), None);
 }
 
 // test whether duplicates are handled correctly by predecessor queries and reconstruction
 #[test]
 fn test_duplicates_successor() {
     let ef = EliasFanoVec::from_slice(&vec![0, 0, 0, 1, 1, 1, 2, 2, 2]);
-    assert_eq!(ef.succ(0), 0);
-    assert_eq!(ef.succ(1), 1);
-    assert_eq!(ef.succ(2), 2);
-    assert_eq!(ef.succ(3), 0);
+    assert_eq!(ef.successor_unchecked(0), 0);
+    assert_eq!(ef.successor_unchecked(1), 1);
+    assert_eq!(ef.successor_unchecked(2), 2);
+    assert_eq!(ef.successor(3), None);
 }
 
 // a randomized test to catch edge cases. If the test fails, efforts should be made to
@@ -385,7 +379,7 @@ fn test_randomized_elias_fano_successor() {
             random_splitter = rng.gen();
         }
 
-        let succ = ef.succ(random_splitter);
+        let succ = ef.successor_unchecked(random_splitter);
         assert!(seq.iter().filter(|&&x| x == succ).count() >= 1);
 
         assert_eq!(succ, seq[seq.partition_point(|&x| x <= random_splitter)]);
@@ -396,9 +390,9 @@ fn test_randomized_elias_fano_successor() {
 fn test_empty_ef_vec() {
     let ef = EliasFanoVec::from_slice(&vec![]);
     assert_eq!(ef.len(), 0);
-    assert_eq!(ef.succ(0), 0);
-    assert_eq!(ef.succ(u64::MAX), 0);
-    assert_eq!(ef.pred(0), u64::MAX);
-    assert_eq!(ef.pred(u64::MAX), u64::MAX);
+    assert_eq!(ef.successor(0), None);
+    assert_eq!(ef.successor(u64::MAX), None);
+    assert_eq!(ef.predecessor(0), None);
+    assert_eq!(ef.predecessor(u64::MAX), None);
     assert_eq!(ef.get(0), None);
 }

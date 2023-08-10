@@ -26,7 +26,7 @@ const BIN_SEARCH_THRESHOLD: usize = 4;
 ///
 /// # Predecessor/Successor Queries
 /// This data structure supports (on average) constant time predecessor/successor queries.
-/// See [`EliasFanoVec::pred`] and [`EliasFanoVec::succ`] for more information.
+/// See [`EliasFanoVec::predecessor_unchecked`] and [`EliasFanoVec::successor_unchecked`] for more information.
 ///
 /// # Example
 /// ```rust
@@ -38,9 +38,9 @@ const BIN_SEARCH_THRESHOLD: usize = 4;
 /// assert_eq!(elias_fano_vec.get_unchecked(0), 0);
 /// assert_eq!(elias_fano_vec.get_unchecked(3), 109);
 ///
-/// assert_eq!(elias_fano_vec.pred(9), 9);
-/// assert_eq!(elias_fano_vec.pred(10), 9);
-/// assert_eq!(elias_fano_vec.pred(420000), 109);
+/// assert_eq!(elias_fano_vec.predecessor_unchecked(9), 9);
+/// assert_eq!(elias_fano_vec.predecessor_unchecked(10), 9);
+/// assert_eq!(elias_fano_vec.predecessor_unchecked(420000), 109);
 /// ```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -156,19 +156,34 @@ impl EliasFanoVec {
 
     /// Returns the largest element that is smaller than or equal to the query.
     /// If the query is smaller than the smallest element in the vector,
-    /// `u64::MAX` is returned.
+    /// `None` is returned.
     ///
     /// This query runs in constant time on average. The worst case runtime is logarithmic in the
     /// number of elements in the vector. The worst case occurs when values in the vector are very
     /// dense with only very few elements that are much larger than most.
     #[must_use]
-    #[allow(clippy::cast_possible_truncation)]
-    pub fn pred(&self, n: u64) -> u64 {
+    pub fn predecessor(&self, n: u64) -> Option<u64> {
         // bound the query to the universe size
-        if n < self.universe_zero || self.len() == 0 {
-            return u64::MAX;
+        if n < self.universe_zero || self.is_empty() {
+            None
+        } else {
+            Some(self.predecessor_unchecked(n))
         }
+    }
 
+    /// Returns the largest element that is smaller than or equal to the query.
+    /// If the query is smaller than the smallest element in the vector, the behavior is undefined.
+    ///
+    /// This query runs in constant time on average. The worst case runtime is logarithmic in the
+    /// number of elements in the vector. The worst case occurs when values in the vector are very
+    /// dense with only very few elements that are much larger than most.
+    ///
+    /// # Panics
+    /// If the query is smaller than the smallest element in the vector, the function might panic.
+    /// Use `predecessor` instead if the query might be out of bounds.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn predecessor_unchecked(&self, n: u64) -> u64 {
         if n > self.universe_max {
             return self.get_unchecked(self.len() - 1);
         }
@@ -278,19 +293,34 @@ impl EliasFanoVec {
 
     /// Returns the smallest element that is greater than or equal to the query.
     /// If the query is greater than the greatest element in the vector,
-    /// `0` is returned.
+    /// `None` is returned.
     ///
     /// This query runs in constant time on average. The worst case runtime is logarithmic in the
     /// number of elements in the vector. The worst case occurs when values in the vector are very
     /// dense with only very few elements that are much larger than most.
     #[must_use]
-    #[allow(clippy::cast_possible_truncation)]
-    pub fn succ(&self, n: u64) -> u64 {
+    pub fn successor(&self, n: u64) -> Option<u64> {
         // bound the query to the universe size
         if n > self.universe_max || self.len == 0 {
-            return 0;
+            None
+        } else {
+            Some(self.successor_unchecked(n))
         }
+    }
 
+    /// Returns the smallest element that is greater than or equal to the query.
+    /// If the query is greater than the greatest element in the vector, the behavior is undefined.
+    ///
+    /// This query runs in constant time on average. The worst case runtime is logarithmic in the
+    /// number of elements in the vector. The worst case occurs when values in the vector are very
+    /// dense with only very few elements that are much larger than most.
+    ///
+    /// # Panics
+    /// If the query is greater than the greatest element in the vector, the function might panic.
+    /// Use `successor` instead if the query might be out of bounds.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn successor_unchecked(&self, n: u64) -> u64 {
         if n < self.universe_zero {
             return self.get_unchecked(0);
         }

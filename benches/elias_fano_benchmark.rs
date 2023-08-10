@@ -23,7 +23,7 @@ fn bench_ef(b: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("predecessor", l), &l, |b, _| {
             b.iter_batched(
                 || pred_sample.sample(&mut rng),
-                |e| black_box(ef_vec.pred(e)),
+                |e| black_box(ef_vec.predecessor_unchecked(e)),
                 BatchSize::SmallInput,
             )
         });
@@ -31,7 +31,7 @@ fn bench_ef(b: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("successor", l), &l, |b, _| {
             b.iter_batched(
                 || pred_sample.sample(&mut rng),
-                |e| black_box(ef_vec.succ(e)),
+                |e| black_box(ef_vec.successor_unchecked(e)),
                 BatchSize::SmallInput,
             )
         });
