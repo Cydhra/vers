@@ -35,12 +35,24 @@ const BIN_SEARCH_THRESHOLD: usize = 4;
 /// let mut elias_fano_vec = EliasFanoVec::from_slice(&[0, 9, 29, 109]);
 ///
 /// assert_eq!(elias_fano_vec.len(), 4);
-/// assert_eq!(elias_fano_vec.get_unchecked(0), 0);
-/// assert_eq!(elias_fano_vec.get_unchecked(3), 109);
+/// assert_eq!(elias_fano_vec.get(0), Some(0));
+/// assert_eq!(elias_fano_vec.get(3), Some(109));
 ///
-/// assert_eq!(elias_fano_vec.predecessor_unchecked(9), 9);
-/// assert_eq!(elias_fano_vec.predecessor_unchecked(10), 9);
-/// assert_eq!(elias_fano_vec.predecessor_unchecked(420000), 109);
+/// // predecessor queries for all elements, including such that are not in the vector
+/// // in constant time except for worst-case input distributions
+/// assert_eq!(elias_fano_vec.predecessor(9), Some(9));
+/// assert_eq!(elias_fano_vec.predecessor(10), Some(9));
+/// assert_eq!(elias_fano_vec.predecessor(420000), Some(109));
+///
+/// // analogous successor queries
+/// assert_eq!(elias_fano_vec.successor(1), Some(9));
+///
+/// // if we know the query is within the valid range (i.e. no predecessor of values smaller than
+/// // the first element, etc), we can use unchecked functions that don't return Options
+/// assert_eq!(elias_fano_vec.predecessor_unchecked(8), 0);
+///
+/// // we can also iterate over the elements
+/// assert_eq!(elias_fano_vec.iter().collect::<Vec<_>>(), vec![0, 9, 29, 109]);
 /// ```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
