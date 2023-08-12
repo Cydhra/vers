@@ -275,7 +275,9 @@ impl BitVec {
     pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
         debug_assert!(len <= WORD_SIZE);
         let partial_word = self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE);
-        if pos % WORD_SIZE + len <= WORD_SIZE {
+        if pos % WORD_SIZE + len == WORD_SIZE {
+            partial_word
+        } else if pos % WORD_SIZE + len < WORD_SIZE {
             partial_word & ((1 << len) - 1)
         } else {
             (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))

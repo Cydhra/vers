@@ -259,3 +259,24 @@ fn test_empty_iter() {
     assert!(iter.advance_back_by(1).is_err());
     assert!(iter.advance_by(1).is_err());
 }
+
+#[test]
+fn test_get_bits() {
+    let mut bv = BitVec::from_zeros(200);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(197);
+    bv.flip_bit(199);
+
+    assert_eq!(bv.get_bits_unchecked(1, 3), 0b101);
+    assert_eq!(bv.get_bits_unchecked(1, 4), 0b101);
+    assert_eq!(bv.get_bits_unchecked(2, 2), 0b10);
+    assert_eq!(bv.get_bits_unchecked(197, 3), 0b101);
+    assert_eq!(bv.get_bits_unchecked(198, 2), 0b10);
+
+    assert_eq!(bv.get_bits(0, 65), None);
+    assert_eq!(bv.get_bits(300, 2), None);
+    assert_eq!(bv.get_bits(190, 12), None);
+    assert_eq!(bv.get_bits(0, 64), Some(0b101010));
+}
