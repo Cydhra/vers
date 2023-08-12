@@ -521,6 +521,48 @@ impl RsVec {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
     }
 
+    /// Return multiple bits at the given position. The number of bits to return is given by `len`.
+    /// At most 64 bits can be returned.
+    /// If the position at the end of the query is larger than the length of the vector,
+    /// None is returned (even if the query partially overlaps with the vector).
+    /// If the length of the query is larger than 64, None is returned.
+    #[must_use]
+    pub fn get_bits(&self, pos: usize, len: usize) -> Option<u64> {
+        if len > WORD_SIZE {
+            return None;
+        }
+        if pos + len > self.len {
+            None
+        } else {
+            Some(self.get_bits_unchecked(pos, len))
+        }
+    }
+
+    /// Return multiple bits at the given position. The number of bits to return is given by `len`.
+    /// At most 64 bits can be returned.
+    ///
+    /// This function is always inlined, because it gains a lot from loop optimization and
+    /// can utilize the processor pre-fetcher better if it is.
+    ///
+    /// # Panics
+    /// If the position is larger than the length of the vector,
+    /// the behavior is undefined (the function will either return any valid results padded with unpredictable
+    /// memory or panic).
+    /// If the length of the query is larger than 64, the behavior is undefined.
+    #[must_use]
+    pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
+        debug_assert!(len <= WORD_SIZE);
+        let partial_word = self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE);
+        if pos % WORD_SIZE + len == WORD_SIZE {
+            partial_word
+        } else if pos % WORD_SIZE + len < WORD_SIZE {
+            partial_word & ((1 << len) - 1)
+        } else {
+            (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
+                & ((1 << len) - 1)
+        }
+    }
+
     /// Returns the number of bytes used on the heap for this vector. This does not include
     /// allocated space that is not used (e.g. by the allocation behavior of `Vec`).
     #[must_use]

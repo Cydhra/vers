@@ -516,3 +516,25 @@ fn test_empty_iter() {
     assert!(iter.advance_back_by(1).is_err());
     assert!(iter.advance_by(1).is_err());
 }
+
+#[test]
+fn test_get_bits() {
+    let mut bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    assert_eq!(rs.get_bits_unchecked(1, 3), 0b101);
+    assert_eq!(rs.get_bits_unchecked(1, 4), 0b101);
+    assert_eq!(rs.get_bits_unchecked(2, 2), 0b10);
+    assert_eq!(rs.get_bits_unchecked(SUPER_BLOCK_SIZE - 1, 3), 0b101);
+    assert_eq!(rs.get_bits_unchecked(SUPER_BLOCK_SIZE, 3), 0b10);
+
+    assert_eq!(rs.get_bits(0, 65), None);
+    assert_eq!(rs.get_bits(3 * SUPER_BLOCK_SIZE, 2), None);
+    assert_eq!(rs.get_bits(2 * SUPER_BLOCK_SIZE - 10, 12), None);
+    assert_eq!(rs.get_bits(0, 64), Some(0b101010));
+}
