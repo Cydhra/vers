@@ -13,9 +13,9 @@ I've decided to publish it.
 - two Range Minimum Query vector structures for constant-time range minimum queries.
 
 ## Beta Status
-I published this library as 0.2.0 as a beta release.
+I published this library as 0.3.0 as a beta release.
 The implementation is tested, benchmarked, optimized, and documented.
-Compared to 0.1.0, I polished the API and added a few convenience functions.
+Compared to 0.1.0 and 0.2.0, I polished the API and added a few convenience functions.
 Functions also validate their inputs now, and the documentation includes examples and panic sections.
 Elias-Fano now supports successor queries next to its predecessor queries.
 I plan to release this into 1.0.0 in the near future, probably without significant changes.
