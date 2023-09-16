@@ -325,7 +325,7 @@ impl EliasFanoVec {
     ///
     /// This query runs in constant time on average. The worst case runtime is logarithmic in the
     /// number of elements in the vector. The worst case occurs when values in the vector are very
-    /// dense with only very few elements that are much larger than most.
+    /// dense with only very few elements that are much smaller than most.
     ///
     /// # Panics
     /// If the query is greater than the greatest element in the vector, the function might panic.
@@ -343,7 +343,7 @@ impl EliasFanoVec {
         let upper_query = (n >> self.lower_len) as usize;
         let lower_query = n & ((1 << self.lower_len) - 1);
 
-        // calculate the upper bound within the lower vector where our predecessor can be found. Since
+        // calculate the upper bound within the lower vector where our successor can be found. Since
         // each bit-prefix in the universe has exactly one corresponding zero in the upper vector,
         // we can use select0 to find the end of the block of values with the same upper value.
         let upper_bound_upper_index = self.upper_vec.select0(upper_query + 1);
@@ -437,7 +437,7 @@ impl EliasFanoVec {
 
         // return the smallest element directly after of the calculated bounds. This is
         // done when the vector does not contain an element with the query's most significant
-        // bit prefix, or when the element at the lower bound is smaller than the query.
+        // bit prefix, or when the element at the upper bound is smaller than the query.
         self.get_unchecked(upper_bound_lower_index)
     }
 
