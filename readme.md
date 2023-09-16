@@ -3,7 +3,7 @@
 Vers (vers-vecs on crates.io)
 contains pure-Rust implementations of several data structures backed by rank and select operations.
 The library was originally a grad student project for a semester course,
-but since it outperforms all publicly available implementations (and won a competition within the course)
+but since it outperforms all publicly available implementations,
 I've decided to publish it.
 
 ## Data Structures
@@ -11,14 +11,6 @@ I've decided to publish it.
 - a succinct bit-vector supporting fast rank and select queries.
 - an Elias-Fano encoding of monotone sequences; supporting constant time predecessor/successor queries.
 - two Range Minimum Query vector structures for constant-time range minimum queries.
-
-## Beta Status
-I published this library as 0.3.0 as a beta release.
-The implementation is tested, benchmarked, optimized, and documented.
-Compared to 0.1.0 and 0.2.0, I polished the API and added a few convenience functions.
-Functions also validate their inputs now, and the documentation includes examples and panic sections.
-Elias-Fano now supports successor queries next to its predecessor queries.
-I plan to release this into 1.0.0 in the near future, probably without significant changes.
 
 # Intrinsics
 This crate uses compiler intrinsics for bit-manipulation. The intrinsics are supported by
@@ -37,10 +29,10 @@ which is why I cannot fall back to a software implementation for different archi
 This crate uses no unsafe code, with the only exception being compiler intrinsics for
 bit-manipulation. The intrinsics cannot fail with the provided inputs (provided they are
 supported by the target machine), so even if they were to be implemented incorrectly, no
-memory unsafety can occur (only incorrect results).
+memory corruption can occur (only incorrect results).
 
 ## Dependencies
-The library has no dependencies outside the Rust standard library.
+The library has no dependencies outside the Rust standard library by default.
 It has a plethora of dependencies for benchmarking purposes, but these are not required for normal use.
 Optionally, the `serde` feature can be enabled to allow serialization and deserialization of the data structures,
 which requires the `serde` crate and its `derive` feature.
