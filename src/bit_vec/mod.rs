@@ -268,12 +268,16 @@ impl BitVec {
     /// This function is always inlined, because it gains a lot from loop optimization and
     /// can utilize the processor pre-fetcher better if it is.
     ///
+    /// # Errors
+    /// If the length of the query is larger than 64, unpredictable data will be returned.
+    /// Use [`get_bits`] to avoid this.
+    ///
     /// # Panics
     /// If the position or interval is larger than the length of the vector,
     /// the function will either return any valid results padded with unpredictable
     /// data or panic.
-    /// If the length of the query is larger than 64, the behavior is undefined.
-    // TODO either mark as unsafe or modulo the length parameter so the shift never overflows
+    ///
+    /// [`get_bits`]: BitVec::get_bits
     #[must_use]
     #[allow(clippy::inline_always)]
     #[allow(clippy::comparison_chain)] // rust-clippy #5354
@@ -284,10 +288,10 @@ impl BitVec {
         if pos % WORD_SIZE + len == WORD_SIZE {
             partial_word
         } else if pos % WORD_SIZE + len < WORD_SIZE {
-            partial_word & ((1 << len) - 1)
+            partial_word & ((1 << (len % WORD_SIZE)) - 1)
         } else {
             (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
-                & ((1 << len) - 1)
+                & ((1 << (len % WORD_SIZE)) - 1)
         }
     }
 
