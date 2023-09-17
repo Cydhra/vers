@@ -1,6 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use rand::distributions::{Distribution, Standard, Uniform};
 use rand::{thread_rng, Rng};
+use sucds::mii_sequences::EliasFanoBuilder;
 use vers_vecs::EliasFanoVec;
 
 mod common;
@@ -27,13 +28,14 @@ fn bench_ef(b: &mut Criterion) {
 
         // query random values from the actual sequences, to be equivalent to the worst case
         // benchmark below
-        group.bench_with_input(BenchmarkId::new("uniform input", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("vers uniform input", l), &l, |b, _| {
             b.iter_batched(
                 || sequence[query_distribution.sample(&mut rng)],
                 |e| black_box(uniform_ef_vec.predecessor_unchecked(e)),
                 BatchSize::SmallInput,
             )
         });
+        drop(uniform_ef_vec);
 
         // prepare a sequence of low values with a few high values at the end
         let mut sequence = (&mut rng)
@@ -47,16 +49,33 @@ fn bench_ef(b: &mut Criterion) {
             .collect::<Vec<u64>>();
         sequence_top.sort_unstable();
         sequence.append(&mut sequence_top);
-        let bad_ef_vec = EliasFanoVec::from_slice(&sequence);
 
+        let bad_ef_vec = EliasFanoVec::from_slice(&sequence);
         // query random values from the actual sequences, to force long searches in the lower vec
-        group.bench_with_input(BenchmarkId::new("clustered input", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("vers clustered input", l), &l, |b, _| {
             b.iter_batched(
                 || sequence[query_distribution.sample(&mut rng)],
                 |e| black_box(bad_ef_vec.predecessor_unchecked(e)),
                 BatchSize::SmallInput,
             )
         });
+        drop(bad_ef_vec);
+
+        let mut sucds_ef_vec =
+            EliasFanoBuilder::new(*sequence.last().unwrap() as usize + 1, sequence.len())
+                .expect("Failed to create sucds Elias-Fano builder");
+        sucds_ef_vec
+            .extend(sequence.iter().map(|e| *e as usize))
+            .expect("Failed to extend sucds Elias-Fano builder");
+        let sucds_ef_vec = sucds_ef_vec.build().enable_rank();
+        group.bench_with_input(BenchmarkId::new("sucds clustered input", l), &l, |b, _| {
+            b.iter_batched(
+                || query_distribution.sample(&mut rng),
+                |e| black_box(sucds_ef_vec.predecessor(e)),
+                BatchSize::SmallInput,
+            )
+        });
+        drop(sucds_ef_vec);
 
         group.bench_with_input(BenchmarkId::new("bin search", l), &l, |b, _| {
             b.iter_batched(

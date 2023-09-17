@@ -3,6 +3,7 @@ use elias_fano::EliasFano;
 use rand::distributions::{Distribution, Standard, Uniform};
 use rand::{thread_rng, Rng};
 use std::time::{Duration, Instant};
+use sucds::mii_sequences::EliasFanoBuilder;
 use vers_vecs::EliasFanoVec;
 
 mod common;
@@ -19,14 +20,9 @@ fn bench_ef(b: &mut Criterion) {
             .take(l)
             .collect::<Vec<u64>>();
         sequence.sort_unstable();
-
-        let ef_vec = EliasFanoVec::from_slice(&sequence);
-        let mut comparison_ef_vec =
-            EliasFano::new(sequence[sequence.len() - 1], sequence.len() as u64);
-        comparison_ef_vec.compress(sequence.iter());
-
         let sample = Uniform::new(0, sequence.len());
 
+        let ef_vec = EliasFanoVec::from_slice(&sequence);
         group.bench_with_input(BenchmarkId::new("vers vector", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng),
@@ -34,14 +30,40 @@ fn bench_ef(b: &mut Criterion) {
                 BatchSize::SmallInput,
             )
         });
+        drop(ef_vec);
 
+        let mut elias_fano_vec =
+            EliasFano::new(sequence[sequence.len() - 1], sequence.len() as u64);
+        elias_fano_vec.compress(sequence.iter());
         group.bench_with_input(BenchmarkId::new("elias fano vector", l), &l, |b, _| {
             b.iter_batched(
                 || sample.sample(&mut rng),
-                |e| black_box(comparison_ef_vec.visit(e as u64)),
+                |e| black_box(elias_fano_vec.visit(e as u64)),
                 BatchSize::SmallInput,
             )
         });
+        drop(elias_fano_vec);
+
+        let mut sucds_ef_vec =
+            EliasFanoBuilder::new(*sequence.last().unwrap() as usize + 1, sequence.len())
+                .expect("Failed to create sucds Elias-Fano builder");
+
+        sucds_ef_vec
+            .extend(sequence.iter().map(|e| *e as usize))
+            .expect("Failed to extend sucds Elias-Fano builder");
+        let sucds_ef_vec = sucds_ef_vec.build();
+        group.bench_with_input(
+            BenchmarkId::new("sucds elias fano vector", l),
+            &l,
+            |b, _| {
+                b.iter_batched(
+                    || sample.sample(&mut rng),
+                    |e| black_box(sucds_ef_vec.select(e)),
+                    BatchSize::SmallInput,
+                )
+            },
+        );
+        drop(sucds_ef_vec);
     }
     group.finish();
 
@@ -56,10 +78,6 @@ fn bench_ef(b: &mut Criterion) {
         sequence.sort_unstable();
 
         let ef_vec = EliasFanoVec::from_slice(&sequence);
-        let mut comparison_ef_vec =
-            EliasFano::new(sequence[sequence.len() - 1], sequence.len() as u64);
-        comparison_ef_vec.compress(sequence.iter());
-
         group.bench_with_input(BenchmarkId::new("vers vector", l), &l, |b, _| {
             b.iter_custom(|iters| {
                 let mut time = Duration::new(0, 0);
@@ -78,16 +96,20 @@ fn bench_ef(b: &mut Criterion) {
                 time
             })
         });
+        drop(ef_vec);
 
+        let mut elias_fano_vec =
+            EliasFano::new(sequence[sequence.len() - 1], sequence.len() as u64);
+        elias_fano_vec.compress(sequence.iter());
         group.bench_with_input(BenchmarkId::new("elias fano vector", l), &l, |b, _| {
             b.iter_custom(|iters| {
                 let mut time = Duration::new(0, 0);
                 let mut i = 0;
 
                 while i < iters {
-                    comparison_ef_vec.reset();
+                    elias_fano_vec.reset();
                     let start = Instant::now();
-                    while comparison_ef_vec.next().is_ok() && i < iters {
+                    while elias_fano_vec.next().is_ok() && i < iters {
                         i += 1;
                     }
                     time += start.elapsed();
@@ -96,6 +118,38 @@ fn bench_ef(b: &mut Criterion) {
                 time
             })
         });
+        drop(elias_fano_vec);
+
+        let mut sucds_ef_vec =
+            EliasFanoBuilder::new(*sequence.last().unwrap() as usize + 1, sequence.len())
+                .expect("Failed to create sucds Elias-Fano builder");
+        sucds_ef_vec
+            .extend(sequence.iter().map(|e| *e as usize))
+            .expect("Failed to extend sucds Elias-Fano builder");
+        let sucds_ef_vec = sucds_ef_vec.build();
+        group.bench_with_input(
+            BenchmarkId::new("sucds elias fano vector", l),
+            &l,
+            |b, _| {
+                b.iter_custom(|iters| {
+                    let mut time = Duration::new(0, 0);
+                    let mut i = 0;
+
+                    while i < iters {
+                        let iter = sucds_ef_vec.iter(0).take((iters - i) as usize);
+                        let start = Instant::now();
+                        for e in iter {
+                            black_box(e);
+                            i += 1;
+                        }
+                        time += start.elapsed();
+                    }
+
+                    time
+                })
+            },
+        );
+        drop(sucds_ef_vec);
     }
     group.finish();
 }
