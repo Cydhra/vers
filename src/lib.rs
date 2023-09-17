@@ -16,9 +16,6 @@
 //! in the [Github repository](https://github.com/Cydhra/vers). At the time of writing,
 //! this crate is the fastest implementation of all data structures except for one implementation
 //! of rank on bit-vectors (which pays for its speed with a missing select implementation).
-//! This crate uses multiple if chains. While using match and cmp might be more idiomatic and exhaustive, 
-//! currently the complier might not inline cmp calls and if chains can be faster. See rust-lang #5354
-//! 
 //!
 //! # Intrinsics
 //! This crate uses compiler intrinsics for bit-manipulation. The intrinsics are supported by
@@ -35,9 +32,6 @@
 //! bit-manipulation. The intrinsics cannot fail with the provided inputs (provided they are
 //! supported by the target machine), so even if they were to be implemented incorrectly, no
 //! memory unsafety can occur (only incorrect results).
-
-// If and when match/cmp becomes faster, remove this
-#![allow(clippy::comparison_chain)]
 
 pub use crate::elias_fano::EliasFanoVec;
 pub use bit_vec::fast_rs_vec::RsVec;
