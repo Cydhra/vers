@@ -40,6 +40,9 @@ pub use bit_vec::BitVec;
 pub use rmq::binary_rmq::BinaryRmq;
 pub use rmq::fast_rmq::FastRmq;
 
+#[cfg(not(all(target_feature = "bmi2", target_feature = "popcnt")))]
+compile_error!("This crate requires the BMI2 and POPCNT feature be available");
+
 pub mod bit_vec;
 pub mod elias_fano;
 pub mod rmq;

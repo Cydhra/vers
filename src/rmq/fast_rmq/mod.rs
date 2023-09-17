@@ -28,20 +28,16 @@ impl SmallBitVector {
         (!self.0 & mask).count_ones() as usize
     }
 
-    fn select0(&self, rank: usize) -> usize {
-        unsafe { self.select0_impl(rank) }
-    }
-
-    #[target_feature(enable = "bmi2")]
-    unsafe fn select0_impl(&self, mut rank: usize) -> usize {
+    #[cfg(target_feature = "bmi2")]
+    fn select0(&self, mut rank: usize) -> usize {
         let word = (self.0 & 0xFFFF_FFFF_FFFF_FFFF) as u64;
         if (word.count_zeros() as usize) <= rank {
             rank -= word.count_zeros() as usize;
         } else {
-            return _pdep_u64(1 << rank, !word).trailing_zeros() as usize;
+            return unsafe { _pdep_u64(1 << rank, !word) }.trailing_zeros() as usize;
         }
         let word = (self.0 >> 64) as u64;
-        64 + _pdep_u64(1 << (rank % 64), !word).trailing_zeros() as usize
+        64 + unsafe { _pdep_u64(1 << (rank % 64), !word) }.trailing_zeros() as usize
     }
 
     fn set_bit(&mut self, i: usize) {

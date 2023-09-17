@@ -212,19 +212,41 @@ impl RsVec {
         }
     }
 
-    #[target_feature(enable = "popcnt")]
-    unsafe fn naive_rank0(&self, pos: usize) -> usize {
+    /// Return the 0-rank of the bit at the given position. The 0-rank is the number of
+    /// 0-bits in the vector up to but excluding the bit at the given position. Calling this
+    /// function with an index larger than the length of the bit-vector will report the total
+    /// number of 0-bits in the bit-vector.
+    ///
+    /// # Parameters
+    /// - `pos`: The position of the bit to return the rank of.
+    #[cfg(target_feature = "popcnt")]
+    #[must_use]
+    pub fn rank0(&self, pos: usize) -> usize {
         self.rank(true, pos)
     }
 
-    #[target_feature(enable = "popcnt")]
-    unsafe fn naive_rank1(&self, pos: usize) -> usize {
+    /// Return the 1-rank of the bit at the given position. The 1-rank is the number of
+    /// 1-bits in the vector up to but excluding the bit at the given position. Calling this
+    /// function with an index larger than the length of the bit-vector will report the total
+    /// number of 1-bits in the bit-vector.
+    ///
+    /// # Parameters
+    /// - `pos`: The position of the bit to return the rank of.
+    #[cfg(target_feature = "popcnt")]
+    #[must_use]
+    pub fn rank1(&self, pos: usize) -> usize {
         self.rank(false, pos)
     }
 
-    #[target_feature(enable = "bmi2")]
+    /// Return the position of the 0-bit with the given rank. See `rank0`.
+    /// The following holds:
+    /// ``select0(rank0(pos)) == pos``
+    ///
+    /// If the rank is larger than the number of 0-bits in the vector, the vector length is returned.
+    #[must_use]
+    #[cfg(target_feature = "bmi2")]
     #[allow(clippy::assertions_on_constants)]
-    unsafe fn bmi_select0(&self, mut rank: usize) -> usize {
+    pub fn select0(&self, mut rank: usize) -> usize {
         if rank >= self.rank0 {
             return self.len;
         }
@@ -286,7 +308,7 @@ impl RsVec {
             } else {
                 return block_index * BLOCK_SIZE
                     + index_counter
-                    + _pdep_u64(1 << rank, !word).trailing_zeros() as usize;
+                    + unsafe { _pdep_u64(1 << rank, !word) }.trailing_zeros() as usize;
             }
         }, n += 1);
 
@@ -294,16 +316,24 @@ impl RsVec {
         // block, and thus outside of the bitvector
         block_index * BLOCK_SIZE
             + index_counter
-            + _pdep_u64(
-                1 << rank,
-                !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-            )
+            + unsafe {
+                _pdep_u64(
+                    1 << rank,
+                    !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+                )
+            }
             .trailing_zeros() as usize
     }
 
-    #[target_feature(enable = "bmi2")]
+    /// Return the position of the 1-bit with the given rank. See `rank1`.
+    /// The following holds:
+    /// ``select1(rank1(pos)) == pos``
+    ///
+    /// If the rank is larger than the number of 1-bits in the bit-vector, the vector length is returned.
+    #[must_use]
+    #[cfg(target_feature = "bmi2")]
     #[allow(clippy::assertions_on_constants)]
-    unsafe fn bmi_select1(&self, mut rank: usize) -> usize {
+    pub fn select1(&self, mut rank: usize) -> usize {
         if rank >= self.rank1 {
             return self.len;
         }
@@ -365,19 +395,21 @@ impl RsVec {
             } else {
                 return block_index * BLOCK_SIZE
                     + index_counter
-                    + _pdep_u64(1 << rank, word).trailing_zeros() as usize;
+                    + unsafe { _pdep_u64(1 << rank, word) }.trailing_zeros() as usize;
             }
         }, n += 1);
 
         // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
         // block, and thus outside of the bitvector
-        block_index * BLOCK_SIZE
-            + index_counter
-            + _pdep_u64(
-                1 << rank,
-                self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-            )
-            .trailing_zeros() as usize
+        unsafe {
+            block_index * BLOCK_SIZE
+                + index_counter
+                + _pdep_u64(
+                    1 << rank,
+                    self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+                )
+                .trailing_zeros() as usize
+        }
     }
 
     // I measured 5-10% improvement with this. I don't know why it's not inlined by default, the
@@ -433,64 +465,6 @@ impl RsVec {
         };
 
         rank
-    }
-
-    /// Return the 0-rank of the bit at the given position. The 0-rank is the number of
-    /// 0-bits in the vector up to but excluding the bit at the given position. Calling this
-    /// function with an index larger than the length of the bit-vector will report the total
-    /// number of 0-bits in the bit-vector.
-    ///
-    /// # Parameters
-    /// - `pos`: The position of the bit to return the rank of.
-    ///
-    /// # Compatibility
-    /// This function forcibly enables the `popcnt` x86 CPU feature.
-    #[must_use]
-    pub fn rank0(&self, pos: usize) -> usize {
-        unsafe { self.naive_rank0(pos) }
-    }
-
-    /// Return the 1-rank of the bit at the given position. The 1-rank is the number of
-    /// 1-bits in the vector up to but excluding the bit at the given position. Calling this
-    /// function with an index larger than the length of the bit-vector will report the total
-    /// number of 1-bits in the bit-vector.
-    ///
-    /// # Parameters
-    /// - `pos`: The position of the bit to return the rank of.
-    ///
-    /// # Compatibility
-    /// This function forcibly enables the `popcnt` x86 CPU feature.
-    #[must_use]
-    pub fn rank1(&self, pos: usize) -> usize {
-        unsafe { self.naive_rank1(pos) }
-    }
-
-    /// Return the position of the 0-bit with the given rank. See `rank0`.
-    /// The following holds:
-    /// ``select0(rank0(pos)) == pos``
-    ///
-    /// If the rank is larger than the number of 0-bits in the vector, the vector length is returned.
-    ///
-    /// # Compatibility
-    /// This function forcibly enables the `bmi2` x86 CPU feature. If this feature is not available
-    /// on the CPU, this function will not work.
-    #[must_use]
-    pub fn select0(&self, rank: usize) -> usize {
-        unsafe { self.bmi_select0(rank) }
-    }
-
-    /// Return the position of the 1-bit with the given rank. See `rank1`.
-    /// The following holds:
-    /// ``select1(rank1(pos)) == pos``
-    ///
-    /// If the rank is larger than the number of 1-bits in the bit-vector, the vector length is returned.
-    ///
-    /// # Compatibility
-    /// This function forcibly enables the `bmi2` x86 CPU feature. If this feature is not available
-    /// on the CPU, this function will not work.
-    #[must_use]
-    pub fn select1(&self, rank: usize) -> usize {
-        unsafe { self.bmi_select1(rank) }
     }
 
     /// Return the length of the vector, i.e. the number of bits it contains.
