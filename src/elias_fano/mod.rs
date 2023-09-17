@@ -186,14 +186,14 @@ impl EliasFanoVec {
     }
 
     /// Returns the largest element that is smaller than or equal to the query.
-    /// If the query is smaller than the smallest element in the vector, the behavior is undefined.
     ///
     /// This query runs in constant time on average. The worst case runtime is logarithmic in the
     /// number of elements in the vector. The worst case occurs when values in the vector are very
     /// dense with only very few elements that are much larger than most.
     ///
     /// # Panics
-    /// If the query is smaller than the smallest element in the vector, the function might panic.
+    /// If the query is smaller than the smallest element in the vector, the function might panic
+    /// or produce wrong results.
     /// Use `predecessor` instead if the query might be out of bounds.
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
@@ -324,14 +324,14 @@ impl EliasFanoVec {
     }
 
     /// Returns the smallest element that is greater than or equal to the query.
-    /// If the query is greater than the greatest element in the vector, the behavior is undefined.
     ///
     /// This query runs in constant time on average. The worst case runtime is logarithmic in the
     /// number of elements in the vector. The worst case occurs when values in the vector are very
     /// dense with only very few elements that are much smaller than most.
     ///
     /// # Panics
-    /// If the query is greater than the greatest element in the vector, the function might panic.
+    /// If the query is greater than the greatest element in the vector, the function might panic
+    /// or produce wrong results.
     /// Use `successor` instead if the query might be out of bounds.
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]

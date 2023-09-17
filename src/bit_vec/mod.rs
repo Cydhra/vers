@@ -215,8 +215,10 @@ impl BitVec {
 
     /// Return the bit at the given position.
     /// The bit takes the least significant bit of the returned u64 word.
+    ///
+    /// # Panics
     /// If the position is larger than the length of the vector,
-    /// the behavior is undefined (the function will either return unpredictable data or panic).
+    /// the function will either return unpredictable data, or panic.
     #[must_use]
     pub fn get_unchecked(&self, pos: usize) -> u64 {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
@@ -234,8 +236,10 @@ impl BitVec {
     }
 
     /// Return whether the bit at the given position is set.
+    ///
+    /// # Panics
     /// If the position is larger than the length of the vector,
-    /// the behavior is undefined (the function will either return unpredictable results or panic).
+    /// the function will either return unpredictable data, or panic.
     #[must_use]
     pub fn is_bit_set_unchecked(&self, pos: usize) -> bool {
         self.get_unchecked(pos) != 0
@@ -265,10 +269,11 @@ impl BitVec {
     /// can utilize the processor pre-fetcher better if it is.
     ///
     /// # Panics
-    /// If the position is larger than the length of the vector,
-    /// the behavior is undefined (the function will either return any valid results padded with unpredictable
-    /// memory or panic).
+    /// If the position or interval is larger than the length of the vector,
+    /// the function will either return any valid results padded with unpredictable
+    /// data or panic.
     /// If the length of the query is larger than 64, the behavior is undefined.
+    // TODO either mark as unsafe or modulo the length parameter so the shift never overflows
     #[must_use]
     #[allow(clippy::inline_always)]
     #[allow(clippy::comparison_chain)] // rust-clippy #5354

@@ -545,10 +545,10 @@ impl RsVec {
     /// can utilize the processor pre-fetcher better if it is.
     ///
     /// # Panics
-    /// If the position is larger than the length of the vector,
-    /// the behavior is undefined (the function will either return any valid results padded with unpredictable
-    /// memory or panic).
+    /// If the position or interval is larger than the length of the vector,
+    /// the function will either return any valid results padded with unpredictable memory, or panic.
     /// If the length of the query is larger than 64, the behavior is undefined.
+    // TODO mark as unsafe or modulo the length parameter so shift never overflows
     #[must_use]
     #[allow(clippy::comparison_chain)] // rust-clippy #5354
     pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
