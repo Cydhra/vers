@@ -40,6 +40,9 @@ pub struct BinaryRmq {
 impl BinaryRmq {
     /// Create a new RMQ data structure for the given data. This uses O(n log n) space and
     /// precalculates the minimum element in intervals 2^k for all k for all elements.
+    ///
+    /// # Panics
+    /// This function will panic if the input is larger than 2^32 elements.
     #[must_use]
     pub fn from_vec(data: Vec<u64>) -> Self {
         // the results are stored in a one-dimensional array, where the k'th element of each row i is
@@ -48,7 +51,7 @@ impl BinaryRmq {
         // but saves us a large amount of page faults for big vectors, when compared to having a
         // two-dimensional array with dynamic length in the second dimension.
         let len = data.len();
-        assert!(len <= u32::MAX as usize, "input too large for binary rmq");
+        assert!(u32::try_from(len).is_ok(), "input too large for binary rmq");
 
         let row_length = len.next_power_of_two().trailing_zeros() as usize + 1;
         let mut results = vec![0u32; len * row_length];

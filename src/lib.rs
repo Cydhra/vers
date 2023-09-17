@@ -1,4 +1,5 @@
 #![warn(missing_docs)]
+#![allow(clippy::module_name_repetitions)]
 
 //! This crate provides a collection of data structures supported by fast implementations of
 //! rank and select queries. The data structures are static, meaning that they cannot be modified

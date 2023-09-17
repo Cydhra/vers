@@ -24,7 +24,7 @@ impl SmallBitVector {
     #[allow(clippy::cast_sign_loss)]
     fn rank0(&self, i: usize) -> usize {
         debug_assert!(i <= 128);
-        let mask = ![(-1i128 << (i & 127)), 0][(i == 128) as usize] as u128;
+        let mask = ![(-1i128 << (i & 127)), 0][usize::from(i == 128)] as u128;
         (!self.0 & mask).count_ones() as usize
     }
 
@@ -189,6 +189,7 @@ impl FastRmq {
     /// Calling this function where one of the indices is out of bounds will produce a panic or an
     /// incorrect result.
     #[must_use]
+    #[allow(clippy::similar_names)]
     pub fn range_min(&self, i: usize, j: usize) -> usize {
         let block_i = i / BLOCK_SIZE;
         let block_j = j / BLOCK_SIZE;

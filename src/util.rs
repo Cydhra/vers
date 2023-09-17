@@ -1,6 +1,7 @@
 macro_rules! gen_iter_impl {
     ($($life:lifetime, )? $name:ident, $type:ty, $item:ty; $({ $($function_defs:tt)* })*) => {
         impl $(<$life>)? $name $(<$life>)? {
+            #[must_use]
             fn new(vec: $(&$life)? $type) -> Self {
                 if vec.is_empty() {
                     return Self {
@@ -87,12 +88,14 @@ macro_rules! gen_iter_impl {
 
             /// Returns the number of elements that this iterator will iterate over. The size is
             /// precise.
+            #[must_use]
             fn size_hint(&self) -> (usize, Option<usize>) {
                 (self.len(), Some(self.len()))
             }
 
             /// Returns the exact number of elements that this iterator would iterate over. Does not
             /// call `next` internally.
+            #[must_use]
             fn count(self) -> usize
             where
                 Self: Sized,
@@ -101,6 +104,7 @@ macro_rules! gen_iter_impl {
             }
 
             /// Returns the last element of the iterator. Does not call `next` internally.
+            #[must_use]
             fn last(self) -> Option<Self::Item>
             where
                 Self: Sized,
@@ -202,6 +206,7 @@ macro_rules! impl_iterator {
 
         impl $type {
             #[doc = concat!("Returns an iterator over the elements of `", stringify!($type), "`.")]
+            #[must_use]
             pub fn iter(&self) -> $bor<'_> {
                 $bor::new(self)
             }
@@ -226,6 +231,7 @@ macro_rules! impl_iterator {
             type Item = u64;
             type IntoIter = $own;
 
+            #[must_use]
             fn into_iter(self) -> Self::IntoIter {
                 $own::new(self)
             }
@@ -235,6 +241,7 @@ macro_rules! impl_iterator {
             type Item = u64;
             type IntoIter = $bor<'a>;
 
+            #[must_use]
             fn into_iter(self) -> Self::IntoIter {
                 $bor::new(self)
             }
@@ -244,6 +251,7 @@ macro_rules! impl_iterator {
             type Item = u64;
             type IntoIter = $bor<'a>;
 
+            #[must_use]
             fn into_iter(self) -> Self::IntoIter {
                 $bor::new(self)
             }
