@@ -48,7 +48,7 @@ impl BinaryRmq {
         // but saves us a large amount of page faults for big vectors, when compared to having a
         // two-dimensional array with dynamic length in the second dimension.
         let len = data.len();
-        assert!(len <= u32::MAX as usize, "input too large for binary rmq");
+        assert!(u32::try_from(len).is_ok(), "input too large for binary rmq");
 
         let row_length = len.next_power_of_two().trailing_zeros() as usize + 1;
         let mut results = vec![0u32; len * row_length];
