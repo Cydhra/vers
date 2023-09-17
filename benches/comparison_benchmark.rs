@@ -9,6 +9,9 @@ use rand::Rng;
 use rsdict::RsDict;
 use succinct::select::Select0Support;
 use succinct::{BinSearchSelect, BitRankSupport, BitVecPush, BitVector as SuccinctVec, Rank9};
+use sucds::bit_vectors::darray::DArray as SucDArray;
+use sucds::bit_vectors::rank9sel::Rank9Sel as SucRank9Vec;
+use sucds::bit_vectors::{BitVector as SucBitVec, Rank, Select};
 use RankSelect as BioRsVec;
 
 mod common;
@@ -70,6 +73,28 @@ fn construct_rank9_select_vec(
     BinSearchSelect::new(construct_rank9_vec(rng, len))
 }
 
+fn construct_sucds_vec(rng: &mut ThreadRng, len: usize) -> SucRank9Vec {
+    let mut suc_bv = SucBitVec::with_capacity(len);
+    for _ in 0..len / 64 {
+        suc_bv
+            .push_bits(rng.sample(Standard), 64)
+            .expect("Failed to push bits into sucds bitvector");
+    }
+
+    SucRank9Vec::new(suc_bv).select0_hints()
+}
+
+fn construct_sucds_darray(rng: &mut ThreadRng, len: usize) -> SucDArray {
+    let mut suc_bv = SucBitVec::with_capacity(len);
+    for _ in 0..len / 64 {
+        suc_bv
+            .push_bits(rng.sample(Standard), 64)
+            .expect("Failed to push bits into sucds bitvector");
+    }
+
+    SucDArray::from_bits(suc_bv.iter()).enable_rank()
+}
+
 fn compare_ranks(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
 
@@ -84,6 +109,8 @@ fn compare_ranks(b: &mut Criterion) {
         let fid_vec = construct_fid_vec(&mut rng, l);
         let ind_bit_vec = construct_ind_bit_vec(&mut rng, l);
         let rank9_vec = construct_rank9_vec(&mut rng, l);
+        let sucds_vec = construct_sucds_vec(&mut rng, l);
+        let sucds_darray = construct_sucds_darray(&mut rng, l);
 
         let sample = Uniform::new(0, l);
 
@@ -142,6 +169,22 @@ fn compare_ranks(b: &mut Criterion) {
                 BatchSize::SmallInput,
             )
         });
+
+        group.bench_with_input(BenchmarkId::new("sucds-rank9", l), &l, |b, _| {
+            b.iter_batched(
+                || sample.sample(&mut rng),
+                |e| black_box(sucds_vec.rank0(e)),
+                BatchSize::SmallInput,
+            )
+        });
+
+        group.bench_with_input(BenchmarkId::new("sucds-darray", l), &l, |b, _| {
+            b.iter_batched(
+                || sample.sample(&mut rng),
+                |e| black_box(sucds_darray.rank0(e)),
+                BatchSize::SmallInput,
+            )
+        });
     }
     group.finish();
 
@@ -156,6 +199,9 @@ fn compare_ranks(b: &mut Criterion) {
         let fid_vec = construct_fid_vec(&mut rng, l);
         let ind_bit_vec = construct_ind_bit_vec(&mut rng, l);
         let rank9_vec = construct_rank9_select_vec(&mut rng, l);
+        let sucds_vec = construct_sucds_vec(&mut rng, l);
+        let sucds_darray = construct_sucds_darray(&mut rng, l);
+
         let sample = Uniform::new(0, l / 3);
 
         group.bench_with_input(BenchmarkId::new("vers", l), &l, |b, _| {
@@ -210,6 +256,22 @@ fn compare_ranks(b: &mut Criterion) {
             b.iter_batched(
                 || sample.sample(&mut rng) as u64,
                 |e| black_box(rank9_vec.select0(e)),
+                BatchSize::SmallInput,
+            )
+        });
+
+        group.bench_with_input(BenchmarkId::new("sucds-rank9", l), &l, |b, _| {
+            b.iter_batched(
+                || sample.sample(&mut rng),
+                |e| black_box(sucds_vec.select0(e)),
+                BatchSize::SmallInput,
+            )
+        });
+
+        group.bench_with_input(BenchmarkId::new("sucds-darray", l), &l, |b, _| {
+            b.iter_batched(
+                || sample.sample(&mut rng),
+                |e| black_box(sucds_darray.select1(e)),
                 BatchSize::SmallInput,
             )
         });

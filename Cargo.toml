@@ -31,6 +31,7 @@ succinct = "0.5"
 elias-fano = "1.1"
 range_minimum_query = "0.1"
 librualg = "0.29"
+sucds = "0.8"
 
 [[bench]]
 name = "rank_benchmark"
