@@ -76,7 +76,7 @@ impl EliasFanoVec {
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub fn from_slice(data: &[u64]) -> Self {
-        if data.len() == 0 {
+        if data.is_empty() {
             return Self {
                 upper_vec: RsVec::from_bit_vec(BitVec::new()),
                 lower_vec: BitVec::new(),
