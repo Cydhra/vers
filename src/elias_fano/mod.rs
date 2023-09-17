@@ -158,6 +158,9 @@ impl EliasFanoVec {
     ///
     /// # Panics
     /// If the index exceeds the length of the vector, the function will panic.
+    /// Use [`get`] instead if the index might be out of bounds.
+    ///
+    /// [`get`]: EliasFanoVec::get
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub fn get_unchecked(&self, index: usize) -> u64 {

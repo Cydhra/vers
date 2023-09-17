@@ -85,6 +85,12 @@ pub struct RsVec {
 impl RsVec {
     /// Build an [`RsVec`] from a [`BitVec`]. This will consume the [`BitVec`]. Since [`RsVec`]s are
     /// immutable, this is the only way to construct an [`RsVec`].
+    ///
+    /// # Example
+    /// See the example for [`RsVec`].
+    ///
+    /// [`BitVec`]: ../struct.BitVec.html
+    /// [`RsVec`]: struct.RsVec.html
     #[must_use]
     pub fn from_bit_vec(mut vec: BitVec) -> RsVec {
         // Construct the block descriptor meta data. Each block descriptor contains the number of
@@ -546,7 +552,7 @@ impl RsVec {
     ///
     /// # Errors
     /// If the length of the query is larger than 64, unpredictable data will be returned.
-    /// Use [`get_bits`] to properly handle this case
+    /// Use [`get_bits`] to properly handle this case with an `Option`.
     ///
     /// # Panics
     /// If the position or interval is larger than the length of the vector,

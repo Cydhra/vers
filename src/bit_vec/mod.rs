@@ -194,9 +194,12 @@ impl BitVec {
         self.flip_bit_unchecked(pos);
     }
 
-    /// Flip the bit at the given position. If the position is larger than the length of the
-    /// vector, the behavior is undefined (the function will either modify unused memory or panic.
-    /// This will not corrupt memory, but will affect invalid unchecked get operations).
+    /// Flip the bit at the given position.
+    ///
+    /// # Panics
+    /// If the position is larger than the length of the
+    /// vector, the function will either modify unused memory or panic.
+    /// This will not corrupt memory.
     pub fn flip_bit_unchecked(&mut self, pos: usize) {
         self.data[pos / WORD_SIZE] ^= 1 << (pos % WORD_SIZE);
     }
@@ -219,6 +222,9 @@ impl BitVec {
     /// # Panics
     /// If the position is larger than the length of the vector,
     /// the function will either return unpredictable data, or panic.
+    /// Use [`get`] to properly handle this case with an `Option`.
+    ///
+    /// [`get`]: BitVec::get
     #[must_use]
     pub fn get_unchecked(&self, pos: usize) -> u64 {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
@@ -240,6 +246,9 @@ impl BitVec {
     /// # Panics
     /// If the position is larger than the length of the vector,
     /// the function will either return unpredictable data, or panic.
+    /// Use [`is_bit_set`] to properly handle this case with an `Option`.
+    ///
+    /// [`is_bit_set`]: BitVec::is_bit_set
     #[must_use]
     pub fn is_bit_set_unchecked(&self, pos: usize) -> bool {
         self.get_unchecked(pos) != 0
