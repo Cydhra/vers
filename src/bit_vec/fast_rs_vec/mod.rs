@@ -550,6 +550,7 @@ impl RsVec {
     /// memory or panic).
     /// If the length of the query is larger than 64, the behavior is undefined.
     #[must_use]
+    #[allow(clippy::comparison_chain)]
     pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
         debug_assert!(len <= WORD_SIZE);
         let partial_word = self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE);

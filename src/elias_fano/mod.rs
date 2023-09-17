@@ -195,6 +195,7 @@ impl EliasFanoVec {
     /// Use `predecessor` instead if the query might be out of bounds.
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::comparison_chain)]
     pub fn predecessor_unchecked(&self, n: u64) -> u64 {
         if n > self.universe_max {
             return self.get_unchecked(self.len() - 1);
@@ -332,6 +333,7 @@ impl EliasFanoVec {
     /// Use `successor` instead if the query might be out of bounds.
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::comparison_chain)]
     pub fn successor_unchecked(&self, n: u64) -> u64 {
         if n < self.universe_zero {
             return self.get_unchecked(0);
