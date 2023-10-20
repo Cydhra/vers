@@ -23,7 +23,7 @@ rand = "0.8"
 
 # comparison benchmarks libraries
 rsdict = { version = "0.0.7", features = ["simd"] }
-bio = "1.3"
+bio = "1.4"
 bv = "0.11"
 fid = "0.1"
 indexed_bitvec = "4.0"
