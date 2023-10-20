@@ -3,7 +3,7 @@
 Vers (vers-vecs on crates.io)
 contains pure-Rust implementations of several data structures backed by rank and select operations.
 The library was originally a grad student project for a semester course,
-but since it outperforms all publicly available implementations,
+but since it performs quite well (especially if worst-case run-times are important) compared to publicly available implementations,
 I've decided to publish it.
 
 ## Data Structures
@@ -31,6 +31,9 @@ bit-manipulation. The intrinsics cannot fail with the provided inputs (provided 
 supported by the target machine), so even if they were to be implemented incorrectly, no
 memory corruption can occur (only incorrect results).
 
+Unsafe code is hidden behind public API.
+The crate fails compilation, if the intrinsics are not available.
+
 ## Dependencies
 The library has no dependencies outside the Rust standard library by default.
 It has a plethora of dependencies for benchmarking purposes, but these are not required for normal use.
@@ -47,8 +50,10 @@ I performed benchmarks on a Ryzen 9 7950X with 32GB of RAM.
 The results are shown below.
 
 ### Bit-Vector
-The bit-vector implementation is the fastest publicly available implementation for rank and select operations.
+The bit-vector implementation is among the fastest publicly available implementation for rank and select operations.
 Note that the `succinct` crate outperforms Vers' `rank` operation, but does not provide an efficient select operation.
+The `sucds` generally performs better than `vers` in average case, but is significantly slower in worst case (see below).
+
 The x-axis is the number of bits in the bit-vector.
 An increase in all runtimes can be observed for input sizes exceeding the L2 cache size (16 MB).
 
@@ -65,26 +70,36 @@ An increase in all runtimes can be observed for input sizes exceeding the L2 cac
 ![Bit-Vector Rank Benchmark](images/rank_comparison.svg)
 ![Bit-Vector Select Benchmark](images/select_comparison.svg)
 
+For small worst-case bit distributions, Vers' implementation is significantly faster than the `sucds` crate.
+Since the `sucds` crate relies on dense arrays, the worst-case for `vers` is different from the worst case for `sucds`,
+and I was unable to find a worst-case distribution for the latter.
+It is unclear if the `sucds` crate is faster than Vers' implementation for worst-case distributions,
+or if I was simply unable to find a suitable worst-case distribution.
+If worst-case runtimes are important to you, I recommend benchmarking both crates with data representative of your
+input bit distribution (since both crates have different worst-case scenarios), or to default to `vers` 
+(look at the benchmark code to get an idea what distributions are bad for `vers`).
+
+![Bit-Vector Select Worst Case Benchmark](images/select_worst_case.svg)
+
 ### Elias-Fano
-There are no publicly available implementations of Elias-Fano encodings with predecessor queries.
 The benchmark compares the performance of Vers' implementation against a naive implementation that uses binary search
 to find the predecessor.
 The x-axis is the number of elements in the sequence.
 An increase in the near-constant runtime can be observed for input sizes exceeding the L3 cache size 
 (64 MB).
-As expected, predecessor and successor queries are the same speed and much faster than binary search.
+As expected, predecessor and successor queries are the same speed and much faster than binary search (for large inputs).
 
 ![Elias-Fano Randomized](images/elias_fano_randomized.svg)
 
 Another benchmark for worst-case input distributions shows that Vers' implementation is still only a factor slower than
-on average inputs and asymptotically better than binary search.
+on average inputs and asymptotically equal to binary search.
 I did not include the successor query in this benchmark, since it is identical to the predecessor query.
+Notably, `sucds` runtime grows exponentially with the number of elements in the sequence for worst-case distributions.
 
 ![Elias-Fano Worst Case](images/elias_fano_worst_case.svg)
 
 There is an Elias-Fano implementation in the [elias-fano](https://crates.io/crates/elias-fano) crate,
 which does not support predecessor/successor queries, but I benchmarked the access times for elements at a given index.
-Vers outperforms the crate by a significant margin.
 It should be noted that the elias-fano crate is inefficient with random order access, so I benchmarked in-order access
 as well.
 The x-axis is the number of elements in the sequence, the y-axis is the time for accessing one element.
@@ -104,7 +119,6 @@ An increase in runtime can be observed for input sizes exceeding the L3 cache si
 ![RMQ Comparison](images/rmq_comparison.svg)
 
 ## License
-
 Licensed under either of
 
 * Apache License, Version 2.0
@@ -115,7 +129,6 @@ Licensed under either of
 at your option.
 
 ## Contribution
-
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
