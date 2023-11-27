@@ -63,7 +63,7 @@ impl BitVec {
     pub fn from_ones(len: usize) -> Self {
         let mut data = vec![u64::MAX; len / WORD_SIZE];
         if len % WORD_SIZE != 0 {
-            data.push((1 << len) - 1);
+            data.push((1 << (len % WORD_SIZE)) - 1);
         }
         Self { data, len }
     }
@@ -328,6 +328,34 @@ impl BitVec {
             (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
                 & ((1 << (len % WORD_SIZE)) - 1)
         }
+    }
+
+    /// Return the number of ones in the bit vector. Since the bit vector doesn't store additional
+    /// metadata, this value is calculated. Use [`RsVec`] for constant-time rank operations.
+    ///
+    /// [`RsVec`]: crate::RsVec
+    #[must_use]
+    pub fn count_ones(&self) -> u64 {
+        let mut ones = self.data[0..self.len / WORD_SIZE]
+            .iter()
+            .map(|limb| limb.count_ones() as u64)
+            .sum();
+        if self.len % WORD_SIZE > 0 {
+            ones += (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones()
+                as u64;
+        }
+        ones
+    }
+
+    /// Return the number of zeros in the bit vector. Since the bit vector doesn't store additional
+    /// metadata, this value is calculated. Use [`RsVec`] for constant-time rank operations.
+    /// This method calls [`count_ones`].
+    ///
+    /// [`RsVec`]: crate::RsVec
+    /// [`count_ones`]: BitVec::count_ones
+    #[must_use]
+    pub fn count_zeros(&self) -> u64 {
+        self.len as u64 - self.count_ones()
     }
 
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory

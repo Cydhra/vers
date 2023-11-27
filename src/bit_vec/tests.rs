@@ -292,3 +292,14 @@ fn test_set_bit() {
         assert_eq!(bv.get(i), Some((i % 25 == 0) as u64));
     }
 }
+
+#[test]
+fn test_count_bits() {
+    let mut bv = BitVec::from_ones(2000);
+    bv.flip_bit(24);
+    bv.flip_bit(156);
+    bv.flip_bit(1999);
+
+    assert_eq!(bv.count_ones(), 1997);
+    assert_eq!(bv.count_zeros(), 3);
+}
