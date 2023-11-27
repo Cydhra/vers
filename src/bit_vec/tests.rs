@@ -280,3 +280,15 @@ fn test_get_bits() {
     assert_eq!(bv.get_bits(190, 12), None);
     assert_eq!(bv.get_bits(0, 64), Some(0b101010));
 }
+
+#[test]
+fn test_set_bit() {
+    let mut bv = BitVec::from_zeros(1025);
+    for i in (0..1025).step_by(25) {
+        assert!(bv.set(i, 0x1).is_ok());
+    }
+
+    for i in 0..1025 {
+        assert_eq!(bv.get(i), Some((i % 25 == 0) as u64));
+    }
+}

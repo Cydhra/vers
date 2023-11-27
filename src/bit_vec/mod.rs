@@ -230,6 +230,32 @@ impl BitVec {
         (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
     }
 
+    /// Set the bit at the given position.
+    /// The bit is given as a u64 value of which only the least significant bit is used.
+    /// If the position is out of range, the function will return `Err` with an error message,
+    /// otherwise it will return an empty `Ok`.
+    pub fn set(&mut self, pos: usize, value: u64) -> Result<(), &str> {
+        if pos >= self.len {
+            Err("out of range")
+        } else {
+            Ok(self.set_unchecked(pos, value))
+        }
+    }
+
+    /// Set the bit at the given position.
+    /// The bit is given as a u64 value of which only the least significant bit is used.
+    ///
+    /// # Panics
+    /// If the position is larger than the length of the vector,
+    /// the function will either do nothing, or panic.
+    /// Use [`set`] to properly handle this case with a `Result`.
+    ///
+    /// [`set`]: BitVec::set
+    pub fn set_unchecked(&mut self, pos: usize, value: u64) {
+        self.data[pos / WORD_SIZE] = (self.data[pos / WORD_SIZE] & !(0x1 << (pos % WORD_SIZE)))
+            | ((value & 0x1) << (pos % WORD_SIZE))
+    }
+
     /// Return whether the bit at the given position is set.
     /// If the position is larger than the length of the vector, None is returned.
     #[must_use]
