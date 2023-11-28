@@ -105,7 +105,7 @@ impl<'a, 'b> MaskedBitVec<'a, 'b> {
     #[inline]
     #[must_use]
     pub fn get_bits(&self, pos: usize, len: usize) -> Option<u64> {
-        if len > super::WORD_SIZE {
+        if len > super::WORD_SIZE || len == 0 {
             return None;
         }
         if pos + len > self.vec.len {

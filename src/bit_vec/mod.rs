@@ -289,7 +289,7 @@ impl BitVec {
     /// If the length of the query is larger than 64, None is returned.
     #[must_use]
     pub fn get_bits(&self, pos: usize, len: usize) -> Option<u64> {
-        if len > WORD_SIZE {
+        if len > WORD_SIZE || len == 0 {
             return None;
         }
         if pos + len > self.len {
