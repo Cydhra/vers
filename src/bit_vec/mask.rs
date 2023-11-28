@@ -1,3 +1,9 @@
+//! This module defines a struct for lazily masking [`BitVec`]. It offers all immutable operations
+//! of `BitVec` but applies a bit-mask during the operation. The struct is created through three
+//! functions in `BitVec`.
+//!
+//! [`BitVec`]: crate::BitVec
+
 use crate::BitVec;
 
 /// A bit vector that is masked with another bit vector via a masking function. Offers the same

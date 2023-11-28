@@ -362,21 +362,24 @@ impl BitVec {
     }
 
     /// Mask this bit vector with another bitvector using bitwise or. The mask is applied lazily
-    /// whenever an operation on the resulting vector is performed.
+    /// whenever an operation on the resulting vector is performed. Returns an error if the length
+    /// of the vector doesn't match the mask.
     #[inline]
     pub fn mask_or<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, |a, b| a | b)
     }
 
     /// Mask this bit vector with another bitvector using bitwise and. The mask is applied lazily
-    /// whenever an operation on the resulting vector is performed.
+    /// whenever an operation on the resulting vector is performed. Returns an error if the length
+    /// of the vector doesn't match the mask.
     #[inline]
     pub fn mask_and<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, |a, b| a & b)
     }
 
     /// Mask this bit vector with another bitvector using bitwise xor. The mask is applied lazily
-    /// whenever an operation on the resulting vector is performed.
+    /// whenever an operation on the resulting vector is performed. Returns an error if the length
+    /// of the vector doesn't match the mask.
     #[inline]
     pub fn mask_xor<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, |a, b| a ^ b)

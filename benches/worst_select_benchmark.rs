@@ -12,22 +12,16 @@ fn bench_ef(b: &mut Criterion) {
     let mut group = b.benchmark_group("Select Benchmark: Worst Case Input");
     group.plot_config(common::plot_config());
 
-    for order_of_magnitude in [
-        14,
-        16,
-        18,
-        20,
-        22,
-        24,
-        26,
-    ] {
+    for order_of_magnitude in [14, 16, 18, 20, 22, 24, 26] {
         let length = 1 << order_of_magnitude;
 
         // uniformly distributed sequence
         let bit_vec = common::construct_vers_vec(&mut rng, length);
-        group.bench_with_input(BenchmarkId::new("uniform input", length), &length, |b, _| {
-            b.iter(|| black_box(bit_vec.select1((1 << 13) - 1)))
-        });
+        group.bench_with_input(
+            BenchmarkId::new("uniform input", length),
+            &length,
+            |b, _| b.iter(|| black_box(bit_vec.select1((1 << 13) - 1))),
+        );
         drop(bit_vec);
 
         // construct a vector with only one select block and put its last one bit at the end
@@ -44,9 +38,11 @@ fn bench_ef(b: &mut Criterion) {
         bit_vec.append_word(2);
         let bit_vec = RsVec::from_bit_vec(bit_vec);
 
-        group.bench_with_input(BenchmarkId::new("worst case input", length), &length, |b, _| {
-            b.iter(|| black_box(bit_vec.select1((1 << 13) - 1)))
-        });
+        group.bench_with_input(
+            BenchmarkId::new("worst case input", length),
+            &length,
+            |b, _| b.iter(|| black_box(bit_vec.select1((1 << 13) - 1))),
+        );
         drop(bit_vec);
 
         let mut rs_dict = RsDict::with_capacity(length / 64);
