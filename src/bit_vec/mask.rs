@@ -9,7 +9,6 @@ pub struct MaskedBitVec<'a, 'b> {
 }
 
 impl<'a, 'b> MaskedBitVec<'a, 'b> {
-
     #[inline]
     pub(crate) fn new(
         vec: &'a BitVec,

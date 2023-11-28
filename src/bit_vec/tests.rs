@@ -25,6 +25,16 @@ fn simple_bit_vec_test() {
 }
 
 #[test]
+fn test_empty_vec() {
+    let bv = BitVec::new();
+
+    assert_eq!(bv.get(0), None);
+    assert_eq!(bv.get(1), None);
+    assert_eq!(bv.get_bits(0, 0), None);
+    assert_eq!(bv.get_bits(0, 10), None);
+}
+
+#[test]
 fn test_alloc_ones() {
     let bv = BitVec::from_ones(42);
     assert_eq!(bv.len(), 42);
@@ -302,4 +312,62 @@ fn test_count_bits() {
 
     assert_eq!(bv.count_ones(), 1997);
     assert_eq!(bv.count_zeros(), 3);
+}
+
+#[test]
+fn test_masked_empty_vec() {
+    let bv = BitVec::new();
+    let mask = BitVec::new();
+    let bv = bv.mask_or(&mask).expect("failed to mask vector");
+
+    assert_eq!(bv.get(0), None);
+    assert_eq!(bv.get(1), None);
+    assert_eq!(bv.get_bits(0, 0), None);
+    assert_eq!(bv.get_bits(0, 10), None);
+}
+
+#[test]
+fn test_masked_get_bits() {
+    let mut bv = BitVec::from_zeros(200);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(197);
+    bv.flip_bit(199);
+
+    let mut mask = BitVec::from_zeros(200);
+    mask.flip_bit(1);
+    mask.flip_bit(2);
+    mask.flip_bit(3);
+
+    let bv = bv.mask_and(&mask).expect("failed to mask vector");
+
+    assert_eq!(bv.get_bits_unchecked(1, 3), 0b101);
+    assert_eq!(bv.get_bits_unchecked(1, 4), 0b101);
+    assert_eq!(bv.get_bits_unchecked(2, 2), 0b10);
+    assert_eq!(bv.get_bits_unchecked(197, 3), 0);
+    assert_eq!(bv.get_bits_unchecked(198, 2), 0);
+
+    assert_eq!(bv.get_bits(0, 65), None);
+    assert_eq!(bv.get_bits(300, 2), None);
+    assert_eq!(bv.get_bits(190, 12), None);
+    assert_eq!(bv.get_bits(0, 64), Some(0b1010));
+}
+
+#[test]
+fn test_masked_count_bits() {
+    let mut bv = BitVec::from_ones(2000);
+    bv.flip_bit(24);
+    bv.flip_bit(156);
+    bv.flip_bit(1999);
+
+    let mut mask = BitVec::from_zeros(2000);
+    mask.flip_bit(24);
+    mask.flip_bit(1999);
+    mask.flip_bit(0);
+
+    let bv = bv.mask_and(&mask).expect("failed to mask vector");
+
+    assert_eq!(bv.count_ones(), 1);
+    assert_eq!(bv.count_zeros(), 1999);
 }

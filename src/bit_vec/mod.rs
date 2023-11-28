@@ -1,6 +1,7 @@
 //! This module contains a simple [bit vector][BitVec] implementation with no overhead and a fast succinct
 //! bit vector implementation with [rank and select queries][fast_rs_vec::RsVec].
 
+use crate::bit_vec::mask::MaskedBitVec;
 use crate::util::impl_iterator;
 use std::mem::size_of;
 
@@ -358,6 +359,27 @@ impl BitVec {
     #[must_use]
     pub fn count_zeros(&self) -> u64 {
         self.len as u64 - self.count_ones()
+    }
+
+    /// Mask this bit vector with another bitvector using bitwise or. The mask is applied lazily
+    /// whenever an operation on the resulting vector is performed.
+    #[inline]
+    pub fn mask_or<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
+        MaskedBitVec::new(self, mask, |a, b| a | b)
+    }
+
+    /// Mask this bit vector with another bitvector using bitwise and. The mask is applied lazily
+    /// whenever an operation on the resulting vector is performed.
+    #[inline]
+    pub fn mask_and<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
+        MaskedBitVec::new(self, mask, |a, b| a & b)
+    }
+
+    /// Mask this bit vector with another bitvector using bitwise xor. The mask is applied lazily
+    /// whenever an operation on the resulting vector is performed.
+    #[inline]
+    pub fn mask_xor<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
+        MaskedBitVec::new(self, mask, |a, b| a ^ b)
     }
 
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
