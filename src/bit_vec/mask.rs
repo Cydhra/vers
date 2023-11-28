@@ -39,9 +39,10 @@ impl<'a, 'b> MaskedBitVec<'a, 'b> {
         'b: 's,
     {
         self.vec
+            .data
             .iter()
-            .zip(self.mask)
-            .map(|(a, b)| (self.bin_op)(a, b))
+            .zip(&self.mask.data)
+            .map(|(&a, &b)| (self.bin_op)(a, b))
     }
 
     /// Return the bit at the given position.

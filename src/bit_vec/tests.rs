@@ -407,3 +407,17 @@ fn test_masked_count_bits() {
     assert_eq!(bv.count_ones(), 1);
     assert_eq!(bv.count_zeros(), 1999);
 }
+
+#[test]
+fn test_masked_to_bit_vec() {
+    let mut bv = BitVec::from_zeros(5);
+    bv.flip_bit(0);
+
+    let mut bv2 = BitVec::from_zeros(5);
+    bv2.flip_bit(1);
+
+    let combined = bv.mask_or(&bv2).expect("failed to mask vector").to_bit_vec();
+    assert_eq!(combined.get_bits(0, 2), Some(3));
+    assert_eq!(combined.get_bits(2, 3), Some(0));
+    assert_eq!(combined.len(), 5);
+}
