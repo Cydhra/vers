@@ -189,4 +189,12 @@ impl<'a, 'b> MaskedBitVec<'a, 'b> {
         }
         ones
     }
+
+    /// Collect the masked BitVec into a new bit vec by applying the mask to all bits.
+    pub fn to_bit_vec(&self) -> BitVec {
+        BitVec {
+            data: self.iter_limbs().collect(),
+            len: self.vec.len,
+        }
+    }
 }
