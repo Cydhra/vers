@@ -28,7 +28,7 @@ const WORD_SIZE: usize = 64;
 /// assert_eq!(bit_vec.get(0), Some(0u64));
 /// assert_eq!(bit_vec.get(1), Some(1u64));
 /// ```
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BitVec {
     data: Vec<u64>,
