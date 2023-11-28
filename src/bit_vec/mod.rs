@@ -71,6 +71,32 @@ impl BitVec {
         Self { data, len }
     }
 
+    /// Construct a bit vector from a set of bits given as distinct u8 values. The constructor will
+    /// take the least significant bit from each value and append it to a bit vector. All other bits
+    /// are ignored.
+    ///
+    /// See also: [`from_bits_u64`]
+    ///
+    /// [`from_bits_u64`]: BitVec::from_bits_u64
+    pub fn from_bits(bits: &[u8]) -> Self {
+        let mut bv = Self::with_capacity(bits.len());
+        bits.iter().for_each(|&b| bv.append_bit(b.into()));
+        bv
+    }
+
+    /// Construct a bit vector from a set of bits given as distinct u64 values. The constructor will
+    /// take the least significant bit from each value and append it to a bit vector. All other bits
+    /// are ignored.
+    ///
+    /// See also: [`from_bits`]
+    ///
+    /// [`from_bits`]: BitVec::from_bits
+    pub fn from_bits_u64(bits: &[u64]) -> Self {
+        let mut bv = Self::with_capacity(bits.len());
+        bits.iter().for_each(|&b| bv.append_bit(b));
+        bv
+    }
+
     /// Append a bit to the bit vector. The bit is given as a boolean, where `true` means 1 and
     /// `false` means 0.
     pub fn append(&mut self, bit: bool) {

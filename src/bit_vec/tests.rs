@@ -416,8 +416,22 @@ fn test_masked_to_bit_vec() {
     let mut bv2 = BitVec::from_zeros(5);
     bv2.flip_bit(1);
 
-    let combined = bv.mask_or(&bv2).expect("failed to mask vector").to_bit_vec();
+    let combined = bv
+        .mask_or(&bv2)
+        .expect("failed to mask vector")
+        .to_bit_vec();
     assert_eq!(combined.get_bits(0, 2), Some(3));
     assert_eq!(combined.get_bits(2, 3), Some(0));
     assert_eq!(combined.len(), 5);
+}
+
+#[test]
+fn test_from_bits() {
+    let bv = BitVec::from_bits(&[1, 0, 1]);
+    assert_eq!(bv.len, 3);
+    assert_eq!(bv.get_bits(0, 3), Some(0b101));
+
+    let bv = BitVec::from_bits_u64(&[1, 0, 1]);
+    assert_eq!(bv.len, 3);
+    assert_eq!(bv.get_bits(0, 3), Some(0b101));
 }
