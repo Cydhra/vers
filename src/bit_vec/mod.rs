@@ -6,6 +6,8 @@ use std::mem::size_of;
 
 pub mod fast_rs_vec;
 
+pub mod mask;
+
 /// Size of a word in bitvectors. All vectors operate on 64-bit words.
 const WORD_SIZE: usize = 64;
 
