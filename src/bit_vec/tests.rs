@@ -315,6 +315,42 @@ fn test_count_bits() {
 }
 
 #[test]
+fn test_masked() {
+    let mut original = BitVec::from_zeros(100);
+    assert!(original.set(30, 1).is_ok());
+    assert!(original.set(31, 1).is_ok());
+    assert!(original.set(32, 1).is_ok());
+
+    let mut mask_or = BitVec::from_zeros(100);
+    assert!(mask_or.set(29, 1).is_ok());
+
+    let masked = original.mask_or(&mask_or).expect("failed to mask 'or'");
+    assert_eq!(masked.get_bits(0, 28), Some(0));
+    assert_eq!(masked.get_bits(29, 4), Some(15));
+    assert_eq!(masked.get_bits(33, 64 - 33), Some(0));
+    assert_eq!(masked.get_bits(64, 36), Some(0));
+
+    let mut mask_and = BitVec::from_zeros(100);
+    assert!(mask_and.set(31, 1).is_ok());
+
+    let masked = original.mask_and(&mask_and).expect("failed to mask 'and'");
+    assert_eq!(masked.get_bits(0, 31), Some(0));
+    assert_eq!(masked.get_bits(31, 1), Some(1));
+    assert_eq!(masked.get_bits(32, 64 - 32), Some(0));
+    assert_eq!(masked.get_bits(64, 36), Some(0));
+
+    let mut mask_xor = BitVec::from_zeros(100);
+    assert!(mask_xor.set(30, 1).is_ok());
+    assert!(mask_xor.set(70, 1).is_ok());
+
+    let masked = original.mask_xor(&mask_xor).expect("failed to mask 'xor'");
+    assert_eq!(masked.get_bits(0, 31), Some(0));
+    assert_eq!(masked.get_bits(31, 2), Some(3));
+    assert_eq!(masked.get_bits(33, 64 - 33), Some(0));
+    assert_eq!(masked.get_bits(64, 36), Some(1 << 6));
+}
+
+#[test]
 fn test_masked_empty_vec() {
     let bv = BitVec::new();
     let mask = BitVec::new();
