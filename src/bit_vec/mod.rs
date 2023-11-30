@@ -4,6 +4,7 @@
 use crate::bit_vec::mask::MaskedBitVec;
 use crate::util::impl_iterator;
 use std::mem::size_of;
+use std::simd::Mask;
 
 pub mod fast_rs_vec;
 
@@ -409,6 +410,19 @@ impl BitVec {
     #[inline]
     pub fn mask_xor<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, |a, b| a ^ b)
+    }
+
+    /// Mask this bit vector with another bitvector using a custom masking operation. The mask is
+    /// applied lazily whenever an operation on the resulting vector is performed. Returns an error
+    /// if the length of the vector doesn't match the mask.
+    /// The masking operation takes two 64 bit values which contain blocks of 64 bits each.
+    /// The last block of a bit vector might contain less bits, and will be padded with
+    /// unpredictable data. Implementations may choose to modify those padding bits without
+    /// repercussions. Implementations shouldn't use operations like bit shift, because the bit order
+    /// within the vector is unspecified.
+    #[inline]
+    pub fn mask_custom<'s, 'b>(&'s self, mask: &'b BitVec, mask_op: fn(u64, u64) -> u64) -> Result<MaskedBitVec<'s, 'b>, String> {
+        MaskedBitVec::new(self, mask, mask_op)
     }
 
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
