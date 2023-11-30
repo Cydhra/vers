@@ -4,7 +4,6 @@
 use crate::bit_vec::mask::MaskedBitVec;
 use crate::util::impl_iterator;
 use std::mem::size_of;
-use std::simd::Mask;
 
 pub mod fast_rs_vec;
 
