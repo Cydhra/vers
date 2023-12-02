@@ -68,6 +68,7 @@ An increase in all runtimes can be observed for input sizes exceeding the L2 cac
 | vers              | https://github.com/Cydhra/vers          |                                     |
 | sucds-rank9       | https://crates.io/crates/sucds          |                                     |
 | sucds-darray      | https://crates.io/crates/sucds          | Dense Set Implementation            |
+
 ![Bit-Vector Rank Benchmark](images/rank_comparison.svg)
 ![Bit-Vector Select Benchmark](images/select_comparison.svg)
 
