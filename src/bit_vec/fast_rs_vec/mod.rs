@@ -7,6 +7,7 @@ use crate::BitVec;
 use core::arch::x86_64::_pdep_u64;
 use std::iter::FusedIterator;
 use std::mem::size_of;
+use std::num::NonZeroUsize;
 
 /// Size of a block in the bitvector.
 const BLOCK_SIZE: usize = 512;
@@ -583,7 +584,7 @@ impl_iterator! { RsVec, RsVecIter, RsVecRefIter }
 /// An iterator that iterates over either one bits or zero bits and exploits the select
 /// meta-data to speed up the iteration. This is faster than iterating over all bits if the iterated
 /// bits are sparse. This is also faster than manually calling `select` on each rank,
-/// because the iterator exploits the linear access pattern.
+/// because the iterator exploits the linear access pattern for faster select queries.
 #[derive(Clone, Debug)]
 pub struct SelectIter<'a, const ZERO: bool> {
     vec: &'a RsVec,
@@ -602,7 +603,7 @@ pub struct SelectIter<'a, const ZERO: bool> {
 impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
     /// Create a new iterator over the given bit-vector. Initialize the caches for select queries
     #[must_use]
-    pub(crate) fn new(vec: &'a RsVec) -> Self {
+    fn new(vec: &'a RsVec) -> Self {
         Self {
             vec,
             next_rank: 0,
@@ -875,6 +876,23 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
             )
         }
     }
+
+    /// Advances the iterator by `n` elements. Returns an error if the iterator does not have
+    /// enough elements left. Does not call `next` internally.
+    /// This method is currently being added to the iterator trait, see
+    /// [this issue](https://github.com/rust-lang/rust/issues/77404).
+    /// As soon as it is stabilized, this method will be removed and replaced with a custom
+    /// implementation in the iterator impl.
+    fn advance_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
+        if self.len() >= n {
+            self.next_rank += n;
+            Ok(())
+        } else {
+            let len = self.len();
+            self.next_rank += len;
+            Err(NonZeroUsize::new(n - len).unwrap())
+        }
+    }
 }
 
 impl<'a, const ZERO: bool> Iterator for SelectIter<'a, ZERO> {
@@ -890,6 +908,34 @@ impl<'a, const ZERO: bool> Iterator for SelectIter<'a, ZERO> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.len(), Some(self.len()))
+    }
+
+    fn count(self) -> usize
+    where
+        Self: Sized,
+    {
+        self.len()
+    }
+
+    fn last(mut self) -> Option<Self::Item>
+    where
+        Self: Sized,
+    {
+        if self.len() == 0 {
+            None
+        } else {
+            self.advance_by(self.len() - 1)
+                .ok()
+                .and_then(|_| self.next())
+        }
+    }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        if ZERO {
+            self.advance_by(n).ok().and_then(|_| self.select_next_0())
+        } else {
+            self.advance_by(n).ok().and_then(|_| self.select_next_1())
+        }
     }
 }
 

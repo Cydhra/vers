@@ -597,3 +597,28 @@ fn test_empty_select_iterator() {
     assert_eq!(iter.clone().count(), 0);
     assert_eq!(iter.next(), None);
 }
+
+#[test]
+fn test_select_iter_custom_impls() {
+    let mut bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(BLOCK_SIZE);
+    bv.flip_bit(BLOCK_SIZE + 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    let iter = rs.iter0();
+    assert_eq!(iter.clone().last(), Some(SUPER_BLOCK_SIZE + 1));
+    assert_eq!(iter.clone().nth(2), Some(5));
+    assert_eq!(iter.clone().nth(10), None);
+    assert_eq!(iter.clone().advance_by(2), Ok(()));
+    assert_eq!(
+        iter.clone().advance_by(10),
+        Err(NonZeroUsize::new(2).unwrap())
+    );
+    assert_eq!(iter.count(), 8);
+}
