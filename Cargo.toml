@@ -46,6 +46,10 @@ name = "select_benchmark"
 harness = false
 
 [[bench]]
+name = "select_iter_benchmark"
+harness = false
+
+[[bench]]
 name = "worst_select_benchmark"
 harness = false
 
