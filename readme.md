@@ -57,16 +57,17 @@ The `sucds` generally performs better than `vers` in average case, but is signif
 The x-axis is the number of bits in the bit-vector.
 An increase in all runtimes can be observed for input sizes exceeding the L2 cache size (16 MB).
 
-| Legend           | Crate                                    | Notes                               |
-|------------------|------------------------------------------|-------------------------------------|
-| bio              | https://crates.io/crates/bio             | with adaptive block-size            |
-| fair bio         | https://crates.io/crates/bio             | with constant block-size            |
-| fid              | https://crates.io/crates/fid             |                                     |
+| Legend            | Crate                                   | Notes                               |
+|-------------------|-----------------------------------------|-------------------------------------|
+| bio               | https://crates.io/crates/bio            | with adaptive block-size            |
+| fair bio          | https://crates.io/crates/bio            | with constant block-size            |
+| fid               | https://crates.io/crates/fid            |                                     |
 | indexed bitvector | https://crates.io/crates/indexed_bitvec |                                     |
-| rank9            | https://crates.io/crates/succinct        | Fastest of multiple implementations |
-| rsdict           | https://crates.io/crates/rsdict          |                                     |
-| vers             | https://github.com/Cydhra/vers           |                                     |
-
+| rank9             | https://crates.io/crates/succinct       | Fastest of multiple implementations |
+| rsdict            | https://crates.io/crates/rsdict         |                                     |
+| vers              | https://github.com/Cydhra/vers          |                                     |
+| sucds-rank9       | https://crates.io/crates/sucds          |                                     |
+| sucds-darray      | https://crates.io/crates/sucds          | Dense Set Implementation            |
 ![Bit-Vector Rank Benchmark](images/rank_comparison.svg)
 ![Bit-Vector Select Benchmark](images/select_comparison.svg)
 
