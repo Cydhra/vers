@@ -550,8 +550,9 @@ impl RsVec {
         }
     }
 
-    /// Get an iterator over the 0-bits in the vector that exploits the select meta-data to speed
-    /// up the iteration. This is faster than calling `select0` on each rank, because the iterator
+    /// Get an iterator over the 0-bits in the vector that uses the select data structure to speed
+    /// up iteration.
+    /// It is faster than calling `select0` on each rank, because the iterator
     /// exploits the linear access pattern.
     ///
     /// See [`SelectIter`] for more information.
@@ -559,8 +560,9 @@ impl RsVec {
         SelectIter::new(self)
     }
 
-    /// Get an iterator over the 1-bits in the vector that exploits the select meta-data to speed
-    /// up the iteration. This is faster than calling `select1` on each rank, because the iterator
+    /// Get an iterator over the 1-bits in the vector that uses the select data structure to speed
+    /// up iteration.
+    /// It is faster than calling `select1` on each rank, because the iterator
     /// exploits the linear access pattern.
     ///
     /// See [`SelectIter`] for more information.
@@ -581,10 +583,33 @@ impl RsVec {
 
 impl_iterator! { RsVec, RsVecIter, RsVecRefIter }
 
-/// An iterator that iterates over either one bits or zero bits and exploits the select
-/// meta-data to speed up the iteration. This is faster than iterating over all bits if the iterated
-/// bits are sparse. This is also faster than manually calling `select` on each rank,
+/// An iterator that iterates over 1-bits or 0-bits and returns their indices.
+/// It uses the select data structures to speed up iteration.
+/// It is faster than iterating over all bits if the iterated bits are sparse.
+/// This is also faster than manually calling `select` on each rank,
 /// because the iterator exploits the linear access pattern for faster select queries.
+///
+/// The iterator can be constructed by calling [`iter0`] or [`iter1`].
+///
+/// # Example
+/// ```rust
+/// use vers_vecs::{BitVec, RsVec};
+///
+/// let mut bit_vec = BitVec::new();
+/// bit_vec.append_word(u64::MAX);
+/// bit_vec.append_word(u64::MAX);
+/// bit_vec.flip_bit(4);
+///
+/// let rs_vec = RsVec::from_bit_vec(bit_vec);
+///
+/// let mut iter = rs_vec.iter0();
+///
+/// assert_eq!(iter.next(), Some(4));
+/// assert_eq!(iter.next(), None);
+/// ```
+///
+/// [`iter0`]: crate::RsVec::iter0
+/// [`iter1`]: crate::RsVec::iter1
 #[derive(Clone, Debug)]
 #[must_use]
 pub struct SelectIter<'a, const ZERO: bool> {
