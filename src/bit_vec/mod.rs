@@ -267,7 +267,8 @@ impl BitVec {
         if pos >= self.len {
             Err("out of range")
         } else {
-            Ok(self.set_unchecked(pos, value))
+            self.set_unchecked(pos, value);
+            Ok(())
         }
     }
 
@@ -420,7 +421,11 @@ impl BitVec {
     /// repercussions. Implementations shouldn't use operations like bit shift, because the bit order
     /// within the vector is unspecified.
     #[inline]
-    pub fn mask_custom<'s, 'b>(&'s self, mask: &'b BitVec, mask_op: fn(u64, u64) -> u64) -> Result<MaskedBitVec<'s, 'b>, String> {
+    pub fn mask_custom<'s, 'b>(
+        &'s self,
+        mask: &'b BitVec,
+        mask_op: fn(u64, u64) -> u64,
+    ) -> Result<MaskedBitVec<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, mask_op)
     }
 

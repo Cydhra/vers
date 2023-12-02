@@ -32,7 +32,6 @@ impl<'a, 'b> MaskedBitVec<'a, 'b> {
 
     /// Iterate over the limbs of the masked vector
     #[inline]
-    #[must_use]
     fn iter_limbs<'s>(&'s self) -> impl Iterator<Item = u64> + 's
     where
         'a: 's,
