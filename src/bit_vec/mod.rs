@@ -78,6 +78,7 @@ impl BitVec {
     /// See also: [`from_bits_u64`]
     ///
     /// [`from_bits_u64`]: BitVec::from_bits_u64
+    #[must_use]
     pub fn from_bits(bits: &[u8]) -> Self {
         let mut bv = Self::with_capacity(bits.len());
         bits.iter().for_each(|&b| bv.append_bit(b.into()));
@@ -91,6 +92,7 @@ impl BitVec {
     /// See also: [`from_bits`]
     ///
     /// [`from_bits`]: BitVec::from_bits
+    #[must_use]
     pub fn from_bits_u64(bits: &[u64]) -> Self {
         let mut bv = Self::with_capacity(bits.len());
         bits.iter().for_each(|&b| bv.append_bit(b));
@@ -261,6 +263,8 @@ impl BitVec {
 
     /// Set the bit at the given position.
     /// The bit is given as a u64 value of which only the least significant bit is used.
+    ///
+    /// # Errors
     /// If the position is out of range, the function will return `Err` with an error message,
     /// otherwise it will return an empty `Ok`.
     pub fn set(&mut self, pos: usize, value: u64) -> Result<(), &str> {
@@ -283,7 +287,7 @@ impl BitVec {
     /// [`set`]: BitVec::set
     pub fn set_unchecked(&mut self, pos: usize, value: u64) {
         self.data[pos / WORD_SIZE] = (self.data[pos / WORD_SIZE] & !(0x1 << (pos % WORD_SIZE)))
-            | ((value & 0x1) << (pos % WORD_SIZE))
+            | ((value & 0x1) << (pos % WORD_SIZE));
     }
 
     /// Return whether the bit at the given position is set.
@@ -365,14 +369,16 @@ impl BitVec {
     ///
     /// [`RsVec`]: crate::RsVec
     #[must_use]
+    #[allow(clippy::missing_panics_doc)] // can't panic because of manual bounds check
     pub fn count_ones(&self) -> u64 {
-        let mut ones = self.data[0..self.len / WORD_SIZE]
+        let mut ones: u64 = self.data[0..self.len / WORD_SIZE]
             .iter()
-            .map(|limb| limb.count_ones() as u64)
+            .map(|limb| <u32 as Into<u64>>::into(limb.count_ones()))
             .sum();
         if self.len % WORD_SIZE > 0 {
-            ones += (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones()
-                as u64;
+            ones += <u32 as Into<u64>>::into(
+                (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones(),
+            );
         }
         ones
     }
@@ -389,37 +395,46 @@ impl BitVec {
     }
 
     /// Mask this bit vector with another bitvector using bitwise or. The mask is applied lazily
-    /// whenever an operation on the resulting vector is performed. Returns an error if the length
-    /// of the vector doesn't match the mask.
+    /// whenever an operation on the resulting vector is performed.
+    ///
+    /// # Errors
+    /// Returns an error if the length of the vector doesn't match the mask length.
     #[inline]
     pub fn mask_or<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, |a, b| a | b)
     }
 
     /// Mask this bit vector with another bitvector using bitwise and. The mask is applied lazily
-    /// whenever an operation on the resulting vector is performed. Returns an error if the length
-    /// of the vector doesn't match the mask.
+    /// whenever an operation on the resulting vector is performed.
+    ///
+    /// # Errors
+    /// Returns an error if the length of the vector doesn't match the mask length.
     #[inline]
     pub fn mask_and<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, |a, b| a & b)
     }
 
     /// Mask this bit vector with another bitvector using bitwise xor. The mask is applied lazily
-    /// whenever an operation on the resulting vector is performed. Returns an error if the length
-    /// of the vector doesn't match the mask.
+    /// whenever an operation on the resulting vector is performed.
+    ///
+    /// # Errors
+    /// Returns an error if the length of the vector doesn't match the mask length.
     #[inline]
     pub fn mask_xor<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, |a, b| a ^ b)
     }
 
     /// Mask this bit vector with another bitvector using a custom masking operation. The mask is
-    /// applied lazily whenever an operation on the resulting vector is performed. Returns an error
-    /// if the length of the vector doesn't match the mask.
+    /// applied lazily whenever an operation on the resulting vector is performed.
+    ///
     /// The masking operation takes two 64 bit values which contain blocks of 64 bits each.
     /// The last block of a bit vector might contain less bits, and will be padded with
     /// unpredictable data. Implementations may choose to modify those padding bits without
     /// repercussions. Implementations shouldn't use operations like bit shift, because the bit order
     /// within the vector is unspecified.
+    ///
+    /// # Errors
+    /// Returns an error if the length of the vector doesn't match the mask length.
     #[inline]
     pub fn mask_custom<'s, 'b>(
         &'s self,

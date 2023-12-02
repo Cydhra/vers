@@ -315,6 +315,13 @@ fn test_count_bits() {
 }
 
 #[test]
+fn test_count_empty_vec() {
+    let bv = BitVec::new();
+    assert_eq!(bv.count_ones(), 0);
+    assert_eq!(bv.count_zeros(), 0);
+}
+
+#[test]
 fn test_masked() {
     let mut original = BitVec::from_zeros(100);
     assert!(original.set(30, 1).is_ok());
@@ -356,6 +363,7 @@ fn test_masked_empty_vec() {
     let mask = BitVec::new();
     let bv = bv.mask_or(&mask).expect("failed to mask vector");
 
+    assert_eq!(bv.count_ones(), 0);
     assert_eq!(bv.get(0), None);
     assert_eq!(bv.get(1), None);
     assert_eq!(bv.get_bits(0, 0), None);

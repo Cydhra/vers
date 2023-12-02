@@ -586,6 +586,7 @@ impl_iterator! { RsVec, RsVecIter, RsVecRefIter }
 /// bits are sparse. This is also faster than manually calling `select` on each rank,
 /// because the iterator exploits the linear access pattern for faster select queries.
 #[derive(Clone, Debug)]
+#[must_use]
 pub struct SelectIter<'a, const ZERO: bool> {
     vec: &'a RsVec,
     next_rank: usize,
@@ -602,7 +603,6 @@ pub struct SelectIter<'a, const ZERO: bool> {
 
 impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
     /// Create a new iterator over the given bit-vector. Initialize the caches for select queries
-    #[must_use]
     fn new(vec: &'a RsVec) -> Self {
         Self {
             vec,

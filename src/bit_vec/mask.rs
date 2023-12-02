@@ -174,18 +174,21 @@ impl<'a, 'b> MaskedBitVec<'a, 'b> {
     /// Return the number of ones in the masked bit vector.
     #[inline]
     #[must_use]
+    #[allow(clippy::missing_panics_doc)] // can't panic because of bounds check
     pub fn count_ones(&self) -> u64 {
         let mut ones = self
             .iter_limbs()
             .take(self.vec.len / super::WORD_SIZE)
-            .map(|limb| limb.count_ones() as u64)
+            .map(|limb| <u32 as Into<u64>>::into(limb.count_ones()))
             .sum();
         if self.vec.len % super::WORD_SIZE > 0 {
-            ones += ((self.bin_op)(
-                *self.vec.data.last().unwrap(),
-                *self.mask.data.last().unwrap(),
-            ) & ((1 << (self.vec.len % super::WORD_SIZE)) - 1))
-                .count_ones() as u64;
+            ones += <u32 as Into<u64>>::into(
+                ((self.bin_op)(
+                    *self.vec.data.last().unwrap(),
+                    *self.mask.data.last().unwrap(),
+                ) & ((1 << (self.vec.len % super::WORD_SIZE)) - 1))
+                    .count_ones(),
+            );
         }
         ones
     }
