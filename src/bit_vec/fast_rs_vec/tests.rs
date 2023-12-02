@@ -538,3 +538,37 @@ fn test_get_bits() {
     assert_eq!(rs.get_bits(2 * SUPER_BLOCK_SIZE - 10, 12), None);
     assert_eq!(rs.get_bits(0, 64), Some(0b101010));
 }
+
+#[test]
+fn test_select1_iterator() {
+    let mut bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(BLOCK_SIZE);
+    bv.flip_bit(BLOCK_SIZE + 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    let mut iter = rs.iter1();
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(3));
+    assert_eq!(iter.next(), Some(5));
+    assert_eq!(iter.next(), Some(BLOCK_SIZE));
+    assert_eq!(iter.next(), Some(BLOCK_SIZE + 1));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE - 1));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE + 1));
+    assert_eq!(iter.next(), None);
+}
+
+#[test]
+fn test_empty_select1_iterator() {
+    let bv = BitVec::new();
+    let rs = RsVec::from_bit_vec(bv);
+    let mut iter = rs.iter1();
+    assert_eq!(iter.clone().count(), 0);
+    assert_eq!(iter.next(), None);
+}

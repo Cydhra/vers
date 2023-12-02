@@ -5,6 +5,7 @@ use super::WORD_SIZE;
 use crate::util::{impl_iterator, unroll};
 use crate::BitVec;
 use core::arch::x86_64::_pdep_u64;
+use std::iter::FusedIterator;
 use std::mem::size_of;
 
 /// Size of a block in the bitvector.
@@ -548,6 +549,15 @@ impl RsVec {
         }
     }
 
+    /// Get an iterator over the 1-bits in the vector that exploits the select meta-data to speed
+    /// up the iteration. This is faster than calling `select1` on each rank, because the iterator
+    /// exploits the linear access pattern.
+    ///
+    /// See [`SelectIter`] for more information.
+    pub fn iter1(&self) -> SelectIter<'_, false> {
+        SelectIter::new(self)
+    }
+
     /// Returns the number of bytes used on the heap for this vector. This does not include
     /// allocated space that is not used (e.g. by the allocation behavior of `Vec`).
     #[must_use]
@@ -560,6 +570,203 @@ impl RsVec {
 }
 
 impl_iterator! { RsVec, RsVecIter, RsVecRefIter }
+
+/// An iterator that iterates over either one bits or zero bits and exploits the select
+/// meta-data to speed up the iteration. This is faster than iterating over all bits if the iterated
+/// bits are sparse. This is also faster than manually calling `select` on each rank,
+/// because the iterator exploits the linear access pattern.
+#[derive(Clone, Debug)]
+pub struct SelectIter<'a, const ZERO: bool> {
+    vec: &'a RsVec,
+    next_rank: usize,
+
+    /// the last index in the super block structure where we found a bit
+    last_super_block: usize,
+
+    /// the last index in the block structure where we found a bit
+    last_block: usize,
+
+    /// the last offset from the last block boundary (0-7) where we found a bit
+    last_word: usize,
+}
+
+impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
+    /// Create a new iterator over the given bit-vector. Initialize the caches for select queries
+    #[must_use]
+    pub(crate) fn new(vec: &'a RsVec) -> Self {
+        Self {
+            vec,
+            next_rank: 0,
+            last_super_block: 0,
+            last_block: 0,
+            last_word: 0,
+        }
+    }
+
+    #[must_use]
+    #[cfg(target_feature = "bmi2")]
+    #[allow(clippy::assertions_on_constants)]
+    fn select_next_1(&mut self) -> Option<usize> {
+        let mut rank = self.next_rank;
+
+        if rank >= self.vec.rank1 {
+            return None;
+        }
+
+        let mut super_block = self.vec.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
+        let mut block_index = 0;
+
+        // check if the last super block still contains the rank, and if yes, we don't need to search
+        if self.vec.super_blocks.len() > (self.last_super_block + 1)
+            && (self.last_super_block + 1) * SUPER_BLOCK_SIZE
+                - self.vec.super_blocks[self.last_super_block + 1].zeros
+                > rank
+        {
+            // instantly jump to the last searched position
+            super_block = self.last_super_block;
+            rank -= super_block * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
+
+            // check if current block contains the one and if yes, we don't need to search
+            if self.vec.blocks.len() > self.last_block + 1
+                && (self.last_block + 1) * BLOCK_SIZE
+                    - self.vec.blocks[self.last_block + 1].zeros as usize
+                    > rank
+            {
+                block_index = self.last_block;
+                let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+
+                rank -= (block_index - block_at_super_block) * BLOCK_SIZE
+                    - self.vec.blocks[block_index].zeros as usize;
+
+                // check if the current word contains the one and if yes, we don't need to search
+                let word = self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + self.last_word];
+                if (word.count_ones() as usize) > rank {
+                    self.next_rank += 1;
+                    return Some(
+                        block_index * BLOCK_SIZE
+                            + self.last_word * WORD_SIZE
+                            + unsafe { _pdep_u64(1 << rank, word) }.trailing_zeros() as usize,
+                    );
+                }
+            }
+        } else {
+            // search for the super block that contains the rank beginning from the super block
+            // returned by the select_blocks vector
+            if self.vec.super_blocks.len() > (super_block + 1)
+                && ((super_block + 1) * SUPER_BLOCK_SIZE
+                    - self.vec.super_blocks[super_block + 1].zeros)
+                    <= rank
+            {
+                let mut upper_bound = self.vec.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
+
+                // binary search for super block that contains the rank until only 8 blocks are left
+                while upper_bound - super_block > 8 {
+                    let middle = super_block + ((upper_bound - super_block) >> 1);
+                    if ((middle + 1) * SUPER_BLOCK_SIZE - self.vec.super_blocks[middle].zeros)
+                        <= rank
+                    {
+                        super_block = middle;
+                    } else {
+                        upper_bound = middle;
+                    }
+                }
+            }
+
+            // linear search for super block that contains the rank
+            while self.vec.super_blocks.len() > (super_block + 1)
+                && ((super_block + 1) * SUPER_BLOCK_SIZE
+                    - self.vec.super_blocks[super_block + 1].zeros)
+                    <= rank
+            {
+                super_block += 1;
+            }
+
+            self.last_super_block = super_block;
+            rank -= super_block * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
+        }
+
+        // if the block index is not zero, we already found the block, and need only update the word
+        if block_index == 0 {
+            // full binary search for block that contains the rank, manually loop-unrolled, because
+            // LLVM doesn't do it for us, but it gains just under 20% performance
+            let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+            block_index = block_at_super_block;
+            debug_assert!(
+                SUPER_BLOCK_SIZE / BLOCK_SIZE == 16,
+                "change unroll constant to {}",
+                64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
+            );
+            unroll!(4,
+            |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
+                if self.vec.blocks.len() > block_index + boundary && rank >= (block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.vec.blocks[block_index + boundary].zeros as usize {
+                    block_index += boundary;
+                }
+            , boundary /= 2);
+
+            self.last_block = block_index;
+            rank -= (block_index - block_at_super_block) * BLOCK_SIZE
+                - self.vec.blocks[block_index].zeros as usize;
+        }
+
+        // linear search for word that contains the rank. Binary search is not possible here,
+        // because we don't have accumulated popcounts for the words. We use pdep to find the
+        // position of the rank-th zero bit in the word, if the word contains enough zeros, otherwise
+        // we subtract the number of ones in the word from the rank and continue with the next word.
+        let mut index_counter = 0;
+        debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
+        unroll!(7, |n = {0}| {
+            let word = self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
+            if (word.count_ones() as usize) <= rank {
+                rank -= word.count_ones() as usize;
+                index_counter += WORD_SIZE;
+            } else {
+                self.last_word = n;
+                self.next_rank += 1;
+                return Some(block_index * BLOCK_SIZE
+                    + index_counter
+                    + unsafe { _pdep_u64(1 << rank, word) }.trailing_zeros() as usize);
+            }
+        }, n += 1);
+
+        // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
+        // block, and thus outside of the bitvector
+        self.last_word = 7;
+        self.next_rank += 1;
+        unsafe {
+            Some(
+                block_index * BLOCK_SIZE
+                    + index_counter
+                    + _pdep_u64(
+                        1 << rank,
+                        self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
+                    )
+                    .trailing_zeros() as usize,
+            )
+        }
+    }
+}
+
+impl<'a> Iterator for SelectIter<'a, false> {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.select_next_1()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len(), Some(self.len()))
+    }
+}
+
+// TODO implement for both bool consts
+impl<'a> FusedIterator for SelectIter<'a, false> {}
+
+// TODO implement for both bool consts
+impl<'a> ExactSizeIterator for SelectIter<'a, false> {
+    fn len(&self) -> usize {
+        self.vec.rank1 - self.next_rank
+    }
+}
 
 #[cfg(test)]
 mod tests;
