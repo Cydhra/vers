@@ -404,6 +404,27 @@ impl BitVec {
         MaskedBitVec::new(self, mask, |a, b| a | b)
     }
 
+    /// Mask this bit vector with another bitvector using bitwise or.
+    /// The mask is applied immediately, unlike in [`mask_or`].
+    ///
+    /// # Errors
+    /// Returns an error if the length of the vector doesn't match the mask length.
+    ///
+    /// [`mask_or`]: BitVec::mask_or
+    pub fn apply_mask_or(&mut self, mask: &BitVec) -> Result<(), String> {
+        if self.len != mask.len {
+            return Err(String::from(
+                "mask cannot have different length than vector",
+            ));
+        }
+
+        for i in 0..self.data.len() {
+            self.data[i] |= mask.data[i];
+        }
+
+        Ok(())
+    }
+
     /// Mask this bit vector with another bitvector using bitwise and. The mask is applied lazily
     /// whenever an operation on the resulting vector is performed.
     ///
@@ -414,6 +435,27 @@ impl BitVec {
         MaskedBitVec::new(self, mask, |a, b| a & b)
     }
 
+    /// Mask this bit vector with another bitvector using bitwise and.
+    /// The mask is applied immediately, unlike in [`mask_and`].
+    ///
+    /// # Errors
+    /// Returns an error if the length of the vector doesn't match the mask length.
+    ///
+    /// [`mask_and`]: BitVec::mask_and
+    pub fn apply_mask_and(&mut self, mask: &BitVec) -> Result<(), String> {
+        if self.len != mask.len {
+            return Err(String::from(
+                "mask cannot have different length than vector",
+            ));
+        }
+
+        for i in 0..self.data.len() {
+            self.data[i] &= mask.data[i];
+        }
+
+        Ok(())
+    }
+
     /// Mask this bit vector with another bitvector using bitwise xor. The mask is applied lazily
     /// whenever an operation on the resulting vector is performed.
     ///
@@ -422,6 +464,27 @@ impl BitVec {
     #[inline]
     pub fn mask_xor<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, |a, b| a ^ b)
+    }
+
+    /// Mask this bit vector with another bitvector using bitwise xor.
+    /// The mask is applied immediately, unlike in [`mask_xor`].
+    ///
+    /// # Errors
+    /// Returns an error if the length of the vector doesn't match the mask length.
+    ///
+    /// [`mask_xor`]: BitVec::mask_xor
+    pub fn apply_mask_xor(&mut self, mask: &BitVec) -> Result<(), String> {
+        if self.len != mask.len {
+            return Err(String::from(
+                "mask cannot have different length than vector",
+            ));
+        }
+
+        for i in 0..self.data.len() {
+            self.data[i] ^= mask.data[i];
+        }
+
+        Ok(())
     }
 
     /// Mask this bit vector with another bitvector using a custom masking operation. The mask is
@@ -442,6 +505,38 @@ impl BitVec {
         mask_op: fn(u64, u64) -> u64,
     ) -> Result<MaskedBitVec<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, mask_op)
+    }
+
+    /// Mask this bit vector with another bitvector using a custom masking operation.
+    /// The mask is applied immediately, unlike in [`mask_custom`].
+    ///
+    /// The masking operation takes two 64 bit values which contain blocks of 64 bits each.
+    /// The last block of a bit vector might contain less bits, and will be padded with
+    /// unpredictable data. Implementations may choose to modify those padding bits without
+    /// repercussions. Implementations shouldn't use operations like bit shift, because the bit order
+    /// within the vector is unspecified.
+    ///
+    /// # Errors
+    /// Returns an error if the length of the vector doesn't match the mask length.
+    ///
+    /// [`mask_custom`]: BitVec::mask_custom
+    #[inline]
+    pub fn apply_mask_custom(
+        &mut self,
+        mask: &BitVec,
+        mask_op: fn(u64, u64) -> u64,
+    ) -> Result<(), String> {
+        if self.len != mask.len {
+            return Err(String::from(
+                "mask cannot have different length than vector",
+            ));
+        }
+
+        for i in 0..self.data.len() {
+            self.data[i] = mask_op(self.data[i], mask.data[i]);
+        }
+
+        Ok(())
     }
 
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory

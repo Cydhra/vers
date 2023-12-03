@@ -434,6 +434,39 @@ fn test_masked_to_bit_vec() {
 }
 
 #[test]
+fn test_apply_masks() {
+    let mut bv = BitVec::from_zeros(100);
+    bv.flip_bit(1);
+    bv.flip_bit(99);
+
+    let mut mask = BitVec::from_zeros(100);
+    mask.flip_bit(1);
+    mask.flip_bit(2);
+    mask.flip_bit(99);
+
+    let mut masked_and = bv.clone();
+    masked_and
+        .apply_mask_and(&mask)
+        .expect("failed to mask vector");
+    assert_eq!(masked_and.get(1), Some(1));
+    assert_eq!(masked_and.get(2), Some(0));
+    assert_eq!(masked_and.get(99), Some(1));
+
+    let mut masked_or = bv.clone();
+    masked_or
+        .apply_mask_or(&mask)
+        .expect("failed to mask vector");
+    assert_eq!(masked_or.get(1), Some(1));
+    assert_eq!(masked_or.get(2), Some(1));
+    assert_eq!(masked_or.get(99), Some(1));
+
+    bv.apply_mask_xor(&mask).expect("failed to mask vector");
+    assert_eq!(bv.get(1), Some(0));
+    assert_eq!(bv.get(2), Some(1));
+    assert_eq!(bv.get(99), Some(0));
+}
+
+#[test]
 fn test_from_bits() {
     let bv = BitVec::from_bits(&[1, 0, 1]);
     assert_eq!(bv.len, 3);
