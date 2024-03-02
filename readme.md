@@ -46,8 +46,9 @@ which requires the `serde` crate and its `derive` feature.
 ## Benchmarks
 I benchmarked the implementations against publicly available implementations of the same data structures.
 The benchmarking code is available in the `bench` directory.
-Since one of the available implementations requires nightly Rust,
-compiling this project in any configuration that includes tests or benchmarks requires nightly Rust.
+When I benchmarked, I used the ``simd`` feature of rsdict, which required nightly Rust.
+The feature depends on the `packed_simd` crate, which is currently not compiling anymore, so I disabled the feature.
+This will reduce the performance of the rsdict crate if you run the benchmarks.
 
 I performed benchmarks on a Ryzen 9 7950X with 32GB of RAM.
 The results are shown below.
