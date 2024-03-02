@@ -16,8 +16,10 @@
 //! Performance was benchmarked against publicly available implementations of the same (or similar)
 //! data structures on crates.io at the time of writing. The benchmark results can be found
 //! in the [Github repository](https://github.com/Cydhra/vers). At the time of writing,
-//! this crate is the fastest implementation of all data structures except for one implementation
-//! of rank on bit-vectors (which pays for its speed with a missing select implementation).
+//! this crate is among the fastest implementations of all data structures.
+//! Some tradeoffs between average time, worst-case time, and available API features should be taken
+//! into consideration when selecting among the fastest libraries
+//! (see the Github repository for a discussion).
 //!
 //! # Intrinsics
 //! This crate uses compiler intrinsics for bit-manipulation. The intrinsics are supported by
