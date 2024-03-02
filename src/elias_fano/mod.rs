@@ -2,7 +2,7 @@
 //! all numbers (compression ratio dependent on data) and allows for constant time predecessor
 //! queries.
 //!
-//! It implements [`iter`][EliasFanoVec::iter] and [`IntoIterator`][IntoIterator] to allow for
+//! It implements [`iter`][EliasFanoVec::iter] and [`IntoIterator`] to allow for
 //! iteration over the values in the vector.
 //!
 //! Beside compression, it also offers expected constant-time predecessor and successor queries
