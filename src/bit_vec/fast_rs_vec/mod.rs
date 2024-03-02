@@ -951,15 +951,15 @@ impl<'a, const ZERO: bool> Iterator for SelectIter<'a, ZERO> {
         } else {
             self.advance_by(self.len() - 1)
                 .ok()
-                .and_then(|_| self.next())
+                .and_then(|()| self.next())
         }
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
         if ZERO {
-            self.advance_by(n).ok().and_then(|_| self.select_next_0())
+            self.advance_by(n).ok().and_then(|()| self.select_next_0())
         } else {
-            self.advance_by(n).ok().and_then(|_| self.select_next_1())
+            self.advance_by(n).ok().and_then(|()| self.select_next_1())
         }
     }
 }
