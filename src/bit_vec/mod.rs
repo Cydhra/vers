@@ -491,7 +491,7 @@ impl BitVec {
     /// applied lazily whenever an operation on the resulting vector is performed.
     ///
     /// The masking operation takes two 64 bit values which contain blocks of 64 bits each.
-    /// The last block of a bit vector might contain less bits, and will be padded with
+    /// The last block of a bit vector might contain fewer bits, and will be padded with
     /// unpredictable data. Implementations may choose to modify those padding bits without
     /// repercussions. Implementations shouldn't use operations like bit shift, because the bit order
     /// within the vector is unspecified.
@@ -511,7 +511,7 @@ impl BitVec {
     /// The mask is applied immediately, unlike in [`mask_custom`].
     ///
     /// The masking operation takes two 64 bit values which contain blocks of 64 bits each.
-    /// The last block of a bit vector might contain less bits, and will be padded with
+    /// The last block of a bit vector might contain fewer bits, and will be padded with
     /// unpredictable data. Implementations may choose to modify those padding bits without
     /// repercussions. Implementations shouldn't use operations like bit shift, because the bit order
     /// within the vector is unspecified.

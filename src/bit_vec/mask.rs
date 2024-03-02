@@ -1,9 +1,8 @@
 //! This module defines a struct for lazily masking [`BitVec`]. It offers all immutable operations
 //! of `BitVec` but applies a bit-mask during the operation. The struct is created through three
 //! functions in `BitVec`.
-//!
-//! [`BitVec`]: crate::BitVec
 
+use super::WORD_SIZE;
 use crate::BitVec;
 
 /// A bit vector that is masked with another bit vector via a masking function. Offers the same
@@ -70,9 +69,9 @@ impl<'a, 'b> MaskedBitVec<'a, 'b> {
     #[must_use]
     pub fn get_unchecked(&self, pos: usize) -> u64 {
         ((self.bin_op)(
-            self.vec.data[pos / super::WORD_SIZE],
-            self.mask.data[pos / super::WORD_SIZE],
-        ) >> (pos % super::WORD_SIZE))
+            self.vec.data[pos / WORD_SIZE],
+            self.mask.data[pos / WORD_SIZE],
+        ) >> (pos % WORD_SIZE))
             & 1
     }
 
@@ -110,7 +109,7 @@ impl<'a, 'b> MaskedBitVec<'a, 'b> {
     #[inline]
     #[must_use]
     pub fn get_bits(&self, pos: usize, len: usize) -> Option<u64> {
-        if len > super::WORD_SIZE || len == 0 {
+        if len > WORD_SIZE || len == 0 {
             return None;
         }
         if pos + len > self.vec.len {
@@ -141,23 +140,23 @@ impl<'a, 'b> MaskedBitVec<'a, 'b> {
     #[allow(clippy::comparison_chain)] // rust-clippy #5354
     #[inline]
     pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
-        debug_assert!(len <= super::WORD_SIZE);
+        debug_assert!(len <= WORD_SIZE);
         let partial_word = (self.bin_op)(
-            self.vec.data[pos / super::WORD_SIZE],
-            self.mask.data[pos / super::WORD_SIZE],
-        ) >> (pos % super::WORD_SIZE);
+            self.vec.data[pos / WORD_SIZE],
+            self.mask.data[pos / WORD_SIZE],
+        ) >> (pos % WORD_SIZE);
 
-        if pos % super::WORD_SIZE + len == super::WORD_SIZE {
+        if pos % WORD_SIZE + len == WORD_SIZE {
             partial_word
-        } else if pos % super::WORD_SIZE + len < super::WORD_SIZE {
-            partial_word & ((1 << (len % super::WORD_SIZE)) - 1)
+        } else if pos % WORD_SIZE + len < WORD_SIZE {
+            partial_word & ((1 << (len % WORD_SIZE)) - 1)
         } else {
             let next_half = (self.bin_op)(
-                self.vec.data[pos / super::WORD_SIZE + 1],
-                self.mask.data[pos / super::WORD_SIZE + 1],
-            ) << (super::WORD_SIZE - pos % super::WORD_SIZE);
+                self.vec.data[pos / WORD_SIZE + 1],
+                self.mask.data[pos / WORD_SIZE + 1],
+            ) << (WORD_SIZE - pos % WORD_SIZE);
 
-            (partial_word | next_half) & ((1 << (len % super::WORD_SIZE)) - 1)
+            (partial_word | next_half) & ((1 << (len % WORD_SIZE)) - 1)
         }
     }
 
@@ -178,15 +177,15 @@ impl<'a, 'b> MaskedBitVec<'a, 'b> {
     pub fn count_ones(&self) -> u64 {
         let mut ones = self
             .iter_limbs()
-            .take(self.vec.len / super::WORD_SIZE)
-            .map(|limb| <u32 as Into<u64>>::into(limb.count_ones()))
+            .take(self.vec.len / WORD_SIZE)
+            .map(|limb| u64::from(limb.count_ones()))
             .sum();
-        if self.vec.len % super::WORD_SIZE > 0 {
-            ones += <u32 as Into<u64>>::into(
+        if self.vec.len % WORD_SIZE > 0 {
+            ones += u64::from(
                 ((self.bin_op)(
                     *self.vec.data.last().unwrap(),
                     *self.mask.data.last().unwrap(),
-                ) & ((1 << (self.vec.len % super::WORD_SIZE)) - 1))
+                ) & ((1 << (self.vec.len % WORD_SIZE)) - 1))
                     .count_ones(),
             );
         }
