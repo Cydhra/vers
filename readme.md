@@ -1,5 +1,8 @@
 # Vers - Very Efficient Rank and Select
 
+[![crates.io](https://img.shields.io/crates/v/vers-vecs.svg)](https://crates.io/crates/vers-vecs)
+[![docs](https://docs.rs/vers-vecs/badge.svg)](https://docs.rs/vers-vecs)
+
 Vers (vers-vecs on crates.io)
 contains pure-Rust implementations of several data structures backed by rank and select operations.
 The library was originally a grad student project for a semester course,
