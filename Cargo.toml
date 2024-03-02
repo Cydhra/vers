@@ -80,5 +80,7 @@ harness = false
 [profile.bench]
 lto = true
 
-[profile.release]
-lto = true
+[package.metadata.docs.rs]
+all-features = true
+rustc-args = ["-C target-feature=+bmi2,+popcnt"]
+rustdoc-args = ["-C target-feature=+bmi2,+popcnt"]
