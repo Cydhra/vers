@@ -400,7 +400,8 @@ impl BitVec {
     /// # Errors
     /// Returns an error if the length of the vector doesn't match the mask length.
     #[inline]
-    pub fn mask_or<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
+    pub fn mask_or<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>, String>
+    {
         MaskedBitVec::new(self, mask, |a, b| a | b)
     }
 
@@ -431,7 +432,11 @@ impl BitVec {
     /// # Errors
     /// Returns an error if the length of the vector doesn't match the mask length.
     #[inline]
-    pub fn mask_and<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
+    pub fn mask_and<'s, 'b>(
+        &'s self,
+        mask: &'b BitVec,
+    ) -> Result<MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>, String>
+    {
         MaskedBitVec::new(self, mask, |a, b| a & b)
     }
 
@@ -462,7 +467,11 @@ impl BitVec {
     /// # Errors
     /// Returns an error if the length of the vector doesn't match the mask length.
     #[inline]
-    pub fn mask_xor<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b>, String> {
+    pub fn mask_xor<'s, 'b>(
+        &'s self,
+        mask: &'b BitVec,
+    ) -> Result<MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>, String>
+    {
         MaskedBitVec::new(self, mask, |a, b| a ^ b)
     }
 
@@ -499,11 +508,14 @@ impl BitVec {
     /// # Errors
     /// Returns an error if the length of the vector doesn't match the mask length.
     #[inline]
-    pub fn mask_custom<'s, 'b>(
+    pub fn mask_custom<'s, 'b, F>(
         &'s self,
         mask: &'b BitVec,
-        mask_op: fn(u64, u64) -> u64,
-    ) -> Result<MaskedBitVec<'s, 'b>, String> {
+        mask_op: F,
+    ) -> Result<MaskedBitVec<'s, 'b, F>, String>
+    where
+        F: Fn(u64, u64) -> u64,
+    {
         MaskedBitVec::new(self, mask, mask_op)
     }
 

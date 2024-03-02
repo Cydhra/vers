@@ -6,19 +6,22 @@ use super::WORD_SIZE;
 use crate::BitVec;
 
 /// A bit vector that is masked with another bit vector via a masking function. Offers the same
-/// functions like an unmasked vector. The mask is applied lazily.
-pub struct MaskedBitVec<'a, 'b> {
+/// functions as an unmasked vector. The mask is applied lazily.
+pub struct MaskedBitVec<'a, 'b, F: Fn(u64, u64) -> u64> {
     vec: &'a BitVec,
     mask: &'b BitVec,
-    bin_op: fn(u64, u64) -> u64,
+    bin_op: F,
 }
 
-impl<'a, 'b> MaskedBitVec<'a, 'b> {
+impl<'a, 'b, F> MaskedBitVec<'a, 'b, F>
+where
+    F: Fn(u64, u64) -> u64,
+{
     #[inline]
     pub(crate) fn new(
         vec: &'a BitVec,
         mask: &'b BitVec,
-        bin_op: fn(u64, u64) -> u64,
+        bin_op: F,
     ) -> Result<Self, String> {
         if vec.len != mask.len {
             return Err(String::from(
