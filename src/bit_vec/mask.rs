@@ -18,11 +18,7 @@ where
     F: Fn(u64, u64) -> u64,
 {
     #[inline]
-    pub(crate) fn new(
-        vec: &'a BitVec,
-        mask: &'b BitVec,
-        bin_op: F,
-    ) -> Result<Self, String> {
+    pub(crate) fn new(vec: &'a BitVec, mask: &'b BitVec, bin_op: F) -> Result<Self, String> {
         if vec.len != mask.len {
             return Err(String::from(
                 "mask cannot have different length than vector",
@@ -195,7 +191,7 @@ where
         ones
     }
 
-    /// Collect the masked BitVec into a new `BitVec` by applying the mask to all bits.
+    /// Collect the masked [`BitVec`] into a new `BitVec` by applying the mask to all bits.
     #[inline]
     #[must_use]
     pub fn to_bit_vec(&self) -> BitVec {

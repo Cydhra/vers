@@ -12,6 +12,11 @@ pub mod mask;
 /// Size of a word in bitvectors. All vectors operate on 64-bit words.
 const WORD_SIZE: usize = 64;
 
+/// Type alias for masked bitvectors that implement a simple bitwise binary operation.
+/// The first lifetime is for the bit vector that is being masked, the second lifetime is for the
+/// mask.
+pub type BitMask<'s, 'b> = MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>;
+
 /// A simple bit vector that does not support rank and select queries. It stores bits densely
 /// in 64 bit limbs. The last limb may be partially filled. Other than that, there is no overhead.
 ///
@@ -400,8 +405,7 @@ impl BitVec {
     /// # Errors
     /// Returns an error if the length of the vector doesn't match the mask length.
     #[inline]
-    pub fn mask_or<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>, String>
-    {
+    pub fn mask_or<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<BitMask<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, |a, b| a | b)
     }
 
@@ -432,11 +436,7 @@ impl BitVec {
     /// # Errors
     /// Returns an error if the length of the vector doesn't match the mask length.
     #[inline]
-    pub fn mask_and<'s, 'b>(
-        &'s self,
-        mask: &'b BitVec,
-    ) -> Result<MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>, String>
-    {
+    pub fn mask_and<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<BitMask<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, |a, b| a & b)
     }
 
@@ -467,11 +467,7 @@ impl BitVec {
     /// # Errors
     /// Returns an error if the length of the vector doesn't match the mask length.
     #[inline]
-    pub fn mask_xor<'s, 'b>(
-        &'s self,
-        mask: &'b BitVec,
-    ) -> Result<MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>, String>
-    {
+    pub fn mask_xor<'s, 'b>(&'s self, mask: &'b BitVec) -> Result<BitMask<'s, 'b>, String> {
         MaskedBitVec::new(self, mask, |a, b| a ^ b)
     }
 
