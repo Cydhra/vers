@@ -247,6 +247,9 @@ macro_rules! impl_iterator {
             }
         }
 
+        // we allow into iter on mutable references for ease of use,
+        // but an iter_mut() function on an immutable data structure would be nonsensical
+        #[allow(clippy::into_iter_without_iter)]
         impl<'a> IntoIterator for &'a mut $type {
             type Item = u64;
             type IntoIter = $bor<'a>;
