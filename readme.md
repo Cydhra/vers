@@ -50,10 +50,11 @@ When I benchmarked, I used the ``simd`` feature of rsdict, which required nightl
 The feature depends on the `packed_simd` crate, which is currently not compiling anymore, so I disabled the feature.
 This will reduce the performance of the rsdict crate if you run the benchmarks.
 
-I performed benchmarks on a Ryzen 9 7950X with 32GB of RAM.
+I performed speed benchmarks on a Ryzen 9 7950X with 32GB of RAM.
 The results are shown below.
 
 ### Bit-Vector
+#### Rank & Select
 The bit-vector implementation is among the fastest publicly available implementation for rank and select operations.
 Note that the `succinct` crate outperforms Vers' `rank` operation, but does not provide an efficient select operation.
 The `sucds` generally performs better than `vers` in average case, but is significantly slower in worst case (see below).
@@ -76,13 +77,28 @@ An increase in all runtimes can be observed for input sizes exceeding the L2 cac
 ![Bit-Vector Rank Benchmark](images/rank_comparison.svg)
 ![Bit-Vector Select Benchmark](images/select_comparison.svg)
 
+#### Heap Size
+
+Another benchmark measures the overhead of the bit-vector implementations.
+The benchmark code can be found in the `examples/` directory.
+The x-axis is the number of bits in the bit-vector,
+the y-axis is the additional overhead in percent compared to the size of the bit-vector.
+Only the fastest competitors are shown to make the graph more readable.
+Vers achieves its high speeds with significantly less memory overhead, as can be seen in the heap size benchmark.
+The legend contains the measurement for the biggest input size,
+because I assume that the overhead approaches a constant value for large inputs.
+
+![Bit-Vector Heap Size Benchmark](images/heap.svg)
+
+#### Worst Case
+
 For small worst-case bit distributions, Vers' implementation is significantly faster than the `sucds` crate.
 Since the `sucds` crate relies on dense arrays, the worst-case for `vers` is different from the worst case for `sucds`,
 and I was unable to find a worst-case distribution for the latter.
 It is unclear if the `sucds` crate is faster than Vers' implementation for worst-case distributions,
 or if I was simply unable to find a suitable worst-case distribution.
 If worst-case runtimes are important to you, I recommend benchmarking both crates with data representative of your
-input bit distribution (since both crates have different worst-case scenarios), or to default to `vers` 
+input bit distribution (since both crates have different worst-case scenarios), or to default to `vers`
 (look at the benchmark code to get an idea what distributions are bad for `vers`).
 
 ![Bit-Vector Select Worst Case Benchmark](images/select_worst_case.svg)
