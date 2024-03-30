@@ -60,8 +60,8 @@ fn construct_ind_bit_vec(rng: &mut ThreadRng, len: usize) -> IndexedBits<Vec<u8>
 
 fn construct_rank9_vec(rng: &mut ThreadRng, len: usize) -> Rank9<SuccinctVec<u64>> {
     let mut bit_vec = SuccinctVec::with_capacity(len as u64);
-    for _ in 0..len / 8 {
-        bit_vec.push_block(rng.sample(Standard))
+    for _ in 0..len {
+        bit_vec.push_bit(rng.sample(Standard))
     }
     Rank9::new(bit_vec)
 }
