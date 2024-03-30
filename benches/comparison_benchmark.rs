@@ -1,4 +1,4 @@
-use bio::data_structures::rank_select::RankSelect;
+use bio::data_structures::rank_select::RankSelect as BioRsVec;
 use bv::BitVec as BioVec;
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use fid::{BitVector as FidVec, FID};
@@ -12,7 +12,6 @@ use succinct::{BinSearchSelect, BitRankSupport, BitVecPush, BitVector as Succinc
 use sucds::bit_vectors::darray::DArray as SucDArray;
 use sucds::bit_vectors::rank9sel::Rank9Sel as SucRank9Vec;
 use sucds::bit_vectors::{BitVector as SucBitVec, Rank, Select};
-use RankSelect as BioRsVec;
 
 mod common;
 
