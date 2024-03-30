@@ -17,7 +17,7 @@ use RankSelect as BioRsVec;
 mod common;
 
 fn construct_rsdict_vec(rng: &mut ThreadRng, len: usize) -> RsDict {
-    let mut rs_dict = RsDict::with_capacity(len * 64);
+    let mut rs_dict = RsDict::with_capacity(len);
     for _ in 0..len {
         rs_dict.push(rng.gen_bool(0.5));
     }
