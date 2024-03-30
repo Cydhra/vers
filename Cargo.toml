@@ -24,7 +24,7 @@ plotters = "0.3.5"
 
 # comparison benchmarks libraries
 rsdict = { version = "0.0.7" }
-bio = "1.5"
+bio = "1.6"
 bv = "0.11"
 fid = "0.1"
 indexed_bitvec = "4.0"
