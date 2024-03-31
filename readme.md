@@ -79,11 +79,13 @@ An increase in all runtimes can be observed for input sizes exceeding the L2 cac
 
 #### Heap Size
 
-Another benchmark measures the overhead of the bit-vector implementations.
+Another benchmark measures the size overhead of the bit-vector implementations.
 The benchmark code can be found in the `examples/` directory.
 The x-axis is the number of bits in the bit-vector,
 the y-axis is the additional overhead in percent compared to the size of the bit-vector.
-Only the fastest competitors are shown to make the graph more readable.
+Only the fastest competitors are shown to make the graph more readable
+(I would like to add the bio crate data structure as well, since it is the only truly succinct one,
+but it does not offer an operation to measure the heap size).
 Vers achieves its high speeds with significantly less memory overhead, as can be seen in the heap size benchmark.
 The legend contains the measurement for the biggest input size,
 because I assume that the overhead approaches a constant value for large inputs.
@@ -91,6 +93,11 @@ because I assume that the overhead approaches a constant value for large inputs.
 ![Bit-Vector Heap Size Benchmark](images/heap.svg)
 
 #### Worst Case
+
+Below is a select-query benchmark of adversarial input distributions 
+(long vector of zeros and then a lot of ones at the end)
+for the `vers` and `rsdict` crate.
+It does not include a measurement for the `sucds` crate:
 
 For small worst-case bit distributions, Vers' implementation is significantly faster than the `sucds` crate.
 Since the `sucds` crate relies on dense arrays, the worst-case for `vers` is different from the worst case for `sucds`,
