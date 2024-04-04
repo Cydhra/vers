@@ -74,6 +74,7 @@ pub mod elias_fano;
 
 #[forbid(unsafe_code)]
 pub mod rmq;
+pub mod trees;
 
 #[forbid(unsafe_code)]
 pub mod wavelet;
