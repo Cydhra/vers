@@ -16,16 +16,17 @@
 //! Performance was benchmarked against publicly available implementations of the same (or similar)
 //! data structures on crates.io at the time of writing. The benchmark results can be found
 //! in the [Github repository](https://github.com/Cydhra/vers). At the time of writing,
-//! this crate is among the fastest implementations of all data structures.
+//! this crate is among the fastest implementations of all data structures, and the most efficient
+//! with regard to memory usage.
 //! Some tradeoffs between average time, worst-case time, and available API features should be taken
 //! into consideration when selecting among the fastest libraries
 //! (see the Github repository for a discussion).
 //!
 //! # Intrinsics
 //! This crate uses compiler intrinsics for bit-manipulation. The intrinsics are supported by
-//! all modern ``x86_64`` CPUs, but not by other architectures. Since the data structures depend
-//! very heavily on these intrinsics, they are forcibly enabled, which means the crate will not
-//! compile on non-``x86_64`` architectures, and will not work correctly on very old ``x86_64`` CPUs.
+//! all modern ``x86_64`` CPUs, but not by other architectures. The crate will compile on other
+//! architectures, but the performance will be significantly worse. It is strongly recommended to
+//! enable the ``BMI2`` and ``popcnt`` target features when using this crate.
 //!
 //! The intrinsics in question are `popcnt` (supported since ``SSE4.2`` resp. ``SSE4a`` on AMD, 2007-2008),
 //! `pdep` (supported with ``BMI2`` since Intel Haswell resp. AMD Excavator, in hardware since AMD Zen 3, 2011-2013),
