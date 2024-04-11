@@ -2,9 +2,9 @@
 //! constant time, select on average in constant time, with a logarithmic worst case.
 
 use super::WORD_SIZE;
+use crate::util::pdep::Pdep;
 use crate::util::{impl_iterator, unroll};
 use crate::BitVec;
-use core::arch::x86_64::_pdep_u64;
 use std::iter::FusedIterator;
 use std::mem::size_of;
 use std::num::NonZeroUsize;
@@ -221,7 +221,6 @@ impl RsVec {
     ///
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
-    #[cfg(target_feature = "popcnt")]
     #[must_use]
     pub fn rank0(&self, pos: usize) -> usize {
         self.rank(true, pos)
@@ -234,7 +233,6 @@ impl RsVec {
     ///
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
-    #[cfg(target_feature = "popcnt")]
     #[must_use]
     pub fn rank1(&self, pos: usize) -> usize {
         self.rank(false, pos)
@@ -246,7 +244,6 @@ impl RsVec {
     ///
     /// If the rank is larger than the number of 0-bits in the vector, the vector length is returned.
     #[must_use]
-    #[cfg(target_feature = "bmi2")]
     #[allow(clippy::assertions_on_constants)]
     pub fn select0(&self, mut rank: usize) -> usize {
         if rank >= self.rank0 {
@@ -310,7 +307,7 @@ impl RsVec {
             } else {
                 return block_index * BLOCK_SIZE
                     + index_counter
-                    + unsafe { _pdep_u64(1 << rank, !word) }.trailing_zeros() as usize;
+                    + (1 << rank).pdep(!word).trailing_zeros() as usize;
             }
         }, n += 1);
 
@@ -318,13 +315,9 @@ impl RsVec {
         // block, and thus outside of the bitvector
         block_index * BLOCK_SIZE
             + index_counter
-            + unsafe {
-                _pdep_u64(
-                    1 << rank,
-                    !self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-                )
-            }
-            .trailing_zeros() as usize
+            + (1 << rank)
+                .pdep(!self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
+                .trailing_zeros() as usize
     }
 
     /// Return the position of the 1-bit with the given rank. See `rank1`.
@@ -333,7 +326,6 @@ impl RsVec {
     ///
     /// If the rank is larger than the number of 1-bits in the bit-vector, the vector length is returned.
     #[must_use]
-    #[cfg(target_feature = "bmi2")]
     #[allow(clippy::assertions_on_constants)]
     pub fn select1(&self, mut rank: usize) -> usize {
         if rank >= self.rank1 {
@@ -397,21 +389,17 @@ impl RsVec {
             } else {
                 return block_index * BLOCK_SIZE
                     + index_counter
-                    + unsafe { _pdep_u64(1 << rank, word) }.trailing_zeros() as usize;
+                    + (1 << rank).pdep(word).trailing_zeros() as usize;
             }
         }, n += 1);
 
         // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
         // block, and thus outside of the bitvector
-        unsafe {
-            block_index * BLOCK_SIZE
-                + index_counter
-                + _pdep_u64(
-                    1 << rank,
-                    self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-                )
+        block_index * BLOCK_SIZE
+            + index_counter
+            + (1 << rank)
+                .pdep(self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
                 .trailing_zeros() as usize
-        }
     }
 
     // I measured 5-10% improvement with this. I don't know why it's not inlined by default, the
@@ -671,7 +659,7 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
                     return Some(
                         block_index * BLOCK_SIZE
                             + self.last_word * WORD_SIZE
-                            + unsafe { _pdep_u64(1 << rank, !word) }.trailing_zeros() as usize,
+                            + (1 << rank).pdep(!word).trailing_zeros() as usize,
                     );
                 }
 
@@ -737,7 +725,7 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
                 self.next_rank += 1;
                 return Some(block_index * BLOCK_SIZE
                     + index_counter
-                    + unsafe { _pdep_u64(1 << rank, !word) }.trailing_zeros() as usize);
+                    + (1 << rank).pdep(!word).trailing_zeros() as usize);
             }
         }, n += 1);
 
@@ -748,18 +736,13 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
         Some(
             block_index * BLOCK_SIZE
                 + index_counter
-                + unsafe {
-                    _pdep_u64(
-                        1 << rank,
-                        !self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-                    )
-                }
-                .trailing_zeros() as usize,
+                + (1 << rank)
+                    .pdep(!self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
+                    .trailing_zeros() as usize,
         )
     }
 
     #[must_use]
-    #[cfg(target_feature = "bmi2")]
     #[allow(clippy::assertions_on_constants)]
     fn select_next_1(&mut self) -> Option<usize> {
         let mut rank = self.next_rank;
@@ -800,7 +783,7 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
                     return Some(
                         block_index * BLOCK_SIZE
                             + self.last_word * WORD_SIZE
-                            + unsafe { _pdep_u64(1 << rank, word) }.trailing_zeros() as usize,
+                            + (1 << rank).pdep(word).trailing_zeros() as usize,
                     );
                 }
 
@@ -881,7 +864,7 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
                 self.next_rank += 1;
                 return Some(block_index * BLOCK_SIZE
                     + index_counter
-                    + unsafe { _pdep_u64(1 << rank, word) }.trailing_zeros() as usize);
+                    + (1 << rank).pdep(word).trailing_zeros() as usize);
             }
         }, n += 1);
 
@@ -889,17 +872,13 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
         // block, and thus outside of the bitvector
         self.last_word = 7;
         self.next_rank += 1;
-        unsafe {
-            Some(
-                block_index * BLOCK_SIZE
-                    + index_counter
-                    + _pdep_u64(
-                        1 << rank,
-                        self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + 7],
-                    )
+        Some(
+            block_index * BLOCK_SIZE
+                + index_counter
+                + (1 << rank)
+                    .pdep(self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
                     .trailing_zeros() as usize,
-            )
-        }
+        )
     }
 
     /// Advances the iterator by `n` elements. Returns an error if the iterator does not have

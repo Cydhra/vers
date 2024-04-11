@@ -5,6 +5,7 @@
 
 use crate::Measure::*;
 use plotters::backend::SVGBackend;
+use plotters::prelude::full_palette::GREEN_800;
 use plotters::prelude::*;
 use plotters::style::full_palette::{ORANGE, PURPLE};
 use rand::distributions::{Standard, Uniform};
@@ -12,11 +13,10 @@ use rand::prelude::{Distribution, ThreadRng};
 use rand::{thread_rng, Rng};
 use rsdict::RsDict;
 use std::collections::HashMap;
-use plotters::prelude::full_palette::GREEN_800;
+use succinct::{BitVecPush, BitVector as SuccinctVec, Rank9, SpaceUsage};
 use sucds::bit_vectors::darray::DArray as SucDArray;
 use sucds::bit_vectors::rank9sel::Rank9Sel as SucRank9Vec;
 use sucds::bit_vectors::BitVector as SucBitVec;
-use succinct::{BitVecPush, BitVector as SuccinctVec, Rank9, SpaceUsage};
 use sucds::Serializable;
 use vers_vecs::{BitVec, RsVec};
 
@@ -77,7 +77,7 @@ enum Measure {
     RsDict,
     SucdR9,
     SucdDa,
-    Rank9
+    Rank9,
 }
 
 // select a color for each measure for the plot

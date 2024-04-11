@@ -1,3 +1,5 @@
+pub(crate) mod pdep;
+
 macro_rules! gen_iter_impl {
     ($($life:lifetime, )? $name:ident, $type:ty, $item:ty; $({ $($function_defs:tt)* })*) => {
         impl $(<$life>)? $name $(<$life>)? {

@@ -28,7 +28,6 @@ impl SmallBitVector {
         (!self.0 & mask).count_ones() as usize
     }
 
-    #[cfg(target_feature = "bmi2")]
     fn select0(&self, mut rank: usize) -> usize {
         let word = (self.0 & 0xFFFF_FFFF_FFFF_FFFF) as u64;
         if (word.count_zeros() as usize) <= rank {
