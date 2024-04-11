@@ -2,12 +2,12 @@
 //! data structure, but uses constant sized structures in place of logarithmic ones, which makes
 //! it faster at the cost of O(n log n) space overhead.
 
-use std::arch::x86_64::_pdep_u64;
 use std::cmp::min_by;
 use std::mem::size_of;
 use std::ops::{Bound, Deref, RangeBounds};
 
 use crate::rmq::binary_rmq::BinaryRmq;
+use crate::util::pdep::Pdep;
 
 /// Size of the blocks the data is split into. One block is indexable with a u8, hence its size.
 const BLOCK_SIZE: usize = 128;
@@ -33,10 +33,10 @@ impl SmallBitVector {
         if (word.count_zeros() as usize) <= rank {
             rank -= word.count_zeros() as usize;
         } else {
-            return unsafe { _pdep_u64(1 << rank, !word) }.trailing_zeros() as usize;
+            return (1 << rank).pdep(!word).trailing_zeros() as usize;
         }
         let word = (self.0 >> 64) as u64;
-        64 + unsafe { _pdep_u64(1 << (rank % 64), !word) }.trailing_zeros() as usize
+        64 + (1 << (rank % 64)).pdep(!word).trailing_zeros() as usize
     }
 
     fn set_bit(&mut self, i: usize) {
