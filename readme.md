@@ -154,7 +154,7 @@ Licensed under either of
 
 at your option.
 
-This project includes code developed by [Gonzalo Brito Gadeschi](https://raw.githubusercontent.com/gnzlbg/bitintr)
+This project includes code developed by [Gonzalo Brito Gadeschi](https://github.com/gnzlbg/bitintr)
 originally licensed under the MIT license.
 It is redistributed under the above dual license.
 
