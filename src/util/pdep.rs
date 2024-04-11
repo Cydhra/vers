@@ -13,10 +13,10 @@
 // None of the utils here are publicly exposed.
 
 mod arch {
-    #[cfg(target_arch = "x86")]
+    #[cfg(all(target_arch = "x86", target_feature = "bmi2"))]
     pub use core::arch::x86::*;
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "bmi2"))]
     pub use core::arch::x86_64::*;
 }
 
