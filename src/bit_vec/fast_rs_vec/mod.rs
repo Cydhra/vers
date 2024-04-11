@@ -1,5 +1,5 @@
 //! A fast succinct bit vector implementation with rank and select queries. Rank computes in
-//! constant time, select on average in constant time, with a logarithmic worst case.
+//! constant-time, select on average in constant-time, with a logarithmic worst case.
 
 use super::WORD_SIZE;
 use crate::util::pdep::Pdep;

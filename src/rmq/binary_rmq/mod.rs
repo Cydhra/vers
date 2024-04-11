@@ -1,6 +1,6 @@
 //! This module contains a range minimum query data structure. It pre-computes the
 //! minimum element in intervals 2^k for all k and uses this information to answer queries in
-//! constant time. This uses O(n log n) space overhead.
+//! constant-time. This uses O(n log n) space overhead.
 
 use std::cmp::min_by;
 use std::collections::Bound;
@@ -12,7 +12,7 @@ use std::ops::{Deref, RangeBounds};
 /// two overlapping sub-queries. This leads to constant-time queries and O(n log n) space overhead.
 /// The pre-calculation is done in O(n log n) time.
 /// This RMQ data structure is slightly faster than the [fast RMQ][crate::rmq::fast_rmq::FastRmq]
-/// for small inputs, but has a much higher space overhead, which makes it slower for large inputs.
+/// for small inputs but has a much higher space overhead, which makes it slower for large inputs.
 /// It does not support input sizes exceeding 2^32 elements.
 ///
 /// # Example

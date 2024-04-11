@@ -1,6 +1,6 @@
 //! A fast and quasi-succinct range minimum query data structure.
-//! It is based on a linear-space RMQ data structure,
-//! but uses constant sized structures in place of logarithmic ones,
+//! It is based on a linear-space RMQ data structure
+//! but uses constant-sized structures in place of logarithmic ones,
 //! which makes it faster at the cost of increasing the space bound to O(n log n).
 
 use std::cmp::min_by;

@@ -9,8 +9,8 @@
 //! # Data structures
 //!  - [Bit-Vector][bit_vec::BitVec] with no overhead. The only data structure that can be modified after creation.
 //!  - [Succinct Bit-Vector][bit_vec::fast_rs_vec::RsVec] supporting fast rank and select queries.
-//!  - [Elias-Fano][elias_fano::EliasFanoVec] encoding of monotone sequences supporting constant time predecessor queries.
-//!  - Two [Range Minimum Query][rmq] structures for constant time range minimum queries.
+//!  - [Elias-Fano][elias_fano::EliasFanoVec] encoding of monotone sequences supporting constant-time predecessor queries.
+//!  - Two [Range Minimum Query][rmq] structures for constant-time range minimum queries.
 //!
 //! # Performance
 //! Performance was benchmarked against publicly available implementations of the same (or similar)
@@ -36,8 +36,8 @@
 //! # Safety
 //! This crate uses no unsafe code, with the only exception being compiler intrinsics for
 //! bit-manipulation. The intrinsics cannot fail with the provided inputs (provided they are
-//! supported by the target machine), so even if they were to be implemented incorrectly, no
-//! memory unsafety can occur (only incorrect results).
+//! supported by the target machine), so even if they were to be implemented incorrectly,
+//! no memory safety issues would arise.
 
 pub use crate::elias_fano::EliasFanoVec;
 pub use bit_vec::fast_rs_vec::RsVec;

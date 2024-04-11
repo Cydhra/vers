@@ -1,5 +1,5 @@
 //! Elias-Fano encoding for sorted vectors of u64 values. It reduces the space required to represent
-//! all numbers (compression ratio dependent on data) and allows for constant time predecessor
+//! all numbers (compression ratio dependent on data) and allows for constant-time predecessor
 //! queries.
 //!
 //! It implements [`iter`][EliasFanoVec::iter] and [`IntoIterator`] to allow for
@@ -19,13 +19,13 @@ use std::cmp::max;
 /// case and for worst case.
 const BIN_SEARCH_THRESHOLD: usize = 4;
 
-/// An elias-fano encoded vector of u64 values. The vector is immutable, which is exploited by
+/// An Elias-Fano encoded vector of u64 values. The vector is immutable, which is exploited by
 /// limiting the word length of elements to the minimum required to represent all elements.
 /// The space requirement for this structure is thus linear in the number of elements with a small
-/// constant factor (smaller than one, unless the required word length is close to 64 bit).
+/// constant factor (smaller than one, unless the required word length is close to 64 bits).
 ///
 /// # Predecessor/Successor Queries
-/// This data structure supports (on average) constant time predecessor/successor queries.
+/// This data structure supports (on average) constant-time predecessor/successor queries.
 /// See [`EliasFanoVec::predecessor_unchecked`] and [`EliasFanoVec::successor_unchecked`] for more information.
 ///
 /// # Example
@@ -175,7 +175,7 @@ impl EliasFanoVec {
     /// If the query is smaller than the smallest element in the vector,
     /// `None` is returned.
     ///
-    /// This query runs in constant time on average. The worst case runtime is logarithmic in the
+    /// This query runs in constant time on average. The worst-case runtime is logarithmic in the
     /// number of elements in the vector. The worst case occurs when values in the vector are very
     /// dense with only very few elements that are much larger than most.
     #[must_use]
@@ -190,7 +190,7 @@ impl EliasFanoVec {
 
     /// Returns the largest element that is smaller than or equal to the query.
     ///
-    /// This query runs in constant time on average. The worst case runtime is logarithmic in the
+    /// This query runs in constant time on average. The worst-case runtime is logarithmic in the
     /// number of elements in the vector. The worst case occurs when values in the vector are very
     /// dense with only very few elements that are much larger than most.
     ///
@@ -313,7 +313,7 @@ impl EliasFanoVec {
     /// If the query is greater than the greatest element in the vector,
     /// `None` is returned.
     ///
-    /// This query runs in constant time on average. The worst case runtime is logarithmic in the
+    /// This query runs in constant time on average. The worst-case runtime is logarithmic in the
     /// number of elements in the vector. The worst case occurs when values in the vector are very
     /// dense with only very few elements that are much larger than most.
     #[must_use]
@@ -328,7 +328,7 @@ impl EliasFanoVec {
 
     /// Returns the smallest element that is greater than or equal to the query.
     ///
-    /// This query runs in constant time on average. The worst case runtime is logarithmic in the
+    /// This query runs in constant time on average. The worst-case runtime is logarithmic in the
     /// number of elements in the vector. The worst case occurs when values in the vector are very
     /// dense with only very few elements that are much smaller than most.
     ///
@@ -459,7 +459,7 @@ impl EliasFanoVec {
 impl_iterator! {
     EliasFanoVec, EliasFanoIter, EliasFanoRefIter;
     /// Returns the minimum remaining element of the iterator.
-    /// Operates in constant time, because elias fano vectors are sorted.
+    /// Operates in constant time, because Elias-Fano vectors are sorted.
     fn min(mut self) -> Option<Self::Item>
     where
         Self: Sized,
@@ -469,7 +469,7 @@ impl_iterator! {
     }
 
     /// Returns the maximum remaining element of the iterator. Operates in constant time,
-    /// because elias fano vectors are sorted.
+    /// because Elias-Fano vectors are sorted.
     fn max(self) -> Option<Self::Item>
     where
         Self: Sized,
