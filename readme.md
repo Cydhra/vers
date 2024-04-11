@@ -5,9 +5,9 @@
 
 Vers (vers-vecs on crates.io)
 contains pure-Rust implementations of several data structures backed by rank and select operations.
-The library was originally a grad student project for a semester course,
-but since it performs quite well (especially if worst-case run-times are important) compared to publicly available implementations,
-I've decided to publish it.
+When using this library, it is strongly recommended to enable the `BMI2` and `popcnt` features for x86_64 CPUs,
+or compile with the `target-cpu=native` flag,
+since the intrinsics speed up both `rank` and `select` operations by a factor of 2-3.
 
 ## Data Structures
 - a bit-vector with no overhead.
@@ -17,25 +17,21 @@ I've decided to publish it.
 
 # Intrinsics
 This crate uses compiler intrinsics for bit-manipulation. The intrinsics are supported by
-all modern x86_64 CPUs, but not by other architectures. Since the data structures depend
-very heavily on these intrinsics, they are forcibly enabled, which means the crate will not
-compile on non-x86_64 architectures, and will not work correctly on very old x86_64 CPUs.
+all modern x86_64 CPUs, but not by other architectures.
+There are fallback implementations if the intrinsics are not available, but they are significantly slower.
+Using this library on `x86` CPUs without enabling `BMI2` and `popcnt` target features is not recommended.
 
 The intrinsics in question are `popcnt` (supported since SSE4.2 resp. SSE4a on AMD, 2007-2008),
 `pdep` (supported with BMI2 since Intel Haswell resp. AMD Excavator, in hardware since AMD Zen 3, 2011-2013),
 and `tzcnt` (supported with BMI1 since Intel Haswell resp. AMD Jaguar, ca. 2013).
 
-Rust offers library functions for popcount and trailing zero count, but not for parallel deposit,
-which is why I cannot fall back to a software implementation for different architectures.
-
 ## Safety
-This crate uses no unsafe code, with the only exception being compiler intrinsics for
-bit-manipulation. The intrinsics cannot fail with the provided inputs (provided they are
+This crate uses no unsafe code, with the only exception being compiler intrinsic for `pdep`.
+The intrinsics cannot fail with the provided inputs (provided they are
 supported by the target machine), so even if they were to be implemented incorrectly, no
 memory corruption can occur (only incorrect results).
 
 Unsafe code is hidden behind public API.
-The crate fails compilation, if the intrinsics are not available.
 
 ## Dependencies
 The library has no dependencies outside the Rust standard library by default.
@@ -52,6 +48,7 @@ This will reduce the performance of the rsdict crate if you run the benchmarks.
 
 I performed speed benchmarks on a Ryzen 9 7950X with 32GB of RAM.
 The results are shown below.
+All benchmarks were run with the `target-cpu=native` flag enabled.
 
 ### Bit-Vector
 #### Rank & Select
