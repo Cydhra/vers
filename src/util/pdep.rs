@@ -1,5 +1,5 @@
 //! Parallel bits deposit intrinsics for all platforms.
-//! Uses the `PDEP` instruction on x86/x86_64 platforms with the `bmi2` feature enabled.
+//! Uses the `PDEP` instruction on `x86`/`x86_64` platforms with the `bmi2` feature enabled.
 
 // This file is part of the `bitintr` crate and is licensed under the terms of the MIT license.
 // Since this crate is dual-licensed, you may choose to use this file under either the MIT license

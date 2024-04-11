@@ -1,6 +1,6 @@
 //! This module defines a struct for lazily masking [`BitVec`]. It offers all immutable operations
-//! of `BitVec` but applies a bit-mask during the operation. The struct is created through three
-//! functions in `BitVec`.
+//! of `BitVec` but applies a bit-mask during the operation. The struct is created through
+//! [`BitVec::mask_xor`], [`BitVec::mask_and`], [`BitVec::mask_or`], or [`BitVec::mask_custom`].
 
 use super::WORD_SIZE;
 use crate::BitVec;
