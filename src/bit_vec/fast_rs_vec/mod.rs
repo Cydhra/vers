@@ -75,11 +75,11 @@ struct SelectSuperBlockDescriptor {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RsVec {
-    data: Vec<u64>,
+    data: Box<[u64]>,
     len: usize,
-    blocks: Vec<BlockDescriptor>,
-    super_blocks: Vec<SuperBlockDescriptor>,
-    select_blocks: Vec<SelectSuperBlockDescriptor>,
+    blocks: Box<[BlockDescriptor]>,
+    super_blocks: Box<[SuperBlockDescriptor]>,
+    select_blocks: Box<[SelectSuperBlockDescriptor]>,
     rank0: usize,
     rank1: usize,
 }
@@ -202,11 +202,11 @@ impl RsVec {
         }
 
         RsVec {
-            data: vec.data,
+            data: vec.data.into(),
             len: vec.len,
-            blocks,
-            super_blocks,
-            select_blocks,
+            blocks: blocks.into(),
+            super_blocks: super_blocks.into(),
+            select_blocks: select_blocks.into(),
             // the last block may contain padding zeros, which should not be counted
             rank0: total_zeros + current_zeros - ((WORD_SIZE - (vec.len % WORD_SIZE)) % WORD_SIZE),
             rank1: vec.len

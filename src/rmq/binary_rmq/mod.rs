@@ -29,12 +29,12 @@ use std::ops::{Deref, RangeBounds};
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BinaryRmq {
-    data: Vec<u64>,
+    data: Box<[u64]>,
 
     // store indices relative to start of range. There is no way to have ranges exceeding 2^32 bits
     // but since we have fast_rmq for larger inputs, which does not have any downsides at that point,
     // we can just use u32 here (which gains cache efficiency for both implementations).
-    results: Vec<u32>,
+    results: Box<[u32]>,
 }
 
 impl BinaryRmq {
@@ -102,7 +102,7 @@ impl BinaryRmq {
             }
         }
 
-        Self { data, results }
+        Self { data: data.into(), results: results.into() }
     }
 
     /// Convenience function for [`BinaryRmq::range_min`] for using range operators.
@@ -170,7 +170,7 @@ impl BinaryRmq {
 /// indexing syntax on the RMQ data structure to access the underlying data, as well as iterators,
 /// etc.
 impl Deref for BinaryRmq {
-    type Target = Vec<u64>;
+    type Target = Box<[u64]>;
 
     fn deref(&self) -> &Self::Target {
         &self.data

@@ -77,10 +77,10 @@ struct Block {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FastRmq {
-    data: Vec<u64>,
+    data: Box<[u64]>,
     block_minima: BinaryRmq,
-    block_min_indices: Vec<u8>,
-    blocks: Vec<Block>,
+    block_min_indices: Box<[u8]>,
+    blocks: Box<[Block]>,
 }
 
 impl FastRmq {
@@ -135,10 +135,10 @@ impl FastRmq {
         });
 
         Self {
-            data,
+            data: data.into(),
             block_minima: BinaryRmq::from_vec(block_minima),
-            block_min_indices,
-            blocks,
+            block_min_indices: block_min_indices.into(),
+            blocks: blocks.into(),
         }
     }
 
@@ -285,7 +285,7 @@ impl FastRmq {
 /// indexing syntax on the RMQ data structure to access the underlying data, as well as iterators,
 /// etc.
 impl Deref for FastRmq {
-    type Target = Vec<u64>;
+    type Target = Box<[u64]>;
 
     fn deref(&self) -> &Self::Target {
         &self.data
