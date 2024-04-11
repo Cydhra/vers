@@ -25,7 +25,8 @@
 //! # Intrinsics
 //! This crate uses compiler intrinsics for bit-manipulation. The intrinsics are supported by
 //! all modern ``x86_64`` CPUs, but not by other architectures. The crate will compile on other
-//! architectures, but the performance will be significantly worse. It is strongly recommended to
+//! architectures using fallback implementations,
+//! but the performance will be significantly worse. It is strongly recommended to
 //! enable the ``BMI2`` and ``popcnt`` target features when using this crate.
 //!
 //! The intrinsics in question are `popcnt` (supported since ``SSE4.2`` resp. ``SSE4a`` on AMD, 2007-2008),
@@ -44,8 +45,14 @@ pub use bit_vec::BitVec;
 pub use rmq::binary_rmq::BinaryRmq;
 pub use rmq::fast_rmq::FastRmq;
 
+#[forbid(unsafe_code)]
 pub mod bit_vec;
+
+#[forbid(unsafe_code)]
 pub mod elias_fano;
+
+#[forbid(unsafe_code)]
 pub mod rmq;
 
+#[allow(unsafe_code)]
 pub(crate) mod util;
