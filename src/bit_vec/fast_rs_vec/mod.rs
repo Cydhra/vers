@@ -575,9 +575,12 @@ impl RsVec {
     /// 0-bits), this is faster than comparing the vectors bit by bit.
     /// Choose the value of `ZERO` depending on which bits are more sparse.
     ///
+    /// This is usually slower than a [`full_equals`] call, unless the vector is very sparse
+    /// (usually well below 1% fill rate).
+    ///
     /// # Parameters
     /// - `other`: The other `RsVec` to compare to.
-    /// - `ZERO`: Whether to compare the 0-bits (true) or the 1-bits (false).
+    /// - `ZERO`: Whether to compare the sparse 0-bits (true) or the sparse 1-bits (false).
     ///
     /// # Returns
     /// `true` if the vectors are equal, `false` otherwise.
@@ -598,6 +601,28 @@ impl RsVec {
             {
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    /// Check if two `RsVec`s are equal. This compares limb by limb. This is usually faster than a
+    /// [`sparse_equals`] call.
+    pub fn full_equals(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+
+        if self.rank0 != other.rank0 || self.rank1 != other.rank1 {
+            return false;
+        }
+
+        if self.data[..self.len / 64].iter().zip(other.data[..other.len / 64].iter()).any(|(a, b)| a != b) {
+            return false;
+        }
+
+        if self.data.last().unwrap() & ((1 << (self.len % 64)) - 1) != other.data.last().unwrap() & ((1 << (other.len % 64)) - 1) {
+            return false;
         }
 
         return true;
