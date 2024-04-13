@@ -538,6 +538,19 @@ impl RsVec {
         }
     }
 
+    /// Get an iterator over the bits in the vector. The iterator will return the indices of the
+    /// 0-bits or the 1-bits in the vector, depending on the constant `ZERO`
+    /// (if true, 0-bits are returned).
+    ///
+    /// It uses the select data structure to speed up iteration.
+    /// It is also faster than calling `select` on each rank, because the iterator exploits
+    /// the linear access pattern.
+    ///
+    /// This method has convenience methods `iter0` and `iter1`.
+    pub fn select_iter<const ZERO: bool>(&self) -> SelectIter<'_, ZERO> {
+        SelectIter::new(self)
+    }
+
     /// Get an iterator over the 0-bits in the vector that uses the select data structure to speed
     /// up iteration.
     /// It is faster than calling `select0` on each rank, because the iterator
@@ -545,7 +558,7 @@ impl RsVec {
     ///
     /// See [`SelectIter`] for more information.
     pub fn iter0(&self) -> SelectIter<'_, true> {
-        SelectIter::new(self)
+        self.select_iter()
     }
 
     /// Get an iterator over the 1-bits in the vector that uses the select data structure to speed
@@ -555,7 +568,39 @@ impl RsVec {
     ///
     /// See [`SelectIter`] for more information.
     pub fn iter1(&self) -> SelectIter<'_, false> {
-        SelectIter::new(self)
+        self.select_iter()
+    }
+
+    /// Check if two `RsVec`s are equal. For sparse vectors (either sparsely filled with 1-bits or
+    /// 0-bits), this is faster than comparing the vectors bit by bit.
+    /// Choose the value of `ZERO` depending on which bits are more sparse.
+    ///
+    /// # Parameters
+    /// - `other`: The other `RsVec` to compare to.
+    /// - `ZERO`: Whether to compare the 0-bits (true) or the 1-bits (false).
+    ///
+    /// # Returns
+    /// `true` if the vectors are equal, `false` otherwise.
+    pub fn sparse_equals<const ZERO: bool>(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+
+        if self.rank0 != other.rank0 || self.rank1 != other.rank1 {
+            return false;
+        }
+
+        let iter: SelectIter<ZERO> = self.select_iter();
+
+        for (rank, bit_index) in iter.enumerate() {
+            // since rank is inlined, we get dead code elimination depending on ZERO
+            if (other.get_unchecked(bit_index) == 0) != ZERO || other.rank(ZERO, bit_index) != rank
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// Returns the number of bytes used on the heap for this vector. This does not include
