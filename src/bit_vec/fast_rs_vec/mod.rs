@@ -575,8 +575,9 @@ impl RsVec {
     /// 0-bits), this is faster than comparing the vectors bit by bit.
     /// Choose the value of `ZERO` depending on which bits are more sparse.
     ///
-    /// This is usually slower than a [`full_equals`] call, unless the vector is very sparse
-    /// (usually well below 1% fill rate).
+    /// This method is faster than [`full_equals`] for sparse vectors beginning at roughly 1
+    /// million bits. Above 4 million bits, this method becomes faster than full equality in general.
+    // TODO benchmark on other machines to verify these thresholds
     ///
     /// # Parameters
     /// - `other`: The other `RsVec` to compare to.
@@ -607,7 +608,7 @@ impl RsVec {
     }
 
     /// Check if two `RsVec`s are equal. This compares limb by limb. This is usually faster than a
-    /// [`sparse_equals`] call.
+    /// [`sparse_equals`] call for small vectors.
     pub fn full_equals(&self, other: &Self) -> bool {
         if self.len() != other.len() {
             return false;
@@ -640,6 +641,26 @@ impl RsVec {
 }
 
 impl_iterator! { RsVec, RsVecIter, RsVecRefIter }
+
+impl PartialEq for RsVec {
+
+    /// Check if two `RsVec`s are equal. This method calls [`sparse_equals`] if the vector has more
+    /// than 4'000'000 bits, and [`full_equals`] otherwise.
+    ///
+    /// This was determined with benchmarks on an `x86_64` machine,
+    /// on which [`sparse_equals`] outperforms [`full_equals`] consistently above this threshold.
+    fn eq(&self, other: &Self) -> bool {
+        if self.len > 4000000 {
+            if self.rank1 > self.rank0 {
+                self.sparse_equals::<true>(other)
+            } else {
+                self.sparse_equals::<false>(other)
+            }
+        } else {
+            self.full_equals(other)
+        }
+    }
+}
 
 /// An iterator that iterates over 1-bits or 0-bits and returns their indices.
 /// It uses the select data structures to speed up iteration.
