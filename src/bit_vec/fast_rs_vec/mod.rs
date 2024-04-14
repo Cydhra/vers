@@ -577,7 +577,6 @@ impl RsVec {
     ///
     /// This method is faster than [`full_equals`] for sparse vectors beginning at roughly 1
     /// million bits. Above 4 million bits, this method becomes faster than full equality in general.
-    // TODO benchmark on other machines to verify these thresholds
     ///
     /// # Parameters
     /// - `other`: The other `RsVec` to compare to.
