@@ -603,7 +603,7 @@ impl RsVec {
             }
         }
 
-        return true;
+        true
     }
 
     /// Check if two `RsVec`s are equal. This compares limb by limb. This is usually faster than a
@@ -617,14 +617,20 @@ impl RsVec {
             return false;
         }
 
-        if self.data[..self.len / 64].iter().zip(other.data[..other.len / 64].iter()).any(|(a, b)| a != b) {
+        if self.data[..self.len / 64]
+            .iter()
+            .zip(other.data[..other.len / 64].iter())
+            .any(|(a, b)| a != b)
+        {
             return false;
         }
 
-        if self.len % 64 > 0 {
-            if self.data[self.len / 64] & ((1 << (self.len % 64)) - 1) != other.data[self.len / 64] & ((1 << (other.len % 64)) - 1) {
-                return false;
-            }
+        // if last incomplete block exists, test it without junk data
+        if self.len % 64 > 0
+            && self.data[self.len / 64] & ((1 << (self.len % 64)) - 1)
+                != other.data[self.len / 64] & ((1 << (other.len % 64)) - 1)
+        {
+            return false;
         }
 
         true
@@ -644,7 +650,6 @@ impl RsVec {
 impl_iterator! { RsVec, RsVecIter, RsVecRefIter }
 
 impl PartialEq for RsVec {
-
     /// Check if two `RsVec`s are equal. This method calls [`sparse_equals`] if the vector has more
     /// than 4'000'000 bits, and [`full_equals`] otherwise.
     ///

@@ -714,4 +714,3 @@ fn test_full_equals() {
 
     assert_eq!(rs1.full_equals(&rs2), false);
 }
-
