@@ -22,24 +22,8 @@ criterion = { version = "0.5.1", features = ["html_reports"] }
 rand = { version = "0.8", features = ["alloc"] }
 plotters = "0.3.5"
 
-# comparison benchmarks libraries
-rsdict = { version = "0.0.7" }
-bio = "1.6"
-bv = "0.11"
-fid = "0.1"
-indexed_bitvec = "4.0"
-succinct = "0.5"
-elias-fano = "1.1"
-range_minimum_query = "0.1"
-librualg = "0.29"
-sucds = "0.8"
-
 [[bench]]
 name = "rank_benchmark"
-harness = false
-
-[[bench]]
-name = "comparison_benchmark"
 harness = false
 
 [[bench]]
@@ -60,14 +44,6 @@ harness = false
 
 [[bench]]
 name = "worst_ef_benchmark"
-harness = false
-
-[[bench]]
-name = "ef_comparison_benchmark"
-harness = false
-
-[[bench]]
-name = "rmq_comparison_benchmark"
 harness = false
 
 [[bench]]
