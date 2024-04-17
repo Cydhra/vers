@@ -650,6 +650,28 @@ fn test_sparse_equals() {
             );
         }
     }
+
+    let mut bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+
+    let rs1 = RsVec::from_bit_vec(bv.clone());
+    let rs2 = RsVec::from_bit_vec(bv.clone());
+
+    assert_eq!(rs1.sparse_equals::<false>(&rs2), true);
+    assert_eq!(rs1.sparse_equals::<true>(&rs2), true);
+
+    bv.flip_bit(3);
+    let rs2 = RsVec::from_bit_vec(bv.clone());
+
+    assert_eq!(rs1.sparse_equals::<false>(&rs2), false);
+    assert_eq!(rs1.sparse_equals::<true>(&rs2), false);
+
+    bv.flip_bit(3);
+    bv.flip_bit(2 * SUPER_BLOCK_SIZE - 1);
+    let rs1 = RsVec::from_bit_vec(bv.clone());
+
+    assert_eq!(rs1.sparse_equals::<false>(&rs2), false);
+    assert_eq!(rs1.sparse_equals::<true>(&rs2), false);
 }
 
 #[test]
@@ -672,5 +694,24 @@ fn test_full_equals() {
             );
         }
     }
+
+    let mut bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+
+    let rs1 = RsVec::from_bit_vec(bv.clone());
+    let rs2 = RsVec::from_bit_vec(bv.clone());
+
+    assert_eq!(rs1.full_equals(&rs2), true);
+
+    bv.flip_bit(3);
+    let rs2 = RsVec::from_bit_vec(bv.clone());
+
+    assert_eq!(rs1.full_equals(&rs2), false);
+
+    bv.flip_bit(3);
+    bv.flip_bit(2 * SUPER_BLOCK_SIZE - 1);
+    let rs1 = RsVec::from_bit_vec(bv.clone());
+
+    assert_eq!(rs1.full_equals(&rs2), false);
 }
 
