@@ -651,3 +651,26 @@ fn test_sparse_equals() {
         }
     }
 }
+
+#[test]
+fn test_full_equals() {
+    for a in 0..u8::MAX as u64 {
+        for b in 0..u8::MAX as u64 {
+            let mut bv1 = BitVec::with_capacity(8);
+            let mut bv2 = BitVec::with_capacity(8);
+            bv1.append_bits(a, 9);
+            bv2.append_bits(b, 9);
+            let rs1 = RsVec::from_bit_vec(bv1);
+            let rs2 = RsVec::from_bit_vec(bv2);
+
+            assert_eq!(
+                rs1.full_equals(&rs2),
+                a == b,
+                "full_equals gives wrong result for a = {}, b = {}",
+                a,
+                b
+            );
+        }
+    }
+}
+

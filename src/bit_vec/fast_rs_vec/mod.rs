@@ -621,11 +621,13 @@ impl RsVec {
             return false;
         }
 
-        if self.data.last().unwrap() & ((1 << (self.len % 64)) - 1) != other.data.last().unwrap() & ((1 << (other.len % 64)) - 1) {
-            return false;
+        if self.len % 64 > 0 {
+            if self.data[self.len / 64] & ((1 << (self.len % 64)) - 1) != other.data[self.len / 64] & ((1 << (other.len % 64)) - 1) {
+                return false;
+            }
         }
 
-        return true;
+        true
     }
 
     /// Returns the number of bytes used on the heap for this vector. This does not include
