@@ -51,10 +51,6 @@ name = "rmq_benchmark"
 harness = false
 
 [[bench]]
-name = "rsvec_iter_benchmark"
-harness = false
-
-[[bench]]
 name = "sparse_equals"
 harness = false
 
