@@ -6,13 +6,13 @@ mod common;
 fn bench_select_iter(b: &mut Criterion) {
     let mut rng = rand::thread_rng();
 
-    let mut group = b.benchmark_group("Select Iterator Benchmark: Randomized Input");
+    let mut group = b.benchmark_group("Select Iterator: Randomized Input");
     group.plot_config(common::plot_config());
 
     for l in common::SIZES {
         let bit_vec = common::construct_vers_vec(&mut rng, l);
 
-        group.bench_with_input(BenchmarkId::new("select", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("select queries", l), &l, |b, _| {
             b.iter_custom(|iters| {
                 let mut time = Duration::new(0, 0);
                 let mut i = 0usize;
@@ -29,7 +29,7 @@ fn bench_select_iter(b: &mut Criterion) {
             })
         });
 
-        group.bench_with_input(BenchmarkId::new("select iter", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("select iterator", l), &l, |b, _| {
             b.iter_custom(|iters| {
                 let mut time = Duration::new(0, 0);
                 let mut i = 0;

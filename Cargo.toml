@@ -23,35 +23,35 @@ rand = { version = "0.8", features = ["alloc"] }
 plotters = "0.3.5"
 
 [[bench]]
-name = "rank_benchmark"
+name = "rank"
 harness = false
 
 [[bench]]
-name = "select_benchmark"
+name = "select"
 harness = false
 
 [[bench]]
-name = "select_iter_benchmark"
+name = "select_iter"
 harness = false
 
 [[bench]]
-name = "worst_select_benchmark"
-harness = false
-
-[[bench]]
-name = "elias_fano_benchmark"
-harness = false
-
-[[bench]]
-name = "worst_ef_benchmark"
-harness = false
-
-[[bench]]
-name = "rmq_benchmark"
+name = "select_adversarial"
 harness = false
 
 [[bench]]
 name = "sparse_equals"
+harness = false
+
+[[bench]]
+name = "elias_fano"
+harness = false
+
+[[bench]]
+name = "elias_fano_adversarial"
+harness = false
+
+[[bench]]
+name = "rmq"
 harness = false
 
 [profile.bench]
