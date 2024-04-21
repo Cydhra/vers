@@ -1,3 +1,7 @@
+#![cfg_attr(
+    all(feature = "simd", target_arch = "x86_64", target_feature = "avx2"),
+    feature(stdarch_x86_avx512)
+)]
 #![warn(missing_docs)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::assertions_on_constants)] // for asserts warning about incompatible constant values
@@ -45,7 +49,10 @@ pub use bit_vec::BitVec;
 pub use rmq::binary_rmq::BinaryRmq;
 pub use rmq::fast_rmq::FastRmq;
 
-#[forbid(unsafe_code)]
+#[cfg_attr(
+    not(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2")),
+    forbid(unsafe_code)
+)]
 pub mod bit_vec;
 
 #[forbid(unsafe_code)]
@@ -54,5 +61,4 @@ pub mod elias_fano;
 #[forbid(unsafe_code)]
 pub mod rmq;
 
-#[allow(unsafe_code)]
 pub(crate) mod util;

@@ -21,6 +21,9 @@ serde = { version = "1.0", optional = true, features = ["derive"] }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 rand = { version = "0.8", features = ["alloc"] }
 
+[features]
+simd = []
+
 [[bench]]
 name = "rank"
 harness = false

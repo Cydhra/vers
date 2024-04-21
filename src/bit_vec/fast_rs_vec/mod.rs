@@ -1,13 +1,15 @@
 //! A fast succinct bit vector implementation with rank and select queries. Rank computes in
 //! constant-time, select on average in constant-time, with a logarithmic worst case.
 
-use super::WORD_SIZE;
-use crate::util::pdep::Pdep;
-use crate::util::{impl_iterator, unroll};
-use crate::BitVec;
 use std::iter::FusedIterator;
 use std::mem::size_of;
 use std::num::NonZeroUsize;
+
+use crate::util::pdep::Pdep;
+use crate::util::{impl_iterator, unroll};
+use crate::BitVec;
+
+use super::WORD_SIZE;
 
 /// Size of a block in the bitvector.
 const BLOCK_SIZE: usize = 512;
@@ -245,6 +247,7 @@ impl RsVec {
     /// If the rank is larger than the number of 0-bits in the vector, the vector length is returned.
     #[must_use]
     #[allow(clippy::assertions_on_constants)]
+    #[inline(never)]
     pub fn select0(&self, mut rank: usize) -> usize {
         if rank >= self.rank0 {
             return self.len;
@@ -278,18 +281,15 @@ impl RsVec {
 
         // full binary search for block that contains the rank, manually loop-unrolled, because
         // LLVM doesn't do it for us, but it gains just under 20% performance
-        let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+        // however this code relies on the fact that 16 blocks are in one superblock
         debug_assert!(
             SUPER_BLOCK_SIZE / BLOCK_SIZE == 16,
             "change unroll constant to {}",
             64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
         );
-        unroll!(4,
-            |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
-                if self.blocks.len() > block_index + boundary && rank >= self.blocks[block_index + boundary].zeros as usize {
-                    block_index += boundary;
-                },
-            boundary /= 2);
+
+        let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+        self.search_block0(rank, &mut block_index);
 
         rank -= self.blocks[block_index].zeros as usize;
 
@@ -318,6 +318,44 @@ impl RsVec {
             + (1 << rank)
                 .pdep(!self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
                 .trailing_zeros() as usize
+    }
+
+    #[cfg(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2"))]
+    #[inline(always)]
+    fn search_block0(&self, rank: usize, block_index: &mut usize) {
+        use std::arch::x86_64::{_mm256_cmpgt_epu16_mask, _mm256_loadu_epi16, _mm256_set1_epi16};
+
+        if self.blocks.len() > *block_index + (SUPER_BLOCK_SIZE / BLOCK_SIZE) {
+            unsafe {
+                let blocks = _mm256_loadu_epi16(self.blocks[*block_index..].as_ptr() as *const i16);
+                let ranks = _mm256_set1_epi16(rank as i16);
+                let mask = _mm256_cmpgt_epu16_mask(blocks, ranks);
+
+                debug_assert!(
+                    mask.count_zeros() > 0,
+                    "first block should always be zero, but still claims to be greater than rank"
+                );
+                *block_index += mask.count_zeros() as usize - 1;
+            }
+        } else {
+            unroll!(4,
+            |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
+                if self.blocks.len() > *block_index + boundary && rank >= self.blocks[*block_index + boundary].zeros as usize {
+                    *block_index += boundary;
+                },
+            boundary /= 2);
+        }
+    }
+
+    #[cfg(not(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2")))]
+    #[inline(always)]
+    fn search_block0(&self, rank: usize, block_index: &mut usize) {
+        unroll!(4,
+            |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
+                if self.blocks.len() > *block_index + boundary && rank >= self.blocks[*block_index + boundary].zeros as usize {
+                    *block_index += boundary;
+                },
+            boundary /= 2);
     }
 
     /// Return the position of the 1-bit with the given rank. See `rank1`.
