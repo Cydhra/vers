@@ -1,3 +1,4 @@
+use std::num::NonZeroUsize;
 use super::*;
 use rand::distributions::{Distribution, Uniform};
 use rand::rngs::StdRng;

@@ -73,7 +73,7 @@ impl RsVec {
 ///
 /// [`bit_set_iter0`]: RsVec::bit_set_iter0
 /// [`bit_set_iter1`]: RsVec::bit_set_iter1
-/// [`SelectIter`]: RsVec::SelectIter
+/// [`SelectIter`]: super::SelectIter
 pub struct BitSetIter<'a, const ZERO: bool> {
     vec: &'a RsVec,
     base: usize,
