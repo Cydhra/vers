@@ -3,15 +3,14 @@
 //! It only exists with the `simd` feature enabled, and since it is slower for sparse vectors,
 //! it is not used as a replacement for the `iter1`/`iter0` methods.
 
-use std::mem::size_of;
 use crate::RsVec;
+use std::mem::size_of;
 
 /// The number of bits in a RsVec that can be processed by AVX instructions at once.
 const VECTOR_SIZE: usize = 16;
 
 // add iterator functions to RsVec
 impl RsVec {
-
     /// Get an iterator over the 0-bits in the vector.
     /// The iterator returns the indices of the 0-bits in the vector, just as [`iter0`]
     /// and [`select0`] do.
@@ -110,10 +109,9 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
                 mask = !mask;
             }
             _mm512_mask_compressstoreu_epi32(self.offsets.as_mut_ptr() as *mut _, mask, offsets);
+            self.content_len = mask.count_ones() as u8;
+            self.cursor = 0;
         }
-
-        self.content_len = data.count_ones() as u8;
-        self.cursor = 0;
     }
 
     fn load_next_chunk(&mut self) -> Option<()> {
