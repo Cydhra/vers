@@ -23,6 +23,7 @@ rand = { version = "0.8", features = ["alloc"] }
 
 [features]
 simd = []
+docsrs = [] # special feature for docs.rs to enable doc_auto_cfg on nightly
 
 [[bench]]
 name = "rank"
