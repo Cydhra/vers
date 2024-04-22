@@ -421,7 +421,9 @@ impl RsVec {
     /// - `ZERO`: Whether to compare the sparse 0-bits (true) or the sparse 1-bits (false).
     ///
     /// # Returns
-    /// `true` if the vectors are equal, `false` otherwise.
+    /// `true` if the vectors' contents are equal, `false` otherwise.
+    ///
+    /// [`full_equals`]: RsVec::full_equals
     pub fn sparse_equals<const ZERO: bool>(&self, other: &Self) -> bool {
         if self.len() != other.len() {
             return false;
@@ -446,6 +448,14 @@ impl RsVec {
 
     /// Check if two `RsVec`s are equal. This compares limb by limb. This is usually faster than a
     /// [`sparse_equals`] call for small vectors.
+    ///
+    /// # Parameters
+    /// - `other`: The other `RsVec` to compare to.
+    ///
+    /// # Returns
+    /// `true` if the vectors' contents are equal, `false` otherwise.
+    ///
+    /// [`sparse_equals`]: RsVec::sparse_equals
     pub fn full_equals(&self, other: &Self) -> bool {
         if self.len() != other.len() {
             return false;
@@ -493,6 +503,15 @@ impl PartialEq for RsVec {
     ///
     /// This was determined with benchmarks on an `x86_64` machine,
     /// on which [`sparse_equals`] outperforms [`full_equals`] consistently above this threshold.
+    ///
+    /// # Parameters
+    /// - `other`: The other `RsVec` to compare to.
+    ///
+    /// # Returns
+    /// `true` if the vectors' contents are equal, `false` otherwise.
+    ///
+    /// [`sparse_equals`]: RsVec::sparse_equals
+    /// [`full_equals`]: RsVec::full_equals
     fn eq(&self, other: &Self) -> bool {
         if self.len > 4000000 {
             if self.rank1 > self.rank0 {
@@ -652,8 +671,8 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
             }
         }, n += 1);
 
-        // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
-        // block, and thus outside of the bitvector
+        // the last word must contain the rank-th zero bit, otherwise the rank is outside the
+        // block, and thus outside the bitvector
         self.last_word = 7;
         self.next_rank += 1;
         Some(
@@ -782,8 +801,8 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
             }
         }, n += 1);
 
-        // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
-        // block, and thus outside of the bitvector
+        // the last word must contain the rank-th zero bit, otherwise the rank is outside the
+        // block, and thus outside the bitvector
         self.last_word = 7;
         self.next_rank += 1;
         Some(
