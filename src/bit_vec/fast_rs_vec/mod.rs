@@ -625,20 +625,8 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
 
         // if the block index is not zero, we already found the block, and need only update the word
         if block_index == 0 {
-            // full binary search for block that contains the rank, manually loop-unrolled, because
-            // LLVM doesn't do it for us, but it gains just under 20% performance
             block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
-            debug_assert!(
-                SUPER_BLOCK_SIZE / BLOCK_SIZE == 16,
-                "change unroll constant to {}",
-                64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
-            );
-            unroll!(4,
-            |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
-                if self.vec.blocks.len() > block_index + boundary && rank >= self.vec.blocks[block_index + boundary].zeros as usize {
-                    block_index += boundary;
-                },
-            boundary /= 2);
+            self.vec.search_block0(rank, &mut block_index);
 
             self.last_block = block_index;
             rank -= self.vec.blocks[block_index].zeros as usize;
@@ -766,17 +754,8 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
             // LLVM doesn't do it for us, but it gains just under 20% performance
             let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
             block_index = block_at_super_block;
-            debug_assert!(
-                SUPER_BLOCK_SIZE / BLOCK_SIZE == 16,
-                "change unroll constant to {}",
-                64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
-            );
-            unroll!(4,
-            |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
-                if self.vec.blocks.len() > block_index + boundary && rank >= (block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.vec.blocks[block_index + boundary].zeros as usize {
-                    block_index += boundary;
-                }
-            , boundary /= 2);
+            self.vec
+                .search_block1(rank, block_at_super_block, &mut block_index);
 
             self.last_block = block_index;
             rank -= (block_index - block_at_super_block) * BLOCK_SIZE
