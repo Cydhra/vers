@@ -47,6 +47,25 @@ fn bench_select_iter(b: &mut Criterion) {
                 time
             })
         });
+
+        group.bench_with_input(BenchmarkId::new("bitset iterator", l), &l, |b, _| {
+            b.iter_custom(|iters| {
+                let mut time = Duration::new(0, 0);
+                let mut i = 0;
+
+                while i < iters {
+                    let iter = bit_vec.bit_set_iter1().take((iters - i) as usize);
+                    let start = Instant::now();
+                    for e in iter {
+                        black_box(e);
+                        i += 1;
+                    }
+                    time += start.elapsed();
+                }
+
+                time
+            })
+        });
     }
     group.finish();
 }

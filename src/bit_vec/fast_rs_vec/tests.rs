@@ -2,6 +2,7 @@ use super::*;
 use rand::distributions::{Distribution, Uniform};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use std::num::NonZeroUsize;
 
 #[test]
 fn test_append_bit() {
@@ -631,6 +632,72 @@ fn test_select0_iterator() {
     let rs = RsVec::from_bit_vec(bv);
 
     let mut iter = rs.iter0();
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(3));
+    assert_eq!(iter.next(), Some(5));
+    assert_eq!(iter.next(), Some(BLOCK_SIZE));
+    assert_eq!(iter.next(), Some(BLOCK_SIZE + 1));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE - 1));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE + 1));
+    assert_eq!(iter.next(), None);
+}
+
+#[cfg(all(
+    feature = "simd",
+    target_arch = "x86_64",
+    target_feature = "avx",
+    target_feature = "avx2",
+    target_feature = "avx512f",
+    target_feature = "avx512bw",
+))]
+#[test]
+fn test_select1_bs_iterator() {
+    let mut bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(BLOCK_SIZE);
+    bv.flip_bit(BLOCK_SIZE + 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    let mut iter = rs.bit_set_iter1();
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(3));
+    assert_eq!(iter.next(), Some(5));
+    assert_eq!(iter.next(), Some(BLOCK_SIZE));
+    assert_eq!(iter.next(), Some(BLOCK_SIZE + 1));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE - 1));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE + 1));
+    assert_eq!(iter.next(), None);
+}
+
+#[cfg(all(
+    feature = "simd",
+    target_arch = "x86_64",
+    target_feature = "avx",
+    target_feature = "avx2",
+    target_feature = "avx512f",
+    target_feature = "avx512bw",
+))]
+#[test]
+fn test_select0_bs_iterator() {
+    let mut bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(BLOCK_SIZE);
+    bv.flip_bit(BLOCK_SIZE + 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    let mut iter = rs.bit_set_iter0();
     assert_eq!(iter.next(), Some(1));
     assert_eq!(iter.next(), Some(3));
     assert_eq!(iter.next(), Some(5));

@@ -21,6 +21,9 @@ serde = { version = "1.0", optional = true, features = ["derive"] }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 rand = { version = "0.8", features = ["alloc"] }
 
+[features]
+simd = []
+
 [[bench]]
 name = "rank"
 harness = false
@@ -58,5 +61,5 @@ lto = true
 
 [package.metadata.docs.rs]
 all-features = true
-rustc-args = ["-Ctarget-feature=+bmi2,+popcnt"]
-rustdoc-args = ["-Ctarget-feature=+bmi2,+popcnt"]
+rustc-args = ["-C", "target-cpu=native"]
+rustdoc-args = ["-C", "target-cpu=native", "--cfg", "docsrs"]
