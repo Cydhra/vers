@@ -61,5 +61,5 @@ lto = true
 
 [package.metadata.docs.rs]
 all-features = true
-rustc-args = ["-Ctarget-feature=+bmi2,+popcnt"]
-rustdoc-args = ["-Ctarget-feature=+bmi2,+popcnt"]
+rustc-args = ["-C", "target-cpu=native"]
+rustdoc-args = ["-C", "target-cpu=native", "--cfg", "docsrs"]

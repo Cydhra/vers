@@ -92,7 +92,14 @@ impl super::RsVec {
     /// It loads the entire block into a SIMD register and compares the rank to the number of zeros
     /// in the block. The resulting mask is popcounted to find how many blocks from the block boundary
     /// the rank is.
-    #[cfg(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2"))]
+    #[cfg(all(
+        feature = "simd",
+        target_arch = "x86_64",
+        target_feature = "avx",
+        target_feature = "avx2",
+        target_feature = "avx512f",
+        target_feature = "avx512bw",
+    ))]
     #[inline(always)]
     pub(super) fn search_block0(&self, rank: usize, block_index: &mut usize) {
         use std::arch::x86_64::{_mm256_cmpgt_epu16_mask, _mm256_loadu_epi16, _mm256_set1_epi16};
@@ -123,7 +130,14 @@ impl super::RsVec {
     /// Search for the block in a superblock that contains the rank. This function is only used
     /// internally and is not part of the public API.
     /// It compares blocks in a loop-unrolled binary search to find the block that contains the rank.
-    #[cfg(not(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2")))]
+    #[cfg(not(all(
+        feature = "simd",
+        target_arch = "x86_64",
+        target_feature = "avx",
+        target_feature = "avx2",
+        target_feature = "avx512f",
+        target_feature = "avx512bw",
+    )))]
     #[inline(always)]
     pub(super) fn search_block0(&self, rank: usize, block_index: &mut usize) {
         self.search_block0_naive(rank, block_index)
@@ -235,7 +249,14 @@ impl super::RsVec {
     /// It loads the entire block into a SIMD register and compares the rank to the number of ones
     /// in the block. The resulting mask is popcounted to find how many blocks from the block boundary
     /// the rank is.
-    #[cfg(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2"))]
+    #[cfg(all(
+        feature = "simd",
+        target_arch = "x86_64",
+        target_feature = "avx",
+        target_feature = "avx2",
+        target_feature = "avx512f",
+        target_feature = "avx512bw",
+    ))]
     #[inline(always)]
     pub(super) fn search_block1(
         &self,
@@ -295,7 +316,14 @@ impl super::RsVec {
     /// Search for the block in a superblock that contains the rank. This function is only used
     /// internally and is not part of the public API.
     /// It compares blocks in a loop-unrolled binary search to find the block that contains the rank.
-    #[cfg(not(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2")))]
+    #[cfg(not(all(
+        feature = "simd",
+        target_arch = "x86_64",
+        target_feature = "avx",
+        target_feature = "avx2",
+        target_feature = "avx512f",
+        target_feature = "avx512bw",
+    )))]
     #[inline(always)]
     pub(super) fn search_block1(
         &self,

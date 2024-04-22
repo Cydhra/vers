@@ -888,7 +888,28 @@ impl<'a, const ZERO: bool> ExactSizeIterator for SelectIter<'a, ZERO> {
     }
 }
 
+// select code in here to keep it more organized
 mod select;
+
+#[cfg(all(
+    feature = "simd",
+    target_arch = "x86_64",
+    target_feature = "avx",
+    target_feature = "avx2",
+    target_feature = "avx512f",
+    target_feature = "avx512bw",
+))]
+mod bitset;
+
+#[cfg(all(
+    feature = "simd",
+    target_arch = "x86_64",
+    target_feature = "avx",
+    target_feature = "avx2",
+    target_feature = "avx512f",
+    target_feature = "avx512bw",
+))]
+pub use bitset::*;
 
 #[cfg(test)]
 mod tests;

@@ -1,10 +1,18 @@
 #![cfg_attr(
-    all(feature = "simd", target_arch = "x86_64", target_feature = "avx2"),
+    all(
+        feature = "simd",
+        target_arch = "x86_64",
+        target_feature = "avx",
+        target_feature = "avx2",
+        target_feature = "avx512f",
+        target_feature = "avx512bw",
+    ),
     feature(stdarch_x86_avx512)
 )]
 #![warn(missing_docs)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::assertions_on_constants)] // for asserts warning about incompatible constant values
+#![cfg_attr(docsrs, feature(doc_cfg), feature(doc_auto_cfg))] // for conditional compilation in docs
 
 //! This crate provides a collection of data structures supported by fast implementations of
 //! rank and select queries. The data structures are static, meaning that they cannot be modified
@@ -50,7 +58,14 @@ pub use rmq::binary_rmq::BinaryRmq;
 pub use rmq::fast_rmq::FastRmq;
 
 #[cfg_attr(
-    not(all(feature = "simd", target_arch = "x86_64", target_feature = "avx2")),
+    not(all(
+        feature = "simd",
+        target_arch = "x86_64",
+        target_feature = "avx",
+        target_feature = "avx2",
+        target_feature = "avx512f",
+        target_feature = "avx512bw",
+    )),
     forbid(unsafe_code)
 )]
 pub mod bit_vec;
