@@ -145,7 +145,7 @@ impl<const ZERO: bool> Iterator for BitSetIter<'_, ZERO> {
                         self.base += 1;
                     }
                 } else {
-                    while self.base < self.vec.len() && self.vec.get_unchecked(self.base) == 1 {
+                    while self.base < self.vec.len() && self.vec.get_unchecked(self.base) != 1 {
                         self.base += 1;
                     }
                 }
