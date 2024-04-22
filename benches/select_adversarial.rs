@@ -1,5 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use rand::thread_rng;
+use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
+use rand::distributions::Uniform;
+use rand::{thread_rng, Rng};
 use vers_vecs::{BitVec, RsVec};
 
 mod common;
@@ -14,15 +15,26 @@ fn select_worst_case(b: &mut Criterion) {
 
         // uniformly distributed sequence
         let bit_vec = common::construct_vers_vec(&mut rng, length);
+        let uniform_sample = Uniform::new(
+            bit_vec.rank0(bit_vec.len()) / 4 * 3,
+            bit_vec.rank0(bit_vec.len()),
+        );
         group.bench_with_input(
             BenchmarkId::new("uniform input", length),
             &length,
-            |b, _| b.iter(|| black_box(bit_vec.select1((1 << 13) - 1))),
+            |b, _| {
+                b.iter_batched(
+                    || rng.sample(uniform_sample),
+                    |e| black_box(bit_vec.select1(e)),
+                    BatchSize::SmallInput,
+                )
+            },
         );
         drop(bit_vec);
 
         // construct a vector with only one select block and put its last one bit at the end
         // of the vector
+
         let mut bit_vec = BitVec::with_capacity(length / 64);
         for _ in 0..(1usize << 13) / 64 - 1 {
             bit_vec.append_word(u64::MAX);
