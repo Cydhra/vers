@@ -622,3 +622,64 @@ fn test_select_iter_custom_impls() {
     );
     assert_eq!(iter.count(), 8);
 }
+
+#[test]
+fn test_construction() {
+    static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
+    let mut bv = BitVec::with_capacity(LENGTH);
+    let mut rng = StdRng::from_seed([
+        0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
+        6, 7,
+    ]);
+    let sample = Uniform::new(0, 2);
+
+    for _ in 0..LENGTH {
+        bv.append_bit(sample.sample(&mut rng));
+    }
+
+    let bv = RsVec::from_bit_vec(bv);
+    assert_eq!(bv.len(), LENGTH);
+
+    let mut zero_counter = 0u32;
+    for (block_index, block) in bv.blocks.iter().enumerate() {
+        if block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE) == 0 {
+            zero_counter = 0;
+        }
+        assert_eq!(zero_counter, block.zeros as u32, "zero count mismatch in block {} of {}", block_index, bv.blocks.len());
+        for word in bv.data[block_index * BLOCK_SIZE / WORD_SIZE..].iter().take(BLOCK_SIZE / WORD_SIZE) {
+            zero_counter += word.count_zeros();
+        }
+    }
+}
+
+// Github issue https://github.com/Cydhra/vers/issues/6 regression test
+#[test]
+fn test_select_iter_regression_i6() {
+    static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
+    let mut bv = BitVec::with_capacity(LENGTH);
+    let mut rng = StdRng::from_seed([
+        0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
+        6, 7,
+    ]);
+    let sample = Uniform::new(0, 2);
+    
+    for _ in 0..LENGTH {
+        bv.append_bit(sample.sample(&mut rng));
+    }
+
+    let bv = RsVec::from_bit_vec(bv);
+
+    assert_eq!(bv.len(), LENGTH);
+
+    for bit1 in bv.iter1() {
+        assert_eq!(bv.get(bit1), Some(1));
+    }
+
+    for bit0 in bv.iter0() {
+        assert_eq!(bv.get(bit0), Some(0));
+    }
+
+    let mut all_bits: Vec<_> = bv.iter0().chain(bv.iter1()).collect();
+    all_bits.sort();
+    assert_eq!(all_bits.len(), LENGTH);
+}
