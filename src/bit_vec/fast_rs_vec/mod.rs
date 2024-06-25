@@ -650,7 +650,7 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
             // OR if the next block has a rank higher than the current rank
             if self.last_block % (SUPER_BLOCK_SIZE / BLOCK_SIZE) == 15
                 || self.vec.blocks.len() > self.last_block + 1
-                && self.vec.blocks[self.last_block + 1].zeros as usize > rank
+                    && self.vec.blocks[self.last_block + 1].zeros as usize > rank
             {
                 // instantly jump to the last searched position
                 block_index = self.last_block;

@@ -645,8 +645,17 @@ fn test_construction() {
         if block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE) == 0 {
             zero_counter = 0;
         }
-        assert_eq!(zero_counter, block.zeros as u32, "zero count mismatch in block {} of {}", block_index, bv.blocks.len());
-        for word in bv.data[block_index * BLOCK_SIZE / WORD_SIZE..].iter().take(BLOCK_SIZE / WORD_SIZE) {
+        assert_eq!(
+            zero_counter,
+            block.zeros as u32,
+            "zero count mismatch in block {} of {}",
+            block_index,
+            bv.blocks.len()
+        );
+        for word in bv.data[block_index * BLOCK_SIZE / WORD_SIZE..]
+            .iter()
+            .take(BLOCK_SIZE / WORD_SIZE)
+        {
             zero_counter += word.count_zeros();
         }
     }
@@ -662,7 +671,7 @@ fn test_select_iter_regression_i6() {
         6, 7,
     ]);
     let sample = Uniform::new(0, 2);
-    
+
     for _ in 0..LENGTH {
         bv.append_bit(sample.sample(&mut rng));
     }
