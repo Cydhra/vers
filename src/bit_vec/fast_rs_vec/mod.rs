@@ -609,9 +609,6 @@ pub struct SelectIter<'a, const ZERO: bool> {
 
     /// the last index in the block structure where we found a bit
     last_block: usize,
-
-    /// the last offset from the last block boundary (0-7) where we found a bit
-    last_word: usize,
 }
 
 impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
@@ -622,7 +619,6 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
             next_rank: 0,
             last_super_block: 0,
             last_block: 0,
-            last_word: 0,
         }
     }
 
@@ -655,19 +651,6 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
                 // instantly jump to the last searched position
                 block_index = self.last_block;
                 rank -= self.vec.blocks[block_index].zeros as usize;
-
-                // check if the current word contains the one and if yes, we don't need to search
-                let word = self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + self.last_word];
-                if (word.count_zeros() as usize) > rank {
-                    self.next_rank += 1;
-                    return Some(
-                        block_index * BLOCK_SIZE
-                            + self.last_word * WORD_SIZE
-                            + (1 << rank).pdep(!word).trailing_zeros() as usize,
-                    );
-                }
-
-                // otherwise we continue select as normal
             }
         } else {
             let mut upper_bound = self.vec.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0;
@@ -725,7 +708,6 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
                 rank -= word.count_zeros() as usize;
                 index_counter += WORD_SIZE;
             } else {
-                self.last_word = n;
                 self.next_rank += 1;
                 return Some(block_index * BLOCK_SIZE
                     + index_counter
@@ -735,7 +717,6 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
 
         // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
         // block, and thus outside of the bitvector
-        self.last_word = 7;
         self.next_rank += 1;
         Some(
             block_index * BLOCK_SIZE
@@ -784,19 +765,6 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
                 let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
                 rank -= (block_index - block_at_super_block) * BLOCK_SIZE
                     - self.vec.blocks[block_index].zeros as usize;
-
-                // check if the current word contains the one and if yes, we don't need to search
-                let word = self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + self.last_word];
-                if (word.count_ones() as usize) > rank {
-                    self.next_rank += 1;
-                    return Some(
-                        block_index * BLOCK_SIZE
-                            + self.last_word * WORD_SIZE
-                            + (1 << rank).pdep(word).trailing_zeros() as usize,
-                    );
-                }
-
-                // otherwise we continue select as normal
             }
         } else {
             // search for the super block that contains the rank beginning from the super block
@@ -869,7 +837,6 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
                 rank -= word.count_ones() as usize;
                 index_counter += WORD_SIZE;
             } else {
-                self.last_word = n;
                 self.next_rank += 1;
                 return Some(block_index * BLOCK_SIZE
                     + index_counter
@@ -879,7 +846,6 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
 
         // the last word must contain the rank-th zero bit, otherwise the rank is outside the
         // block, and thus outside the bitvector
-        self.last_word = 7;
         self.next_rank += 1;
         Some(
             block_index * BLOCK_SIZE

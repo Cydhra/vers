@@ -663,7 +663,7 @@ fn test_construction() {
 
 // Github issue https://github.com/Cydhra/vers/issues/6 regression test
 #[test]
-fn test_select_iter_regression_i6() {
+fn test_iter1_regression_i6() {
     static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
     let mut bv = BitVec::with_capacity(LENGTH);
     let mut rng = StdRng::from_seed([
