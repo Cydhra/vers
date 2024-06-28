@@ -1,10 +1,10 @@
-use std::iter::FusedIterator;
-use std::num::NonZeroUsize;
 use crate::bit_vec::fast_rs_vec::{BLOCK_SIZE, SELECT_BLOCK_SIZE, SUPER_BLOCK_SIZE};
 use crate::bit_vec::WORD_SIZE;
-use crate::RsVec;
 use crate::util::pdep::Pdep;
 use crate::util::unroll;
+use crate::RsVec;
+use std::iter::FusedIterator;
+use std::num::NonZeroUsize;
 
 impl RsVec {
     /// Get an iterator over the bits in the vector. The iterator will return the indices of the
@@ -115,8 +115,12 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
             rank -= self.vec.super_blocks[super_block].zeros;
 
             // check if current block contains the one and if yes, we don't need to search
-            if self.vec.blocks.len() > self.last_block + 1
-                && self.vec.blocks[self.last_block + 1].zeros as usize > rank
+            // this is true IF the last_block is either the last block in a super block,
+            // in which case it must be this block, because we know the rank is within the super block,
+            // OR if the next block has a rank higher than the current rank
+            if self.last_block % (SUPER_BLOCK_SIZE / BLOCK_SIZE) == 15
+                || self.vec.blocks.len() > self.last_block + 1
+                    && self.vec.blocks[self.last_block + 1].zeros as usize > rank
             {
                 // instantly jump to the last searched position
                 block_index = self.last_block;
@@ -195,8 +199,8 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
             block_index * BLOCK_SIZE
                 + index_counter
                 + (1 << rank)
-                .pdep(!self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
-                .trailing_zeros() as usize,
+                    .pdep(!self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
+                    .trailing_zeros() as usize,
         )
     }
 
@@ -215,18 +219,23 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
         // check if the last super block still contains the rank, and if yes, we don't need to search
         if self.vec.super_blocks.len() > (self.last_super_block + 1)
             && (self.last_super_block + 1) * SUPER_BLOCK_SIZE
-            - self.vec.super_blocks[self.last_super_block + 1].zeros
-            > rank
+                - self.vec.super_blocks[self.last_super_block + 1].zeros
+                > rank
         {
             // instantly jump to the last searched position
             super_block = self.last_super_block;
+            let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
             rank -= super_block * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
 
             // check if current block contains the one and if yes, we don't need to search
-            if self.vec.blocks.len() > self.last_block + 1
-                && (self.last_block + 1) * BLOCK_SIZE
-                - self.vec.blocks[self.last_block + 1].zeros as usize
-                > rank
+            // this is true IF the last_block is either the last block in a super block,
+            // in which case it must be this block, because we know the rank is within the super block,
+            // OR if the next block has a rank higher than the current rank
+            if self.last_block % (SUPER_BLOCK_SIZE / BLOCK_SIZE) == 15
+                || self.vec.blocks.len() > self.last_block + 1
+                    && (self.last_block + 1 - block_at_super_block) * BLOCK_SIZE
+                        - self.vec.blocks[self.last_block + 1].zeros as usize
+                        > rank
             {
                 // instantly jump to the last searched position
                 block_index = self.last_block;
@@ -252,8 +261,8 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
             // returned by the select_blocks vector
             if self.vec.super_blocks.len() > (super_block + 1)
                 && ((super_block + 1) * SUPER_BLOCK_SIZE
-                - self.vec.super_blocks[super_block + 1].zeros)
-                <= rank
+                    - self.vec.super_blocks[super_block + 1].zeros)
+                    <= rank
             {
                 let mut upper_bound = self.vec.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
 
@@ -273,8 +282,8 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
             // linear search for super block that contains the rank
             while self.vec.super_blocks.len() > (super_block + 1)
                 && ((super_block + 1) * SUPER_BLOCK_SIZE
-                - self.vec.super_blocks[super_block + 1].zeros)
-                <= rank
+                    - self.vec.super_blocks[super_block + 1].zeros)
+                    <= rank
             {
                 super_block += 1;
             }
@@ -325,8 +334,8 @@ impl<'a, const ZERO: bool> SelectIter<'a, ZERO> {
             block_index * BLOCK_SIZE
                 + index_counter
                 + (1 << rank)
-                .pdep(self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
-                .trailing_zeros() as usize,
+                    .pdep(self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
+                    .trailing_zeros() as usize,
         )
     }
 
@@ -364,15 +373,15 @@ impl<'a, const ZERO: bool> Iterator for SelectIter<'a, ZERO> {
     }
 
     fn count(self) -> usize
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         self.len()
     }
 
     fn last(mut self) -> Option<Self::Item>
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         if self.len() == 0 {
             None
