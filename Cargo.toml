@@ -19,63 +19,42 @@ serde = { version = "1.0", optional = true, features = ["derive"] }
 [dev-dependencies]
 # benchmarking
 criterion = { version = "0.5.1", features = ["html_reports"] }
-rand = "0.8"
-plotters = "0.3.5"
+rand = { version = "0.8", features = ["alloc"] }
 
-# comparison benchmarks libraries
-rsdict = { version = "0.0.7" }
-bio = "1.6"
-bv = "0.11"
-fid = "0.1"
-indexed_bitvec = "4.0"
-succinct = "0.5"
-elias-fano = "1.1"
-range_minimum_query = "0.1"
-librualg = "0.29"
-sucds = "0.8"
+[features]
+simd = []
+docsrs = [] # special feature for docs.rs to enable doc_auto_cfg on nightly
 
 [[bench]]
-name = "rank_benchmark"
+name = "rank"
 harness = false
 
 [[bench]]
-name = "comparison_benchmark"
+name = "select"
 harness = false
 
 [[bench]]
-name = "select_benchmark"
+name = "select_iter"
 harness = false
 
 [[bench]]
-name = "select_iter_benchmark"
+name = "select_adversarial"
 harness = false
 
 [[bench]]
-name = "worst_select_benchmark"
+name = "sparse_equals"
 harness = false
 
 [[bench]]
-name = "elias_fano_benchmark"
+name = "elias_fano"
 harness = false
 
 [[bench]]
-name = "worst_ef_benchmark"
+name = "elias_fano_adversarial"
 harness = false
 
 [[bench]]
-name = "ef_comparison_benchmark"
-harness = false
-
-[[bench]]
-name = "rmq_comparison_benchmark"
-harness = false
-
-[[bench]]
-name = "rmq_benchmark"
-harness = false
-
-[[bench]]
-name = "rsvec_iter_benchmark"
+name = "rmq"
 harness = false
 
 [profile.bench]
@@ -83,5 +62,5 @@ lto = true
 
 [package.metadata.docs.rs]
 all-features = true
-rustc-args = ["-Ctarget-feature=+bmi2,+popcnt"]
-rustdoc-args = ["-Ctarget-feature=+bmi2,+popcnt"]
+rustc-args = ["-C", "target-cpu=native"]
+rustdoc-args = ["-C", "target-cpu=native", "--cfg", "docsrs"]

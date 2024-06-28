@@ -2,6 +2,7 @@ use super::*;
 use rand::distributions::{Distribution, Uniform};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use std::num::NonZeroUsize;
 
 #[test]
 fn test_append_bit() {
@@ -203,7 +204,7 @@ fn test_only_ones_select() {
 }
 
 #[test]
-fn random_data_select() {
+fn random_data_select0() {
     let mut bv = BitVec::with_capacity(LENGTH);
     let mut rng = StdRng::from_seed([
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
@@ -220,11 +221,9 @@ fn random_data_select() {
 
     assert_eq!(bv.len(), LENGTH);
 
-    for _ in 0..100 {
-        // since we need a random rank, do not generate a number within the full length of
-        // the vector, as only approximately half of the bits are set.
-        let rnd_rank = rng.gen_range(0..LENGTH / 2 - BLOCK_SIZE);
-        let actual_index0 = bv.select0(rnd_rank);
+    for _ in 0..500 {
+        let rnd_rank0 = rng.gen_range(0..bv.rank0);
+        let actual_index0 = bv.select0(rnd_rank0);
 
         let data = &bv.data;
         let mut rank_counter = 0;
@@ -233,7 +232,7 @@ fn random_data_select() {
         let mut index = 0;
         loop {
             let zeros = data[index].count_zeros() as usize;
-            if rank_counter + zeros > rnd_rank {
+            if rank_counter + zeros > rnd_rank0 {
                 break;
             } else {
                 rank_counter += zeros;
@@ -245,7 +244,7 @@ fn random_data_select() {
         let mut bit_index = 0;
         loop {
             if data[index] & (1 << bit_index) == 0 {
-                if rank_counter == rnd_rank {
+                if rank_counter == rnd_rank0 {
                     break;
                 } else {
                     rank_counter += 1;
@@ -256,6 +255,61 @@ fn random_data_select() {
         }
 
         assert_eq!(actual_index0, expected_index0);
+    }
+}
+
+#[test]
+fn random_data_select1() {
+    let mut bv = BitVec::with_capacity(LENGTH);
+    let mut rng = StdRng::from_seed([
+        0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
+        6, 7,
+    ]);
+    let sample = Uniform::new(0, 2);
+    static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
+
+    for _ in 0..LENGTH {
+        bv.append_bit_u8(sample.sample(&mut rng) as u8);
+    }
+
+    let bv = RsVec::from_bit_vec(bv);
+
+    assert_eq!(bv.len(), LENGTH);
+
+    for _ in 0..500 {
+        let rnd_rank1 = rng.gen_range(0..bv.rank1);
+        let actual_index1 = bv.select1(rnd_rank1);
+
+        let data = &bv.data;
+        let mut rank_counter = 0;
+        let mut expected_index1 = 0;
+
+        let mut index = 0;
+        loop {
+            let ones = data[index].count_ones() as usize;
+            if rank_counter + ones > rnd_rank1 {
+                break;
+            } else {
+                rank_counter += ones;
+                expected_index1 += WORD_SIZE;
+                index += 1;
+            }
+        }
+
+        let mut bit_index = 0;
+        loop {
+            if data[index] & (1 << bit_index) > 0 {
+                if rank_counter == rnd_rank1 {
+                    break;
+                } else {
+                    rank_counter += 1;
+                }
+            }
+            expected_index1 += 1;
+            bit_index += 1;
+        }
+
+        assert_eq!(actual_index1, expected_index1);
     }
 }
 
@@ -589,6 +643,72 @@ fn test_select0_iterator() {
     assert_eq!(iter.next(), None);
 }
 
+#[cfg(all(
+    feature = "simd",
+    target_arch = "x86_64",
+    target_feature = "avx",
+    target_feature = "avx2",
+    target_feature = "avx512f",
+    target_feature = "avx512bw",
+))]
+#[test]
+fn test_select1_bs_iterator() {
+    let mut bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(BLOCK_SIZE);
+    bv.flip_bit(BLOCK_SIZE + 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    let mut iter = rs.bit_set_iter1();
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(3));
+    assert_eq!(iter.next(), Some(5));
+    assert_eq!(iter.next(), Some(BLOCK_SIZE));
+    assert_eq!(iter.next(), Some(BLOCK_SIZE + 1));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE - 1));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE + 1));
+    assert_eq!(iter.next(), None);
+}
+
+#[cfg(all(
+    feature = "simd",
+    target_arch = "x86_64",
+    target_feature = "avx",
+    target_feature = "avx2",
+    target_feature = "avx512f",
+    target_feature = "avx512bw",
+))]
+#[test]
+fn test_select0_bs_iterator() {
+    let mut bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(BLOCK_SIZE);
+    bv.flip_bit(BLOCK_SIZE + 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    let mut iter = rs.bit_set_iter0();
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(3));
+    assert_eq!(iter.next(), Some(5));
+    assert_eq!(iter.next(), Some(BLOCK_SIZE));
+    assert_eq!(iter.next(), Some(BLOCK_SIZE + 1));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE - 1));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE));
+    assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE + 1));
+    assert_eq!(iter.next(), None);
+}
+
 #[test]
 fn test_empty_select_iterator() {
     let bv = BitVec::new();
@@ -621,6 +741,98 @@ fn test_select_iter_custom_impls() {
         Err(NonZeroUsize::new(2).unwrap())
     );
     assert_eq!(iter.count(), 8);
+}
+
+#[test]
+fn test_sparse_equals() {
+    for a in 0..u8::MAX as u64 {
+        for b in 0..u8::MAX as u64 {
+            let mut bv1 = BitVec::with_capacity(8);
+            let mut bv2 = BitVec::with_capacity(8);
+            bv1.append_bits(a, 9);
+            bv2.append_bits(b, 9);
+            let rs1 = RsVec::from_bit_vec(bv1);
+            let rs2 = RsVec::from_bit_vec(bv2);
+
+            assert_eq!(
+                rs1.sparse_equals::<true>(&rs2),
+                a == b,
+                "sparse_equals::0 gives wrong result for a = {}, b = {}",
+                a,
+                b
+            );
+            assert_eq!(
+                rs1.sparse_equals::<false>(&rs2),
+                a == b,
+                "sparse_equals::1 gives wrong result for a = {}, b = {}",
+                a,
+                b
+            );
+        }
+    }
+
+    let mut bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+
+    let rs1 = RsVec::from_bit_vec(bv.clone());
+    let rs2 = RsVec::from_bit_vec(bv.clone());
+
+    assert_eq!(rs1.sparse_equals::<false>(&rs2), true);
+    assert_eq!(rs1.sparse_equals::<true>(&rs2), true);
+
+    bv.flip_bit(3);
+    let rs2 = RsVec::from_bit_vec(bv.clone());
+
+    assert_eq!(rs1.sparse_equals::<false>(&rs2), false);
+    assert_eq!(rs1.sparse_equals::<true>(&rs2), false);
+
+    bv.flip_bit(3);
+    bv.flip_bit(2 * SUPER_BLOCK_SIZE - 1);
+    let rs1 = RsVec::from_bit_vec(bv.clone());
+
+    assert_eq!(rs1.sparse_equals::<false>(&rs2), false);
+    assert_eq!(rs1.sparse_equals::<true>(&rs2), false);
+}
+
+#[test]
+fn test_full_equals() {
+    for a in 0..u8::MAX as u64 {
+        for b in 0..u8::MAX as u64 {
+            let mut bv1 = BitVec::with_capacity(8);
+            let mut bv2 = BitVec::with_capacity(8);
+            bv1.append_bits(a, 9);
+            bv2.append_bits(b, 9);
+            let rs1 = RsVec::from_bit_vec(bv1);
+            let rs2 = RsVec::from_bit_vec(bv2);
+
+            assert_eq!(
+                rs1.full_equals(&rs2),
+                a == b,
+                "full_equals gives wrong result for a = {}, b = {}",
+                a,
+                b
+            );
+        }
+    }
+
+    let mut bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+
+    let rs1 = RsVec::from_bit_vec(bv.clone());
+    let rs2 = RsVec::from_bit_vec(bv.clone());
+
+    assert_eq!(rs1.full_equals(&rs2), true);
+
+    bv.flip_bit(3);
+    let rs2 = RsVec::from_bit_vec(bv.clone());
+
+    assert_eq!(rs1.full_equals(&rs2), false);
+
+    bv.flip_bit(3);
+    bv.flip_bit(2 * SUPER_BLOCK_SIZE - 1);
+    let rs1 = RsVec::from_bit_vec(bv.clone());
+
+    assert_eq!(rs1.full_equals(&rs2), false);
 }
 
 // fuzzing test for iter1 and iter0 as last ditch fail-safe

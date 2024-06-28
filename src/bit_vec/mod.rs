@@ -104,6 +104,26 @@ impl BitVec {
         bv
     }
 
+    /// Construct a bit vector from a slice of u64 quad words. Since the data is only cloned without
+    /// any masking or transformation, this is one of the fastest ways to create a bit vector.
+    #[must_use]
+    pub fn from_words(words: &[u64]) -> Self {
+        let len = words.len() * WORD_SIZE;
+        Self {
+            data: words.to_vec(),
+            len,
+        }
+    }
+
+    /// Construct a bit vector from a vector of u64 quad words.
+    /// Since the data is moved without any masking or transformation, this is one of the fastest ways
+    /// to create a bit vector.
+    #[must_use]
+    pub fn from_vec(data: Vec<u64>) -> Self {
+        let len = data.len() * WORD_SIZE;
+        Self { data, len }
+    }
+
     /// Append a bit to the bit vector. The bit is given as a boolean, where `true` means 1 and
     /// `false` means 0.
     pub fn append(&mut self, bit: bool) {
