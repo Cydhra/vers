@@ -943,3 +943,21 @@ fn test_iter1_regression_i6() {
     all_bits.sort();
     assert_eq!(all_bits.len(), LENGTH);
 }
+
+// Github issue https://github.com/Cydhra/vers/issues/8 regression test
+#[test]
+fn test_iter1_regression_i8() {
+    let input_on_bits = vec![
+        1, 14, 21, 24, 36, 48, 57, 59, 65, 69, 81, 87, 97, 100, 101, 104, 111, 117,
+    ];
+
+    let mut bv = BitVec::from_zeros(8193);
+
+    for idx in &input_on_bits {
+        bv.set(*idx as usize, 1).unwrap();
+    }
+
+    let bv = RsVec::from_bit_vec(bv);
+    let output_on_bits: Vec<_> = bv.iter1().collect();
+    assert_eq!(input_on_bits, output_on_bits);
+}
