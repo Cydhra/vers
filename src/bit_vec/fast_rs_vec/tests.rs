@@ -834,3 +834,130 @@ fn test_full_equals() {
 
     assert_eq!(rs1.full_equals(&rs2), false);
 }
+
+// fuzzing test for iter1 and iter0 as last ditch fail-safe
+#[test]
+fn test_random_data_iter() {
+    let mut rng = StdRng::from_seed([
+        0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
+        6, 7,
+    ]);
+
+    for fill_ratio in [10, 50, 90] {
+        for length in [
+            BLOCK_SIZE / 2,
+            BLOCK_SIZE,
+            SUPER_BLOCK_SIZE,
+            4 * SUPER_BLOCK_SIZE,
+        ] {
+            for _ in 0..20 {
+                let mut bv = BitVec::with_capacity(length);
+                let sample = Uniform::new(0, 100);
+                for _ in 0..length {
+                    bv.append_bit((sample.sample(&mut rng) < fill_ratio) as u64);
+                }
+
+                let bv = RsVec::from_bit_vec(bv);
+                let output_on_bits: Vec<_> = bv.iter1().collect();
+                let output_off_bits: Vec<_> = bv.iter0().collect();
+
+                for idx in output_on_bits {
+                    assert_eq!(bv.get(idx), Some(1), "bit {} is not 1", idx);
+                }
+
+                for idx in output_off_bits {
+                    assert_eq!(bv.get(idx), Some(0), "bit {} is not 0", idx);
+                }
+            }
+        }
+    }
+}
+
+// test a randomly generated bit vector for correct values in blocks
+#[test]
+fn test_block_layout() {
+    static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
+    let mut bv = BitVec::with_capacity(LENGTH);
+    let mut rng = StdRng::from_seed([
+        0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
+        6, 7,
+    ]);
+    let sample = Uniform::new(0, 2);
+
+    for _ in 0..LENGTH {
+        bv.append_bit(sample.sample(&mut rng));
+    }
+
+    let bv = RsVec::from_bit_vec(bv);
+    assert_eq!(bv.len(), LENGTH);
+
+    let mut zero_counter = 0u32;
+    for (block_index, block) in bv.blocks.iter().enumerate() {
+        if block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE) == 0 {
+            zero_counter = 0;
+        }
+        assert_eq!(
+            zero_counter,
+            block.zeros as u32,
+            "zero count mismatch in block {} of {}",
+            block_index,
+            bv.blocks.len()
+        );
+        for word in bv.data[block_index * BLOCK_SIZE / WORD_SIZE..]
+            .iter()
+            .take(BLOCK_SIZE / WORD_SIZE)
+        {
+            zero_counter += word.count_zeros();
+        }
+    }
+}
+
+// Github issue https://github.com/Cydhra/vers/issues/6 regression test
+#[test]
+fn test_iter1_regression_i6() {
+    static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
+    let mut bv = BitVec::with_capacity(LENGTH);
+    let mut rng = StdRng::from_seed([
+        0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
+        6, 7,
+    ]);
+    let sample = Uniform::new(0, 2);
+
+    for _ in 0..LENGTH {
+        bv.append_bit(sample.sample(&mut rng));
+    }
+
+    let bv = RsVec::from_bit_vec(bv);
+
+    assert_eq!(bv.len(), LENGTH);
+
+    for bit1 in bv.iter1() {
+        assert_eq!(bv.get(bit1), Some(1));
+    }
+
+    for bit0 in bv.iter0() {
+        assert_eq!(bv.get(bit0), Some(0));
+    }
+
+    let mut all_bits: Vec<_> = bv.iter0().chain(bv.iter1()).collect();
+    all_bits.sort();
+    assert_eq!(all_bits.len(), LENGTH);
+}
+
+// Github issue https://github.com/Cydhra/vers/issues/8 regression test
+#[test]
+fn test_iter1_regression_i8() {
+    let input_on_bits = vec![
+        1, 14, 21, 24, 36, 48, 57, 59, 65, 69, 81, 87, 97, 100, 101, 104, 111, 117,
+    ];
+
+    let mut bv = BitVec::from_zeros(8193);
+
+    for idx in &input_on_bits {
+        bv.set(*idx as usize, 1).unwrap();
+    }
+
+    let bv = RsVec::from_bit_vec(bv);
+    let output_on_bits: Vec<_> = bv.iter1().collect();
+    assert_eq!(input_on_bits, output_on_bits);
+}
