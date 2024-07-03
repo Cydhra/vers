@@ -21,6 +21,15 @@ pub type BitMask<'s, 'b> = MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>;
 /// A simple bit vector that does not support rank and select queries. It stores bits densely
 /// in 64 bit limbs. The last limb may be partially filled. Other than that, there is no overhead.
 ///
+/// The bit vector has a wide range of constructors that allow for easy creation from various
+/// sources.
+/// Among them are constructors for creating an empty vector ([`BitVec::new`]),
+/// creating one from single bits of various integer types ([`BitVec::from_bits`]),
+/// creating limbs from u64 values directly ([`BitVec::from_words`]),
+/// or packing a sequence of numerical values into a dense bit sequence ([`BitVec::pack_sequence_u64`]).
+///
+/// The bit vector can be modified after creation.
+///
 /// # Example
 /// ```rust
 /// use vers_vecs::{BitVec, RsVec};
