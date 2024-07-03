@@ -312,6 +312,12 @@ impl BitVec {
         self.append_bit(u64::from(bit));
     }
 
+    /// Append a bit from a u16. The least significant bit is appended to the bit vector.
+    /// All other bits are ignored.
+    pub fn append_bit_u16(&mut self, bit: u16) {
+        self.append_bit(u64::from(bit));
+    }
+
     /// Append a bit from a u8. The least significant bit is appended to the bit vector.
     /// All other bits are ignored.
     pub fn append_bit_u8(&mut self, bit: u8) {
