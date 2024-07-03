@@ -168,6 +168,7 @@ impl BitVec {
     /// assert_eq!(bv.get_bits(4, 4), Some(0b1100u64));
     /// assert_eq!(bv.get_bits(8, 4), Some(0b1111u64));
     /// ```
+    #[must_use]
     pub fn pack_sequence_u64(sequence: &[u64], bits_per_element: usize) -> Self {
         Self::pack_bits::<_, 64>(sequence, bits_per_element)
     }
@@ -195,6 +196,7 @@ impl BitVec {
     /// assert_eq!(bv.get_bits(4, 4), Some(0b1100u64));
     /// assert_eq!(bv.get_bits(8, 4), Some(0b1111u64));
     /// ```
+    #[must_use]
     pub fn pack_sequence_u32(sequence: &[u32], bits_per_element: usize) -> Self {
         Self::pack_bits::<_, 32>(sequence, bits_per_element)
     }
@@ -222,6 +224,7 @@ impl BitVec {
     /// assert_eq!(bv.get_bits(4, 4), Some(0b1100u64));
     /// assert_eq!(bv.get_bits(8, 4), Some(0b1111u64));
     /// ```
+    #[must_use]
     pub fn pack_sequence_u16(sequence: &[u16], bits_per_element: usize) -> Self {
         Self::pack_bits::<_, 16>(sequence, bits_per_element)
     }
@@ -249,6 +252,7 @@ impl BitVec {
     /// assert_eq!(bv.get_bits(4, 4), Some(0b1100u64));
     /// assert_eq!(bv.get_bits(8, 4), Some(0b1111u64));
     /// ```
+    #[must_use]
     pub fn pack_sequence_u8(sequence: &[u8], bits_per_element: usize) -> Self {
         Self::pack_bits::<_, 8>(sequence, bits_per_element)
     }
