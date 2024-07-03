@@ -558,3 +558,39 @@ fn test_pack_u64() {
     assert_eq!(bv.get_bits(195, 64), Some(u64::MAX));
     assert_eq!(bv.get_bits(259, 1), Some(0));
 }
+
+#[test]
+fn test_remaining_packing_constructors() {
+    let bv = BitVec::pack_sequence_u32(&[10, 12, 0, 1000, 1, 0, 1, 0], 10);
+    assert_eq!(bv.len, 80);
+    assert_eq!(bv.get_bits(0, 10), Some(10));
+    assert_eq!(bv.get_bits(10, 10), Some(12));
+    assert_eq!(bv.get_bits(20, 10), Some(0));
+    assert_eq!(bv.get_bits(30, 10), Some(1000));
+    assert_eq!(bv.get_bits(40, 10), Some(1));
+    assert_eq!(bv.get_bits(50, 10), Some(0));
+    assert_eq!(bv.get_bits(60, 10), Some(1));
+    assert_eq!(bv.get_bits(70, 10), Some(0));
+
+    let bv = BitVec::pack_sequence_u16(&[10, 12, 0, 1000, 1, 0, 1, 0], 10);
+    assert_eq!(bv.len, 80);
+    assert_eq!(bv.get_bits(0, 10), Some(10));
+    assert_eq!(bv.get_bits(10, 10), Some(12));
+    assert_eq!(bv.get_bits(20, 10), Some(0));
+    assert_eq!(bv.get_bits(30, 10), Some(1000));
+    assert_eq!(bv.get_bits(40, 10), Some(1));
+    assert_eq!(bv.get_bits(50, 10), Some(0));
+    assert_eq!(bv.get_bits(60, 10), Some(1));
+    assert_eq!(bv.get_bits(70, 10), Some(0));
+
+    let bv = BitVec::pack_sequence_u8(&[10, 12, 0, 100, 1, 0, 1, 0], 10);
+    assert_eq!(bv.len, 80);
+    assert_eq!(bv.get_bits(0, 10), Some(10));
+    assert_eq!(bv.get_bits(10, 10), Some(12));
+    assert_eq!(bv.get_bits(20, 10), Some(0));
+    assert_eq!(bv.get_bits(30, 10), Some(100));
+    assert_eq!(bv.get_bits(40, 10), Some(1));
+    assert_eq!(bv.get_bits(50, 10), Some(0));
+    assert_eq!(bv.get_bits(60, 10), Some(1));
+    assert_eq!(bv.get_bits(70, 10), Some(0));
+}

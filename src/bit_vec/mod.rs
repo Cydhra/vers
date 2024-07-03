@@ -125,6 +125,26 @@ impl BitVec {
         Self { data, len }
     }
 
+    fn pack_bits<T, const MAX_BITS: usize>(sequence: &[T], bits_per_element: usize) -> Self
+    where
+        T: Into<u64> + Copy,
+    {
+        let mut bv = Self::with_capacity(sequence.len() * bits_per_element);
+        for &word in sequence {
+            if bits_per_element <= MAX_BITS {
+                bv.append_bits(word.into(), bits_per_element);
+            } else {
+                bv.append_bits(word.into(), MAX_BITS);
+                let mut rest = bits_per_element - MAX_BITS;
+                while rest > 0 {
+                    bv.append_bits(0, min(rest, MAX_BITS));
+                    rest = rest.saturating_sub(MAX_BITS);
+                }
+            }
+        }
+        bv
+    }
+
     /// Construct a bit vector by packing a sequence of numerical values into a dense sequence.
     /// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
     /// The number of bits per element is given by `bits_per_element`.
@@ -149,20 +169,88 @@ impl BitVec {
     /// assert_eq!(bv.get_bits(8, 4), Some(0b1111u64));
     /// ```
     pub fn pack_sequence_u64(sequence: &[u64], bits_per_element: usize) -> Self {
-        let mut bv = Self::with_capacity(sequence.len() * bits_per_element);
-        for &word in sequence {
-            if bits_per_element <= 64 {
-                bv.append_bits(word, bits_per_element);
-            } else {
-                bv.append_word(word);
-                let mut rest = bits_per_element - 64;
-                while rest > 0 {
-                    bv.append_bits(0, min(rest, 64));
-                    rest = rest.saturating_sub(64);
-                }
-            }
-        }
-        bv
+        Self::pack_bits::<_, 64>(sequence, bits_per_element)
+    }
+
+    /// Construct a bit vector by packing a sequence of numerical values into a dense sequence.
+    /// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
+    /// The number of bits per element is given by `bits_per_element`.
+    /// The sequence is given as a slice of u32 values.
+    /// If the number of bits per element is smaller than 32, the function takes the
+    /// least significant bits of each element, and discards the rest.
+    /// If the number of bits per element is larger than 32, the function will pad the elements
+    /// with zeros.
+    /// The function will append the bits of each element to the bit vector in the order they are
+    /// given in the sequence (i.e. the first element takes bits `0..bits_per_element` of the vector).
+    ///
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::BitVec;
+    ///
+    /// let sequence = [0b1010u32, 0b1100u32, 0b1111u32];
+    /// let bv = BitVec::pack_sequence_u32(&sequence, 4);
+    ///
+    /// assert_eq!(bv.len(), 12);
+    /// assert_eq!(bv.get_bits(0, 4), Some(0b1010u64));
+    /// assert_eq!(bv.get_bits(4, 4), Some(0b1100u64));
+    /// assert_eq!(bv.get_bits(8, 4), Some(0b1111u64));
+    /// ```
+    pub fn pack_sequence_u32(sequence: &[u32], bits_per_element: usize) -> Self {
+        Self::pack_bits::<_, 32>(sequence, bits_per_element)
+    }
+
+    /// Construct a bit vector by packing a sequence of numerical values into a dense sequence.
+    /// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
+    /// The number of bits per element is given by `bits_per_element`.
+    /// The sequence is given as a slice of u16 values.
+    /// If the number of bits per element is smaller than 16, the function takes the
+    /// least significant bits of each element, and discards the rest.
+    /// If the number of bits per element is larger than 16, the function will pad the elements
+    /// with zeros.
+    /// The function will append the bits of each element to the bit vector in the order they are
+    /// given in the sequence (i.e. the first element takes bits `0..bits_per_element` of the vector).
+    ///
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::BitVec;
+    ///
+    /// let sequence = [0b1010u16, 0b1100u16, 0b1111u16];
+    /// let bv = BitVec::pack_sequence_u16(&sequence, 4);
+    ///
+    /// assert_eq!(bv.len(), 12);
+    /// assert_eq!(bv.get_bits(0, 4), Some(0b1010u64));
+    /// assert_eq!(bv.get_bits(4, 4), Some(0b1100u64));
+    /// assert_eq!(bv.get_bits(8, 4), Some(0b1111u64));
+    /// ```
+    pub fn pack_sequence_u16(sequence: &[u16], bits_per_element: usize) -> Self {
+        Self::pack_bits::<_, 16>(sequence, bits_per_element)
+    }
+
+    /// Construct a bit vector by packing a sequence of numerical values into a dense sequence.
+    /// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
+    /// The number of bits per element is given by `bits_per_element`.
+    /// The sequence is given as a slice of u8 values.
+    /// If the number of bits per element is smaller than 8, the function takes the
+    /// least significant bits of each element, and discards the rest.
+    /// If the number of bits per element is larger than 8, the function will pad the elements
+    /// with zeros.
+    /// The function will append the bits of each element to the bit vector in the order they are
+    /// given in the sequence (i.e. the first element takes bits `0..bits_per_element` of the vector).
+    ///
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::BitVec;
+    ///
+    /// let sequence = [0b1010u8, 0b1100u8, 0b1111u8];
+    /// let bv = BitVec::pack_sequence_u8(&sequence, 4);
+    ///
+    /// assert_eq!(bv.len(), 12);
+    /// assert_eq!(bv.get_bits(0, 4), Some(0b1010u64));
+    /// assert_eq!(bv.get_bits(4, 4), Some(0b1100u64));
+    /// assert_eq!(bv.get_bits(8, 4), Some(0b1111u64));
+    /// ```
+    pub fn pack_sequence_u8(sequence: &[u8], bits_per_element: usize) -> Self {
+        Self::pack_bits::<_, 8>(sequence, bits_per_element)
     }
 
     /// Append a bit to the bit vector. The bit is given as a boolean, where `true` means 1 and
