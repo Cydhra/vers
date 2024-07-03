@@ -90,8 +90,8 @@ pub struct RsVec {
     blocks: Vec<BlockDescriptor>,
     super_blocks: Vec<SuperBlockDescriptor>,
     select_blocks: Vec<SelectSuperBlockDescriptor>,
-    rank0: usize,
-    rank1: usize,
+    pub(crate) rank0: usize,
+    pub(crate) rank1: usize,
 }
 
 impl RsVec {

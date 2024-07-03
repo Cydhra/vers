@@ -73,4 +73,7 @@ pub mod elias_fano;
 #[forbid(unsafe_code)]
 pub mod rmq;
 
+#[forbid(unsafe_code)]
+mod wavelet;
+
 pub(crate) mod util;
