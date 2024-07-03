@@ -591,6 +591,10 @@ fn test_get_bits() {
     assert_eq!(rs.get_bits(3 * SUPER_BLOCK_SIZE, 2), None);
     assert_eq!(rs.get_bits(2 * SUPER_BLOCK_SIZE - 10, 12), None);
     assert_eq!(rs.get_bits(0, 64), Some(0b101010));
+
+    let bv = BitVec::from_ones(100);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.get_bits(3, 64), Some(u64::MAX));
 }
 
 #[test]

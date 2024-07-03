@@ -379,8 +379,13 @@ impl RsVec {
         } else if pos % WORD_SIZE + len < WORD_SIZE {
             partial_word & ((1 << (len % WORD_SIZE)) - 1)
         } else {
-            (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
-                & ((1 << (len % WORD_SIZE)) - 1)
+            if len == 64 {
+                return partial_word
+                    | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE));
+            } else {
+                (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
+                    & ((1 << len) - 1)
+            }
         }
     }
 
