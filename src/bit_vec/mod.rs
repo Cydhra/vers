@@ -3,6 +3,7 @@
 
 use crate::bit_vec::mask::MaskedBitVec;
 use crate::util::impl_iterator;
+use std::cmp::min;
 use std::mem::size_of;
 
 pub mod fast_rs_vec;
@@ -122,6 +123,46 @@ impl BitVec {
     pub fn from_vec(data: Vec<u64>) -> Self {
         let len = data.len() * WORD_SIZE;
         Self { data, len }
+    }
+
+    /// Construct a bit vector by packing a sequence of numerical values into a dense sequence.
+    /// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
+    /// The number of bits per element is given by `bits_per_element`.
+    /// The sequence is given as a slice of u64 values.
+    /// If the number of bits per element is smaller than 64, the function takes the
+    /// least significant bits of each element, and discards the rest.
+    /// If the number of bits per element is larger than 64, the function will pad the elements
+    /// with zeros.
+    /// The function will append the bits of each element to the bit vector in the order they are
+    /// given in the sequence (i.e. the first element takes bits `0..bits_per_element` of the vector).
+    ///
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::BitVec;
+    ///
+    /// let sequence = [0b1010u64, 0b1100u64, 0b1111u64];
+    /// let bv = BitVec::pack_sequence_u64(&sequence, 4);
+    ///
+    /// assert_eq!(bv.len(), 12);
+    /// assert_eq!(bv.get_bits(0, 4), Some(0b1010u64));
+    /// assert_eq!(bv.get_bits(4, 4), Some(0b1100u64));
+    /// assert_eq!(bv.get_bits(8, 4), Some(0b1111u64));
+    /// ```
+    pub fn pack_sequence_u64(sequence: &[u64], bits_per_element: usize) -> Self {
+        let mut bv = Self::with_capacity(sequence.len() * bits_per_element);
+        for &word in sequence {
+            if bits_per_element <= 64 {
+                bv.append_bits(word, bits_per_element);
+            } else {
+                bv.append_word(word);
+                let mut rest = bits_per_element - 64;
+                while rest > 0 {
+                    bv.append_bits(0, min(rest, 64));
+                    rest = rest.saturating_sub(64);
+                }
+            }
+        }
+        bv
     }
 
     /// Append a bit to the bit vector. The bit is given as a boolean, where `true` means 1 and

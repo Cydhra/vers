@@ -505,3 +505,56 @@ fn test_from_vec() {
     assert_eq!(bv.len, 0);
     assert_eq!(bv.get_bits(0, 0), None);
 }
+
+#[test]
+fn test_pack_u64() {
+    let bv = BitVec::pack_sequence_u64(&[10, 12, 0, 1000, 1, 0, 1, 0], 10);
+    assert_eq!(bv.len, 80);
+    assert_eq!(bv.get_bits(0, 10), Some(10));
+    assert_eq!(bv.get_bits(10, 10), Some(12));
+    assert_eq!(bv.get_bits(20, 10), Some(0));
+    assert_eq!(bv.get_bits(30, 10), Some(1000));
+    assert_eq!(bv.get_bits(40, 10), Some(1));
+    assert_eq!(bv.get_bits(50, 10), Some(0));
+    assert_eq!(bv.get_bits(60, 10), Some(1));
+    assert_eq!(bv.get_bits(70, 10), Some(0));
+
+    let bv = BitVec::pack_sequence_u64(&[0, 1000, 1, u64::MAX], 8);
+    assert_eq!(bv.len, 32);
+    assert_eq!(bv.get_bits(0, 8), Some(0));
+    assert_eq!(bv.get_bits(8, 8), Some(0b11101000));
+    assert_eq!(bv.get_bits(16, 8), Some(1));
+    assert_eq!(bv.get_bits(24, 8), Some(0b11111111));
+
+    let bv = BitVec::pack_sequence_u64(&[0, 1000, 1, u64::MAX], 0);
+    assert_eq!(bv.len, 0);
+
+    let bv = BitVec::pack_sequence_u64(&[0, 1000, 1, u64::MAX], 64);
+    assert_eq!(bv.len, 256);
+    assert_eq!(bv.get_bits(0, 64), Some(0));
+    assert_eq!(bv.get_bits(64, 64), Some(1000));
+    assert_eq!(bv.get_bits(128, 64), Some(1));
+    assert_eq!(bv.get_bits(192, 64), Some(u64::MAX));
+
+    let bv = BitVec::pack_sequence_u64(&[0, 1, 2, u64::MAX], 128);
+    assert_eq!(bv.len, 512);
+    assert_eq!(bv.get_bits(0, 64), Some(0));
+    assert_eq!(bv.get_bits(64, 64), Some(0));
+    assert_eq!(bv.get_bits(128, 64), Some(1));
+    assert_eq!(bv.get_bits(192, 64), Some(0));
+    assert_eq!(bv.get_bits(256, 64), Some(2));
+    assert_eq!(bv.get_bits(320, 64), Some(0));
+    assert_eq!(bv.get_bits(384, 64), Some(u64::MAX));
+    assert_eq!(bv.get_bits(448, 64), Some(0));
+
+    let bv = BitVec::pack_sequence_u64(&[0, 1, 2, u64::MAX], 65);
+    assert_eq!(bv.len, 260);
+    assert_eq!(bv.get_bits(0, 64), Some(0));
+    assert_eq!(bv.get_bits(64, 1), Some(0));
+    assert_eq!(bv.get_bits(65, 64), Some(1));
+    assert_eq!(bv.get_bits(129, 1), Some(0));
+    assert_eq!(bv.get_bits(130, 64), Some(2));
+    assert_eq!(bv.get_bits(194, 1), Some(0));
+    assert_eq!(bv.get_bits(195, 64), Some(u64::MAX));
+    assert_eq!(bv.get_bits(259, 1), Some(0));
+}
