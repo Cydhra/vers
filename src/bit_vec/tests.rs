@@ -289,6 +289,9 @@ fn test_get_bits() {
     assert_eq!(bv.get_bits(300, 2), None);
     assert_eq!(bv.get_bits(190, 12), None);
     assert_eq!(bv.get_bits(0, 64), Some(0b101010));
+
+    let bv = BitVec::from_ones(200);
+    assert_eq!(bv.get_bits(4, 64), Some(u64::MAX));
 }
 
 #[test]
