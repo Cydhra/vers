@@ -8,7 +8,7 @@
 //! Beside compression, it also offers expected constant-time predecessor and successor queries
 //! (compare to expected logarithmic time for sorted sequences with binary search or search trees).
 
-use crate::util::impl_iterator;
+use crate::util::impl_ef_iterator;
 use crate::BitVec;
 use crate::RsVec;
 use std::cmp::max;
@@ -456,27 +456,8 @@ impl EliasFanoVec {
     }
 }
 
-impl_iterator! {
-    EliasFanoVec, EliasFanoIter, EliasFanoRefIter;
-    /// Returns the minimum remaining element of the iterator.
-    /// Operates in constant time, because Elias-Fano vectors are sorted.
-    fn min(mut self) -> Option<Self::Item>
-    where
-        Self: Sized,
-        Self::Item: Ord,
-    {
-        self.next()
-    }
-
-    /// Returns the maximum remaining element of the iterator. Operates in constant time,
-    /// because Elias-Fano vectors are sorted.
-    fn max(self) -> Option<Self::Item>
-    where
-        Self: Sized,
-        Self::Item: Ord,
-    {
-        self.last()
-    }
+impl_ef_iterator! {
+    EliasFanoIter, EliasFanoRefIter
 }
 
 #[cfg(test)]
