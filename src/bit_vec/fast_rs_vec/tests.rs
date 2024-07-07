@@ -720,6 +720,10 @@ fn test_empty_select_iterator() {
     let mut iter = rs.iter1();
     assert_eq!(iter.clone().count(), 0);
     assert_eq!(iter.next(), None);
+
+    let mut iter = rs.iter0();
+    assert_eq!(iter.clone().count(), 0);
+    assert_eq!(iter.next(), None);
 }
 
 #[test]
