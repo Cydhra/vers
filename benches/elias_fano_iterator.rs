@@ -1,4 +1,3 @@
-use std::cmp::min;
 use std::time::{Duration, Instant};
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
