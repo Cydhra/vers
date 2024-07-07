@@ -180,6 +180,10 @@ macro_rules! gen_ef_iter_impl {
                     }
                 } else {
                     self.index += n;
+                    if n > 0 {
+                        // since advance_by is not stable yet, we need to call nth - 1.
+                        self.upper_iter.nth(n - 1).expect("upper iterator should not be exhausted");
+                    }
                     Ok(())
                 }
             }
@@ -206,6 +210,10 @@ macro_rules! gen_ef_iter_impl {
                     return Err(std::num::NonZeroUsize::new(n - remaining).unwrap());
                 }
                 self.back_index = if self.back_index >= Some(n) { self.back_index.map(|b| b - n) } else { None };
+                if n > 0 {
+                    // since advance_by is not stable yet, we need to call nth - 1.
+                    self.upper_iter.nth_back(n - 1).expect("upper iterator should not be exhausted");
+                }
                 Ok(())
             }
 
@@ -258,7 +266,11 @@ macro_rules! gen_ef_iter_impl {
                     return None;
                 }
 
-                Some(self.vec.get_unchecked(*self.back_index.as_ref().unwrap()))
+                let upper = self.upper_iter.last().unwrap() - self.back_index.unwrap() - 1;
+                let lower = self
+                    .vec
+                    .get_bits_unchecked(self.back_index.unwrap() * self.lower_len, self.lower_len);
+                Some(((upper as u64) << self.lower_len) | lower)
             }
 
             /// Returns the nth element of the iterator. Does not call `next` internally, but advances
@@ -298,26 +310,30 @@ macro_rules! gen_ef_iter_impl {
 
         impl $(<$life>)? std::iter::FusedIterator for $name $(<$life>)? {}
 
-        // impl $(<$life>)? std::iter::DoubleEndedIterator for $name $(<$life>)? {
-        //     fn next_back(&mut self) -> Option<Self::Item> {
-        //         if Some(self.index) > self.back_index {
-        //             return None;
-        //         }
-        //         self.vec.get(*self.back_index.as_ref().unwrap()).map(|v| {
-        //             if *self.back_index.as_ref().unwrap() == 0 {
-        //                 self.back_index = None;
-        //             } else {
-        //                 self.back_index = Some(self.back_index.unwrap() - 1);
-        //             }
-        //             v
-        //         })
-        //     }
-        //
-        //     fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
-        //         self.advance_back_by(n).ok()?;
-        //         self.next_back()
-        //     }
-        // }
+        impl $(<$life>)? std::iter::DoubleEndedIterator for $name $(<$life>)? {
+            fn next_back(&mut self) -> Option<Self::Item> {
+                if let Some(upper) = self.upper_iter.next_back() {
+                    let index_back = self.back_index.unwrap();
+                    let upper = upper - index_back - 1;
+                    let lower = self
+                        .vec
+                        .get_bits_unchecked(index_back * self.lower_len, self.lower_len);
+                    if *self.back_index.as_ref().unwrap() == 0 {
+                        self.back_index = None;
+                    } else {
+                        self.back_index = Some(self.back_index.unwrap() - 1);
+                    }
+                    Some(((upper as u64) << self.lower_len) | lower)
+                } else {
+                    None
+                }
+            }
+
+            fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+                self.advance_back_by(n).ok()?;
+                self.next_back()
+            }
+        }
     };
 }
 
