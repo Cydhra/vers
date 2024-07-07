@@ -96,7 +96,7 @@ impl super::RsVec {
     )))]
     #[inline(always)]
     pub(super) fn search_block0(&self, rank: usize, block_index: &mut usize) {
-        self.search_block0_naive(rank, block_index)
+        self.search_block0_naive(rank, block_index);
     }
 
     #[inline(always)]
@@ -120,7 +120,7 @@ impl super::RsVec {
 
     /// Search for the word in the block that contains the rank, return the index of the rank-th
     /// zero bit in the word.
-    /// This function is called by the select0, iter::select_next_0 and iter::select_next_0_back functions.
+    /// This function is called by the ``select0``, ``iter::select_next_0`` and ``iter::select_next_0_back`` functions.
     ///
     /// # Arguments
     /// * `rank` - the rank to search for, relative to the block
@@ -156,11 +156,11 @@ impl super::RsVec {
     }
 
     /// Search for the super block that contains the rank.
-    /// This function is called by the select0, iter::select_next_0 and iter::select_next_0_back functions.
+    /// This function is called by the ``select0``, ``iter::select_next_0`` and ``iter::select_next_0_back`` functions.
     ///
     /// # Arguments
     /// * `super_block` - the index of the super block to start the search from, this is the
-    ///  super block in the select_blocks vector that contains the rank
+    ///  super block in the ``select_blocks`` vector that contains the rank
     /// * `rank` - the rank to search for
     #[inline(always)]
     pub(super) fn search_super_block0(&self, mut super_block: usize, rank: usize) -> usize {
@@ -311,7 +311,7 @@ impl super::RsVec {
         block_at_super_block: usize,
         block_index: &mut usize,
     ) {
-        self.search_block1_naive(rank, block_at_super_block, block_index)
+        self.search_block1_naive(rank, block_at_super_block, block_index);
     }
 
     #[inline(always)]
@@ -340,7 +340,7 @@ impl super::RsVec {
 
     /// Search for the word in the block that contains the rank, return the index of the rank-th
     /// zero bit in the word.
-    /// This function is called by the select1, iter::select_next_1 and iter::select_next_1_back functions.
+    /// This function is called by the ``select1``, ``iter::select_next_1`` and ``iter::select_next_1_back`` functions.
     ///
     /// # Arguments
     /// * `rank` - the rank to search for, relative to the block
@@ -376,11 +376,11 @@ impl super::RsVec {
     }
 
     /// Search for the super block that contains the rank.
-    /// This function is called by the select1, iter::select_next_1 and iter::select_next_1_back functions.
+    /// This function is called by the ``select1``, ``iter::select_next_1`` and ``iter::select_next_1_back`` functions.
     ///
     /// # Arguments
     /// * `super_block` - the index of the super block to start the search from, this is the
-    ///  super block in the select_blocks vector that contains the rank
+    ///  super block in the ``select_blocks`` vector that contains the rank
     /// * `rank` - the rank to search for
     #[inline(always)]
     pub(super) fn search_super_block1(&self, mut super_block: usize, rank: usize) -> usize {

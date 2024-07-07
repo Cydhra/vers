@@ -382,10 +382,10 @@ impl RsVec {
             if len == 64 {
                 return partial_word
                     | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE));
-            } else {
-                (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
-                    & ((1 << len) - 1)
             }
+
+            (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
+                & ((1 << len) - 1)
         }
     }
 
@@ -404,6 +404,7 @@ impl RsVec {
     /// `true` if the vectors' contents are equal, `false` otherwise.
     ///
     /// [`full_equals`]: RsVec::full_equals
+    #[must_use]
     pub fn sparse_equals<const ZERO: bool>(&self, other: &Self) -> bool {
         if self.len() != other.len() {
             return false;
@@ -436,6 +437,7 @@ impl RsVec {
     /// `true` if the vectors' contents are equal, `false` otherwise.
     ///
     /// [`sparse_equals`]: RsVec::sparse_equals
+    #[must_use]
     pub fn full_equals(&self, other: &Self) -> bool {
         if self.len() != other.len() {
             return false;
@@ -493,7 +495,7 @@ impl PartialEq for RsVec {
     /// [`sparse_equals`]: RsVec::sparse_equals
     /// [`full_equals`]: RsVec::full_equals
     fn eq(&self, other: &Self) -> bool {
-        if self.len > 4000000 {
+        if self.len > 4_000_000 {
             if self.rank1 > self.rank0 {
                 self.sparse_equals::<true>(other)
             } else {

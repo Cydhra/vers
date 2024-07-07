@@ -154,7 +154,7 @@ macro_rules! gen_iter_impl {
                 Some(self.vec.search_word_in_block0(rank, block_index))
             }
 
-            /// Same implementation like select_next_0, but backwards
+            /// Same implementation like ``select_next_0``, but backwards
             fn select_next_0_back(&mut self) -> Option<usize> {
                 let mut rank = self.next_rank_back?;
 
