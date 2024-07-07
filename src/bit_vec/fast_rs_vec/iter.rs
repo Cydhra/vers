@@ -339,6 +339,23 @@ macro_rules! gen_iter_impl {
                     Err(NonZeroUsize::new(n - len).unwrap())
                 }
             }
+
+            /// Advances the iterator back by `n` elements. Returns an error if the iterator does not have
+            /// enough elements left. Does not call `next_back` internally.
+            /// This method is currently being added to the iterator trait, see
+            /// [this issue](https://github.com/rust-lang/rust/issues/77404).
+            /// As soon as it is stabilized, this method will be removed and replaced with a custom
+            /// implementation in the double ended iterator impl.
+            pub(super) fn advance_back_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
+                if self.len() >= n {
+                    self.next_rank_back = self.next_rank_back.map(|x| x - n);
+                    Ok(())
+                } else {
+                    let len = self.len();
+                    self.next_rank_back = self.next_rank_back.map(|x| x - len);
+                    Err(NonZeroUsize::new(n - len).unwrap())
+                }
+            }
         }
 
         impl<$($life,)? const ZERO: bool> Iterator for $name<$($life,)? ZERO> {
@@ -393,18 +410,21 @@ macro_rules! gen_iter_impl {
                     self.select_next_1_back()
                 }
             }
+
+            fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+                if ZERO {
+                    self.advance_back_by(n).ok().and_then(|()| self.select_next_0_back())
+                } else {
+                    self.advance_back_by(n).ok().and_then(|()| self.select_next_1_back())
+                }
+            }
         }
 
         impl<$($life,)? const ZERO: bool> FusedIterator for $name<$($life,)? ZERO> {}
 
         impl<$($life,)? const ZERO: bool> ExactSizeIterator for $name<$($life,)? ZERO> {
             fn len(&self) -> usize {
-                // todo!("implement hint minding next rank back");
-                if ZERO {
-                    self.vec.rank0 - self.next_rank
-                } else {
-                    self.vec.rank1 - self.next_rank
-                }
+                self.next_rank_back.map(|x| x + 1).unwrap_or_default().saturating_sub(self.next_rank)
             }
         }
     }
