@@ -714,16 +714,40 @@ fn test_select0_bs_iterator() {
 }
 
 #[test]
-fn test_empty_select_iterator() {
+fn test_empty_vec_select_iter() {
     let bv = BitVec::new();
     let rs = RsVec::from_bit_vec(bv);
     let mut iter = rs.iter1();
     assert_eq!(iter.clone().count(), 0);
     assert_eq!(iter.next(), None);
+    assert_eq!(iter.next_back(), None);
 
     let mut iter = rs.iter0();
     assert_eq!(iter.clone().count(), 0);
     assert_eq!(iter.next(), None);
+    assert_eq!(iter.next_back(), None);
+}
+
+#[test]
+fn test_full_vec_empty_select_iter() {
+    // test whether select iterators behave correctly when the vector doesnt contain the searched bit
+    let bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+
+    let mut iter = rs.iter1();
+    assert_eq!(iter.size_hint(), (0, Some(0)));
+    assert_eq!(iter.next(), None);
+    assert_eq!(iter.next_back(), None);
+    assert_eq!(iter.size_hint(), (0, Some(0)));
+
+    let bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+
+    let mut iter = rs.iter0();
+    assert_eq!(iter.size_hint(), (0, Some(0)));
+    assert_eq!(iter.next(), None);
+    assert_eq!(iter.next_back(), None);
+    assert_eq!(iter.size_hint(), (0, Some(0)));
 }
 
 #[test]
@@ -884,28 +908,6 @@ fn test_select_iter_back_without_idx0() {
     assert_eq!(iter.next(), Some(1));
     assert_eq!(iter.next_back(), None);
     assert_eq!(iter.next(), None);
-}
-
-#[test]
-fn test_select_iter_empty_iters() {
-    // test whether select iterators behave correctly when the vector doesnt contain the searched bit
-    let bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
-    let rs = RsVec::from_bit_vec(bv);
-
-    let mut iter = rs.iter1();
-    assert_eq!(iter.size_hint(), (0, Some(0)));
-    assert_eq!(iter.next(), None);
-    assert_eq!(iter.next_back(), None);
-    assert_eq!(iter.size_hint(), (0, Some(0)));
-
-    let bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
-    let rs = RsVec::from_bit_vec(bv);
-
-    let mut iter = rs.iter0();
-    assert_eq!(iter.size_hint(), (0, Some(0)));
-    assert_eq!(iter.next(), None);
-    assert_eq!(iter.next_back(), None);
-    assert_eq!(iter.size_hint(), (0, Some(0)));
 }
 
 #[test]
