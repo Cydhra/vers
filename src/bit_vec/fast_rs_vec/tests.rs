@@ -887,6 +887,28 @@ fn test_select_iter_back_without_idx0() {
 }
 
 #[test]
+fn test_select_iter_empty_iters() {
+    // test whether select iterators behave correctly when the vector doesnt contain the searched bit
+    let bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+
+    let mut iter = rs.iter1();
+    assert_eq!(iter.size_hint(), (0, Some(0)));
+    assert_eq!(iter.next(), None);
+    assert_eq!(iter.next_back(), None);
+    assert_eq!(iter.size_hint(), (0, Some(0)));
+
+    let bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+
+    let mut iter = rs.iter0();
+    assert_eq!(iter.size_hint(), (0, Some(0)));
+    assert_eq!(iter.next(), None);
+    assert_eq!(iter.next_back(), None);
+    assert_eq!(iter.size_hint(), (0, Some(0)));
+}
+
+#[test]
 fn test_select_iter_custom_impls() {
     let mut bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
     bv.flip_bit(1);

@@ -97,7 +97,7 @@ macro_rules! gen_iter_impl {
                 Self {
                     vec,
                     next_rank: 0,
-                    next_rank_back: Some(if ZERO { rank0 } else { rank1 }.saturating_sub(1)),
+                    next_rank_back: Some(if ZERO { rank0 } else { rank1 }).and_then(|x| if x > 0 { Some(x - 1) } else { None }),
                     last_super_block: 0,
                     last_super_block_back: super_blocks_len - 1,
                     last_block: 0,
