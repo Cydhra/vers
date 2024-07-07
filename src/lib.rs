@@ -58,17 +58,6 @@ pub use bit_vec::BitVec;
 pub use rmq::binary_rmq::BinaryRmq;
 pub use rmq::fast_rmq::FastRmq;
 
-#[cfg_attr(
-    not(all(
-        feature = "simd",
-        target_arch = "x86_64",
-        target_feature = "avx",
-        target_feature = "avx2",
-        target_feature = "avx512f",
-        target_feature = "avx512bw",
-    )),
-    forbid(unsafe_code)
-)]
 pub mod bit_vec;
 
 #[forbid(unsafe_code)]
