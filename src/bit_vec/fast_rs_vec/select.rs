@@ -1,6 +1,6 @@
 // Select code is in here to keep it more organized.
 
-use crate::bit_vec::fast_rs_vec::{BLOCK_SIZE, SUPER_BLOCK_SIZE};
+use crate::bit_vec::fast_rs_vec::{BLOCK_SIZE, SELECT_BLOCK_SIZE, SUPER_BLOCK_SIZE};
 use crate::bit_vec::WORD_SIZE;
 use crate::util::pdep::Pdep;
 use crate::util::unroll;
@@ -23,31 +23,12 @@ impl super::RsVec {
             return self.len;
         }
 
-        let mut super_block =
-            self.select_blocks[rank / crate::bit_vec::fast_rs_vec::SELECT_BLOCK_SIZE].index_0;
+        let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_0;
 
         if self.super_blocks.len() > (super_block + 1)
             && self.super_blocks[super_block + 1].zeros <= rank
         {
-            let mut upper_bound = self.select_blocks
-                [rank / crate::bit_vec::fast_rs_vec::SELECT_BLOCK_SIZE + 1]
-                .index_0;
-
-            while upper_bound - super_block > 8 {
-                let middle = super_block + ((upper_bound - super_block) >> 1);
-                if self.super_blocks[middle].zeros <= rank {
-                    super_block = middle;
-                } else {
-                    upper_bound = middle;
-                }
-            }
-
-            // linear search for super block that contains the rank
-            while self.super_blocks.len() > (super_block + 1)
-                && self.super_blocks[super_block + 1].zeros <= rank
-            {
-                super_block += 1;
-            }
+            super_block = self.search_super_block0(super_block, rank);
         }
 
         rank -= self.super_blocks[super_block].zeros;
@@ -57,31 +38,7 @@ impl super::RsVec {
 
         rank -= self.blocks[block_index].zeros as usize;
 
-        // linear search for word that contains the rank. Binary search is not possible here,
-        // because we don't have accumulated popcounts for the words. We use pdep to find the
-        // position of the rank-th zero bit in the word, if the word contains enough zeros, otherwise
-        // we subtract the number of ones in the word from the rank and continue with the next word.
-        let mut index_counter = 0;
-        debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
-        unroll!(7, |n = {0}| {
-            let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
-            if (word.count_zeros() as usize) <= rank {
-                rank -= word.count_zeros() as usize;
-                index_counter += WORD_SIZE;
-            } else {
-                return block_index * BLOCK_SIZE
-                    + index_counter
-                    + (1 << rank).pdep(!word).trailing_zeros() as usize;
-            }
-        }, n += 1);
-
-        // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
-        // block, and thus outside of the bitvector
-        block_index * BLOCK_SIZE
-            + index_counter
-            + (1 << rank)
-                .pdep(!self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
-                .trailing_zeros() as usize
+        self.search_word_in_block0(rank, block_index)
     }
 
     /// Search for the block in a superblock that contains the rank. This function is only used
@@ -160,6 +117,71 @@ impl super::RsVec {
                     *block_index += boundary;
                 },
             boundary /= 2);
+    }
+
+    /// Search for the word in the block that contains the rank, return the index of the rank-th
+    /// zero bit in the word.
+    /// This function is called by the select0, iter::select_next_0 and iter::select_next_0_back functions.
+    ///
+    /// # Arguments
+    /// * `rank` - the rank to search for, relative to the block
+    /// * `block_index` - the index of the block to search in, this is the block in the blocks
+    /// vector that contains the rank
+    pub(super) fn search_word_in_block0(&self, mut rank: usize, block_index: usize) -> usize {
+        // linear search for word that contains the rank. Binary search is not possible here,
+        // because we don't have accumulated popcounts for the words. We use pdep to find the
+        // position of the rank-th zero bit in the word, if the word contains enough zeros, otherwise
+        // we subtract the number of ones in the word from the rank and continue with the next word.
+        let mut index_counter = 0;
+        debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
+        unroll!(7, |n = {0}| {
+                    let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
+                    if (word.count_zeros() as usize) <= rank {
+                        rank -= word.count_zeros() as usize;
+                        index_counter += WORD_SIZE;
+                    } else {
+                        return block_index * BLOCK_SIZE
+                            + index_counter
+                            + (1 << rank).pdep(!word).trailing_zeros() as usize;
+                    }
+                }, n += 1);
+
+        // the last word must contain the rank-th zero bit, otherwise the rank is outside the
+        // block, and thus outside the bitvector
+        block_index * BLOCK_SIZE
+            + index_counter
+            + (1 << rank)
+                .pdep(!self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
+                .trailing_zeros() as usize
+    }
+
+    /// Search for the super block that contains the rank.
+    /// This function is called by the select_next_0 and select_next_0_back functions.
+    ///
+    /// # Arguments
+    /// * `super_block` - the index of the super block to start the search from, this is the
+    ///  super block in the select_blocks vector that contains the rank
+    /// * `rank` - the rank to search for
+    pub(super) fn search_super_block0(&self, mut super_block: usize, rank: usize) -> usize {
+        let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0;
+
+        while upper_bound - super_block > 8 {
+            let middle = super_block + ((upper_bound - super_block) >> 1);
+            if self.super_blocks[middle].zeros <= rank {
+                super_block = middle;
+            } else {
+                upper_bound = middle;
+            }
+        }
+
+        // linear search for super block that contains the rank
+        while self.super_blocks.len() > (super_block + 1)
+            && self.super_blocks[super_block + 1].zeros <= rank
+        {
+            super_block += 1;
+        }
+
+        super_block
     }
 
     /// Return the position of the 1-bit with the given rank. See `rank1`.
