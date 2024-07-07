@@ -1187,6 +1187,68 @@ fn test_random_data_iter() {
     }
 }
 
+#[test]
+fn test_random_data_iter_both_ends() {
+    let mut rng = StdRng::from_seed([
+        0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
+        6, 7,
+    ]);
+
+    for fill_ratio in [10, 50, 90] {
+        for length in [
+            BLOCK_SIZE / 2,
+            BLOCK_SIZE,
+            SUPER_BLOCK_SIZE,
+            4 * SUPER_BLOCK_SIZE,
+        ] {
+            for _ in 0..20 {
+                let mut bv = BitVec::with_capacity(length);
+                let sample = Uniform::new(0, 100);
+                for _ in 0..length {
+                    bv.append_bit((sample.sample(&mut rng) < fill_ratio) as u64);
+                }
+                let bv = RsVec::from_bit_vec(bv);
+
+                let mut zeros = Vec::with_capacity(bv.rank0);
+                let mut ones = Vec::with_capacity(bv.rank1);
+
+                let mut iter0 = bv.iter0();
+                let mut iter1 = bv.iter1();
+
+                for _ in 0..bv.rank0 {
+                    zeros.push(if sample.sample(&mut rng) < 50 {
+                        iter0.next().unwrap()
+                    } else {
+                        iter0.next_back().unwrap()
+                    });
+                }
+                zeros.sort();
+                zeros.dedup();
+                assert_eq!(zeros.len(), bv.rank0);
+
+                for _ in 0..bv.rank1 {
+                    ones.push(if sample.sample(&mut rng) < 50 {
+                        iter1.next().unwrap()
+                    } else {
+                        iter1.next_back().unwrap()
+                    });
+                }
+                ones.sort();
+                ones.dedup();
+                assert_eq!(ones.len(), bv.rank1);
+
+                for idx in ones {
+                    assert_eq!(bv.get(idx), Some(1), "bit {} is not 1", idx);
+                }
+
+                for idx in zeros {
+                    assert_eq!(bv.get(idx), Some(0), "bit {} is not 0", idx);
+                }
+            }
+        }
+    }
+}
+
 // test a randomly generated bit vector for correct values in blocks
 #[test]
 fn test_block_layout() {
