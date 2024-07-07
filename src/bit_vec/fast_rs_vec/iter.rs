@@ -1,7 +1,4 @@
 use crate::bit_vec::fast_rs_vec::{BLOCK_SIZE, SELECT_BLOCK_SIZE, SUPER_BLOCK_SIZE};
-use crate::bit_vec::WORD_SIZE;
-use crate::util::pdep::Pdep;
-use crate::util::unroll;
 use crate::RsVec;
 use std::iter::FusedIterator;
 use std::num::NonZeroUsize;
@@ -207,7 +204,7 @@ macro_rules! gen_iter_impl {
             fn select_next_1(&mut self) -> Option<usize> {
                 let mut rank = self.next_rank;
 
-                if rank >= self.vec.rank1 {
+                if rank >= self.vec.rank1 || self.next_rank_back.is_none() || rank > self.next_rank_back.unwrap() {
                     return None;
                 }
 
@@ -242,36 +239,7 @@ macro_rules! gen_iter_impl {
                             - self.vec.blocks[block_index].zeros as usize;
                     }
                 } else {
-                    // search for the super block that contains the rank beginning from the super block
-                    // returned by the select_blocks vector
-                    if self.vec.super_blocks.len() > (super_block + 1)
-                        && ((super_block + 1) * SUPER_BLOCK_SIZE
-                            - self.vec.super_blocks[super_block + 1].zeros)
-                            <= rank
-                    {
-                        let mut upper_bound = self.vec.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
-
-                        // binary search for super block that contains the rank until only 8 blocks are left
-                        while upper_bound - super_block > 8 {
-                            let middle = super_block + ((upper_bound - super_block) >> 1);
-                            if ((middle + 1) * SUPER_BLOCK_SIZE - self.vec.super_blocks[middle].zeros)
-                                <= rank
-                            {
-                                super_block = middle;
-                            } else {
-                                upper_bound = middle;
-                            }
-                        }
-                    }
-
-                    // linear search for super block that contains the rank
-                    while self.vec.super_blocks.len() > (super_block + 1)
-                        && ((super_block + 1) * SUPER_BLOCK_SIZE
-                            - self.vec.super_blocks[super_block + 1].zeros)
-                            <= rank
-                    {
-                        super_block += 1;
-                    }
+                    super_block = self.vec.search_super_block1(super_block, rank);
 
                     self.last_super_block = super_block;
                     rank -= super_block * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
@@ -291,35 +259,68 @@ macro_rules! gen_iter_impl {
                         - self.vec.blocks[block_index].zeros as usize;
                 }
 
-                // linear search for word that contains the rank. Binary search is not possible here,
-                // because we don't have accumulated popcounts for the words. We use pdep to find the
-                // position of the rank-th zero bit in the word, if the word contains enough zeros, otherwise
-                // we subtract the number of ones in the word from the rank and continue with the next word.
-                let mut index_counter = 0;
-                debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
-                unroll!(7, |n = {0}| {
-                    let word = self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
-                    if (word.count_ones() as usize) <= rank {
-                        rank -= word.count_ones() as usize;
-                        index_counter += WORD_SIZE;
-                    } else {
-                        self.next_rank += 1;
-                        return Some(block_index * BLOCK_SIZE
-                            + index_counter
-                            + (1 << rank).pdep(word).trailing_zeros() as usize);
-                    }
-                }, n += 1);
-
-                // the last word must contain the rank-th zero bit, otherwise the rank is outside the
-                // block, and thus outside the bitvector
                 self.next_rank += 1;
-                Some(
-                    block_index * BLOCK_SIZE
-                        + index_counter
-                        + (1 << rank)
-                            .pdep(self.vec.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
-                            .trailing_zeros() as usize,
-                )
+                Some(self.vec.search_word_in_block1(rank, block_index))
+            }
+
+            #[must_use]
+            #[allow(clippy::assertions_on_constants)]
+            fn select_next_1_back(&mut self) -> Option<usize> {
+                let mut rank = self.next_rank_back?;
+
+                if self.next_rank_back.is_none() || rank < self.next_rank {
+                    return None;
+                }
+
+                let mut super_block = self.vec.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
+                let mut block_index = 0;
+
+                // check if the last super block still contains the rank, and if yes, we don't need to search
+                if (self.last_super_block_back) * SUPER_BLOCK_SIZE
+                        - self.vec.super_blocks[self.last_super_block_back].zeros
+                        < rank
+                {
+                    // instantly jump to the last searched position
+                    super_block = self.last_super_block_back;
+                    let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+                    rank -= super_block * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
+
+                    // check if current block contains the one and if yes, we don't need to search
+                    // this is true IF the ones before the last block are less than the rank,
+                    // since the block before then can't contain it
+                    if (self.last_block_back - block_at_super_block) * BLOCK_SIZE
+                        - self.vec.blocks[self.last_block_back].zeros as usize
+                            <= rank
+                    {
+                        // instantly jump to the last searched position
+                        block_index = self.last_block_back;
+                        let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+                        rank -= (block_index - block_at_super_block) * BLOCK_SIZE
+                            - self.vec.blocks[block_index].zeros as usize;
+                    }
+                } else {
+                    super_block = self.vec.search_super_block1(super_block, rank);
+
+                    self.last_super_block_back = super_block;
+                    rank -= super_block * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
+                }
+
+                // if the block index is not zero, we already found the block, and need only update the word
+                if block_index == 0 {
+                    // full binary search for block that contains the rank, manually loop-unrolled, because
+                    // LLVM doesn't do it for us, but it gains just under 20% performance
+                    let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+                    block_index = block_at_super_block;
+                    self.vec
+                        .search_block1(rank, block_at_super_block, &mut block_index);
+
+                    self.last_block_back = block_index;
+                    rank -= (block_index - block_at_super_block) * BLOCK_SIZE
+                        - self.vec.blocks[block_index].zeros as usize;
+                }
+
+                self.next_rank_back = self.next_rank_back.and_then(|x| if x > 0 { Some(x - 1) } else { None });
+                Some(self.vec.search_word_in_block1(rank, block_index))
             }
 
             /// Advances the iterator by `n` elements. Returns an error if the iterator does not have
@@ -389,7 +390,7 @@ macro_rules! gen_iter_impl {
                 if ZERO {
                     self.select_next_0_back()
                 } else {
-                    todo!("implement select_next_1_back")
+                    self.select_next_1_back()
                 }
             }
         }
