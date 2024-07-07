@@ -2,7 +2,7 @@
 //! bit vector implementation with [rank and select queries][fast_rs_vec::RsVec].
 
 use crate::bit_vec::mask::MaskedBitVec;
-use crate::util::impl_iterator;
+use crate::util::impl_bv_iterator;
 use std::cmp::min;
 use std::mem::size_of;
 
@@ -727,7 +727,7 @@ impl BitVec {
     }
 }
 
-impl_iterator! { BitVec, BitVecIter, BitVecRefIter }
+impl_bv_iterator! { BitVec, BitVecIter, BitVecRefIter }
 
 #[cfg(test)]
 mod tests;
