@@ -911,14 +911,19 @@ fn test_select_iter_empty_iters() {
 #[test]
 fn test_select_iter_custom_impls() {
     let mut bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
-    bv.flip_bit(1);
-    bv.flip_bit(3);
-    bv.flip_bit(5);
-    bv.flip_bit(BLOCK_SIZE);
-    bv.flip_bit(BLOCK_SIZE + 1);
-    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
-    bv.flip_bit(SUPER_BLOCK_SIZE);
-    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let zeros = &[
+        1,
+        3,
+        5,
+        BLOCK_SIZE,
+        BLOCK_SIZE + 1,
+        SUPER_BLOCK_SIZE - 1,
+        SUPER_BLOCK_SIZE,
+        SUPER_BLOCK_SIZE + 1,
+    ];
+    for &i in zeros {
+        bv.flip_bit(i);
+    }
     let rs = RsVec::from_bit_vec(bv);
 
     let iter = rs.iter0();
@@ -931,6 +936,23 @@ fn test_select_iter_custom_impls() {
         Err(NonZeroUsize::new(2).unwrap())
     );
     assert_eq!(iter.count(), 8);
+
+    let mut iter = rs.iter0();
+    iter.next_back();
+    assert_eq!(iter.nth_back(2), Some(BLOCK_SIZE + 1));
+    iter.next_back();
+    assert_eq!(iter.last(), Some(5));
+
+    let mut iter = rs.iter0();
+    iter.next();
+    assert_eq!(iter.clone().nth_back(7), None);
+    assert_eq!(iter.clone().len(), 7);
+    assert_eq!(
+        iter.clone().advance_back_by(8),
+        Err(NonZeroUsize::new(1).unwrap())
+    );
+    assert_eq!(iter.clone().advance_back_by(7), Ok(()));
+    assert_eq!(iter.clone().advance_back_by(6), Ok(()));
 }
 
 #[test]
