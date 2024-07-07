@@ -17,7 +17,6 @@ impl super::RsVec {
     /// If the rank is larger than the number of 0-bits in the vector, the vector length is returned.
     #[must_use]
     #[allow(clippy::assertions_on_constants)]
-    #[inline(never)]
     pub fn select0(&self, mut rank: usize) -> usize {
         if rank >= self.rank0 {
             return self.len;
@@ -127,6 +126,7 @@ impl super::RsVec {
     /// * `rank` - the rank to search for, relative to the block
     /// * `block_index` - the index of the block to search in, this is the block in the blocks
     /// vector that contains the rank
+    #[inline(always)]
     pub(super) fn search_word_in_block0(&self, mut rank: usize, block_index: usize) -> usize {
         // linear search for word that contains the rank. Binary search is not possible here,
         // because we don't have accumulated popcounts for the words. We use pdep to find the
@@ -162,6 +162,7 @@ impl super::RsVec {
     /// * `super_block` - the index of the super block to start the search from, this is the
     ///  super block in the select_blocks vector that contains the rank
     /// * `rank` - the rank to search for
+    #[inline(always)]
     pub(super) fn search_super_block0(&self, mut super_block: usize, rank: usize) -> usize {
         let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0;
 
@@ -345,6 +346,7 @@ impl super::RsVec {
     /// * `rank` - the rank to search for, relative to the block
     /// * `block_index` - the index of the block to search in, this is the block in the blocks
     /// vector that contains the rank
+    #[inline(always)]
     pub(super) fn search_word_in_block1(&self, mut rank: usize, block_index: usize) -> usize {
         // linear search for word that contains the rank. Binary search is not possible here,
         // because we don't have accumulated popcounts for the words. We use pdep to find the
@@ -380,6 +382,7 @@ impl super::RsVec {
     /// * `super_block` - the index of the super block to start the search from, this is the
     ///  super block in the select_blocks vector that contains the rank
     /// * `rank` - the rank to search for
+    #[inline(always)]
     pub(super) fn search_super_block1(&self, mut super_block: usize, rank: usize) -> usize {
         let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
 
