@@ -522,7 +522,7 @@ impl BitVec {
     /// [`get_bits`]: BitVec::get_bits
     #[must_use]
     #[allow(clippy::inline_always)]
-    #[allow(clippy::comparison_chain)] // rust-clippy #5354
+    #[allow(clippy::comparison_chain, clippy::collapsible_else_if)] // readability
     #[inline(always)] // inline to gain loop optimization and pipeline advantages for elias fano
     pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
         debug_assert!(len <= WORD_SIZE);
