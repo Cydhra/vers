@@ -54,6 +54,10 @@ name = "elias_fano_adversarial"
 harness = false
 
 [[bench]]
+name = "elias_fano_iterator"
+harness = false
+
+[[bench]]
 name = "rmq"
 harness = false
 
