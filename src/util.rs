@@ -233,7 +233,7 @@ macro_rules! gen_ef_iter_impl {
                         .vec
                         .get_bits_unchecked(self.index * self.lower_len, self.lower_len);
                     self.index += 1;
-                    Some(((upper as u64) << self.lower_len) | lower)
+                    Some((((upper as u64) << self.lower_len) | lower) + self.universe_zero)
                 } else {
                     None
                 }
@@ -323,7 +323,7 @@ macro_rules! gen_ef_iter_impl {
                     } else {
                         self.back_index = Some(self.back_index.unwrap() - 1);
                     }
-                    Some(((upper as u64) << self.lower_len) | lower)
+                    Some((((upper as u64) << self.lower_len) | lower) + self.universe_zero)
                 } else {
                     None
                 }
@@ -461,6 +461,7 @@ macro_rules! impl_ef_iterator {
             // a call to next_back()). It can be Some(..) even if the iterator is empty
             back_index: Option<usize>,
             lower_len: usize,
+            universe_zero: u64,
         }
 
         impl $own {
@@ -473,6 +474,7 @@ macro_rules! impl_ef_iterator {
                         index: 0,
                         back_index: None,
                         lower_len: vec.lower_len,
+                        universe_zero: vec.universe_zero,
                     };
                 }
 
@@ -483,6 +485,7 @@ macro_rules! impl_ef_iterator {
                     index: 0,
                     back_index: Some(last),
                     lower_len: vec.lower_len,
+                    universe_zero: vec.universe_zero,
                 }
             }
         }
@@ -506,6 +509,7 @@ macro_rules! impl_ef_iterator {
             // a call to next_back()). It can be Some(..) even if the iterator is empty
             back_index: Option<usize>,
             lower_len: usize,
+            universe_zero: u64,
         }
 
         impl<'a> $bor<'a> {
@@ -518,6 +522,7 @@ macro_rules! impl_ef_iterator {
                         index: 0,
                         back_index: None,
                         lower_len: vec.lower_len,
+                        universe_zero: vec.universe_zero,
                     };
                 }
 
@@ -528,6 +533,7 @@ macro_rules! impl_ef_iterator {
                     index: 0,
                     back_index: Some(last),
                     lower_len: vec.lower_len,
+                    universe_zero: vec.universe_zero,
                 }
             }
         }

@@ -1,6 +1,7 @@
 use crate::EliasFanoVec;
 use rand::distributions::Uniform;
-use rand::{thread_rng, Rng};
+use rand::rngs::StdRng;
+use rand::{thread_rng, Rng, RngCore, SeedableRng};
 
 #[test]
 fn test_elias_fano() {
@@ -313,6 +314,39 @@ fn test_empty_iter() {
     assert!(iter.advance_by(0).is_ok());
     assert!(iter.advance_back_by(1).is_err());
     assert!(iter.advance_by(1).is_err());
+}
+
+#[test]
+fn test_iter_randomized() {
+    let mut rng = StdRng::from_seed([
+        0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
+        6, 7,
+    ]);
+
+    for _ in 0..100 {
+        let len = (rng.next_u64() % 4000) as usize;
+        let mut seq = vec![0u64; len];
+        for i in 0..len {
+            seq[i] = rng.next_u64();
+        }
+
+        seq.sort_unstable();
+
+        let ef = EliasFanoVec::from_slice(&seq);
+
+        let mut iter = ef.iter();
+        let mut compare = seq.iter();
+
+        for _ in 0..len {
+            if rng.gen_bool(0.5) {
+                assert_eq!(iter.next().unwrap(), *compare.next().unwrap());
+            } else {
+                assert_eq!(iter.next_back().unwrap(), *compare.next_back().unwrap());
+            }
+        }
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), None);
+    }
 }
 
 #[test]
