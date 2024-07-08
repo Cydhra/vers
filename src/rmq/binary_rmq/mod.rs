@@ -187,5 +187,11 @@ impl Deref for BinaryRmq {
     }
 }
 
+impl From<Vec<u64>> for BinaryRmq {
+    fn from(data: Vec<u64>) -> Self {
+        Self::from_vec(data)
+    }
+}
+
 #[cfg(test)]
 mod tests;

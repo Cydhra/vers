@@ -309,5 +309,11 @@ impl Deref for FastRmq {
     }
 }
 
+impl From<Vec<u64>> for FastRmq {
+    fn from(data: Vec<u64>) -> Self {
+        Self::from_vec(data)
+    }
+}
+
 #[cfg(test)]
 mod tests;
