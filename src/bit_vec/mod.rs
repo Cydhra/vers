@@ -90,13 +90,50 @@ impl BitVec {
     /// take the least significant bit from each value and append it to a bit vector. All other bits
     /// are ignored.
     ///
-    /// See also: [`from_bits_u64`]
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::BitVec;
+    ///
+    /// let bits: &[u8] = &[1, 0, 1, 1, 1, 1];
+    /// let bv = BitVec::from_bits(&bits);
+    ///
+    /// assert_eq!(bv.len(), 6);
+    /// assert_eq!(bv.get_bits(0, 6), Some(0b111101u64));
+    /// ```
     ///
     /// [`from_bits_u64`]: BitVec::from_bits_u64
     #[must_use]
     pub fn from_bits(bits: &[u8]) -> Self {
         let mut bv = Self::with_capacity(bits.len());
         bits.iter().for_each(|&b| bv.append_bit(b.into()));
+        bv
+    }
+
+    /// Construct a bit vector from a set of bits given as distinct u16 values. The constructor will
+    /// take the least significant bit from each value and append it to a bit vector. All other bits
+    /// are ignored.
+    ///
+    /// See also: [`from_bits`]
+    ///
+    /// [`from_bits`]: BitVec::from_bits
+    #[must_use]
+    pub fn from_bits_u16(bits: &[u16]) -> Self {
+        let mut bv = Self::with_capacity(bits.len());
+        bits.iter().for_each(|&b| bv.append_bit_u16(b));
+        bv
+    }
+
+    /// Construct a bit vector from a set of bits given as distinct u32 values. The constructor will
+    /// take the least significant bit from each value and append it to a bit vector. All other bits
+    /// are ignored.
+    ///
+    /// See also: [`from_bits`]
+    ///
+    /// [`from_bits`]: BitVec::from_bits
+    #[must_use]
+    pub fn from_bits_u32(bits: &[u32]) -> Self {
+        let mut bv = Self::with_capacity(bits.len());
+        bits.iter().for_each(|&b| bv.append_bit_u32(b));
         bv
     }
 
