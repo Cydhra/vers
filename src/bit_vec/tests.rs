@@ -594,3 +594,17 @@ fn test_remaining_packing_constructors() {
     assert_eq!(bv.get_bits(60, 10), Some(1));
     assert_eq!(bv.get_bits(70, 10), Some(0));
 }
+
+#[test]
+fn test_from_conversion() {
+    let limbs: &[u64] = &[0, u64::MAX];
+    let bv: BitVec = limbs.into();
+    assert_eq!(bv.len, 128);
+    assert_eq!(bv.get_bits(0, 64), Some(0));
+    assert_eq!(bv.get_bits(64, 64), Some(u64::MAX));
+
+    let bv: BitVec = Vec::<u64>::from(limbs).into();
+    assert_eq!(bv.len, 128);
+    assert_eq!(bv.get_bits(0, 64), Some(0));
+    assert_eq!(bv.get_bits(64, 64), Some(u64::MAX));
+}

@@ -1117,5 +1117,25 @@ impl BitVec {
 
 impl_bv_iterator! { BitVec, BitVecIter, BitVecRefIter }
 
+/// Create a new bit vector from a slice of u64 values.
+/// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
+/// The function will append the bits of each element to the bit vector in the order they are
+/// given in the slice (i.e. the first element takes bits `0..64` of the vector).
+impl From<&[u64]> for BitVec {
+    fn from(data: &[u64]) -> Self {
+        BitVec::from_limbs(data)
+    }
+}
+
+/// Create a new bit vector from a slice of u64 values.
+/// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
+/// The function will append the bits of each element to the bit vector in the order they are
+/// given in the slice (i.e. the first element takes bits `0..64` of the vector).
+impl From<Vec<u64>> for BitVec {
+    fn from(data: Vec<u64>) -> Self {
+        BitVec::from_limbs(&data)
+    }
+}
+
 #[cfg(test)]
 mod tests;
