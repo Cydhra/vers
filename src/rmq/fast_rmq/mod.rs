@@ -143,6 +143,17 @@ impl FastRmq {
         }
     }
 
+    /// Creates a new range minimum query data structure from the given data.
+    /// The iterator is consumed and the data is stored in a vector.
+    ///
+    /// See [`FastRmq::from_vec`] for more information.
+    ///
+    /// [`FastRmq::from_vec`]: FastRmq::from_vec
+    #[must_use]
+    pub fn from_iter<I: IntoIterator<Item = u64>>(iter: I) -> Self {
+        Self::from_vec(iter.into_iter().collect())
+    }
+
     /// Convenience function for [`FastRmq::range_min`] for using range operators.
     /// The range is clamped to the length of the data structure, sso this function will not panic,
     /// unless called on an empty data structure, because that does not have a valid index.
