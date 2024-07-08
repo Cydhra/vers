@@ -5,15 +5,15 @@
 
 Vers (vers-vecs on crates.io)
 contains pure-Rust implementations of several data structures backed by rank and select operations.
-When using this library, it is strongly recommended to enable the `BMI2` and `popcnt` features for x86_64 CPUs,
+When using this library, it is strongly recommended to enable the `BMI2` and `popcnt` features for x86_64 CPUs
 or compile with the `target-cpu=native` flag,
 since the intrinsics speed up both `rank` and `select` operations by a factor of 2-3.
 
 ## Data Structures
 - A fully-featured bit vector with no memory overhead.
 - A succinct bit vector supporting fast rank and select queries.
-- an Elias-Fano encoding of monotone sequences supporting constant time predecessor/successor queries.
-- two Range Minimum Query vector structures for constant-time range minimum queries.
+- An Elias-Fano encoding of monotone sequences supporting constant-time predecessor/successor queries.
+- Two Range Minimum Query vector structures for constant-time range minimum queries.
 
 ## Why Vers?
 - **Performance**: Vers is among the fastest publicly available implementations for its data structures.
@@ -41,17 +41,17 @@ It also enables a special iterator for the rank/select bit vector that uses vect
 ## Benchmarks
 I benchmarked the implementations against publicly available implementations of the same data structures.
 The benchmarking code is available in the [vers-benchmarks](https://github.com/Cydhra/vers_benchmarks) repository.
-The benchmark uses the ``simd`` feature of rsdict, which requires nightly Rust.
+The benchmark uses the `simd` feature of rsdict, which requires nightly Rust.
 
 I performed the benchmarks on a Ryzen 9 7950X with 32GB of RAM.
 Some of the results are shown below.
-All benchmarks were run with the `target-cpu=native` flag enabled.
+All benchmarks were run with the `target-cpu=native` flag enabled, and the `simd` feature enabled for Vers.
 More results can be found in the benchmark repository.
 
 ### Bit-Vector
 #### Rank & Select
-The bit vector implementation is among the fastest publicly available implementation for rank and select operations.
-Note that the `succinct` crate substantially outperforms Vers' `rank` operation, but does not provide an efficient select operation.
+The bit vector implementation is among the fastest publicly available implementations for rank and select operations.
+Note that the `succinct` crate substantially outperforms Vers' `rank` operation but does not provide an efficient select operation.
 
 The x-axis is the number of bits in the bit vector.
 An increase in all runtimes can be observed for input sizes exceeding the L2 cache size (16 MB).
@@ -77,7 +77,7 @@ An increase in all runtimes can be observed for input sizes exceeding the L2 cac
 The memory overhead of the bit vector implementation is significantly lower than that of other implementations.
 The x-axis is the number of bits in the bit vector,
 the y-axis is the additional overhead in percent compared to the size of the bit vector.
-Only the fastest competitors are shown to make the graph more readable
+Only the fastest competitors are shown, to make the graph more readable
 (I would like to add the bio crate data structure as well, since it is the only truly succinct one,
 but it does not offer an operation to measure the heap size.
 The same is true for the `bitm` crate, which claims to have a lower memory overhead compared to `Vers`,
@@ -98,7 +98,7 @@ In-order access benchmarks can be found in the benchmark repository.
 
 The following two benchmarks show the predecessor query times for average element distribution and the 
 worst-case element distribution.
-Note, that Vers worst-case query times are logarithmic, while `sucds` has linear worst-case query times.
+Note that Vers worst-case query times are logarithmic, while `sucds` has linear worst-case query times.
 
 ![Elias-Fano Worst Case](images/elias_fano_pred_random.svg)
 ![Elias-Fano Worst Case](images/elias_fano_pred_adversarial.svg)
@@ -114,7 +114,7 @@ An increase in runtime can be observed for input sizes exceeding the L3 cache si
 ![RMQ Comparison](images/rmq_comparison.svg)
 
 # Intrinsics
-This crate uses compiler intrinsics for bit-manipulation. The intrinsics are supported by
+This crate uses compiler intrinsics for bit manipulation. The intrinsics are supported by
 all modern x86_64 CPUs, but not by other architectures.
 There are fallback implementations if the intrinsics are not available, but they are significantly slower.
 Using this library on `x86` CPUs without enabling `BMI2` and `popcnt` target features is not recommended.
