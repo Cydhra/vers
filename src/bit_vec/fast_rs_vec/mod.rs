@@ -507,6 +507,20 @@ impl PartialEq for RsVec {
     }
 }
 
+impl From<BitVec> for RsVec {
+    /// Build an [`RsVec`] from a [`BitVec`]. This will consume the [`BitVec`]. Since [`RsVec`]s are
+    /// immutable, this is the only way to construct an [`RsVec`].
+    ///
+    /// # Example
+    /// See the example for [`RsVec`].
+    ///
+    /// [`BitVec`]: BitVec
+    /// [`RsVec`]: RsVec
+    fn from(vec: BitVec) -> Self {
+        RsVec::from_bit_vec(vec)
+    }
+}
+
 // iter code in here to keep it more organized
 mod iter;
 // select code in here to keep it more organized
