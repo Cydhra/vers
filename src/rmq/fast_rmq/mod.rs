@@ -88,8 +88,13 @@ impl FastRmq {
     /// Creates a new range minimum query data structure from the given data. Creation time is
     /// O(n log n) and space overhead is O(n log n) with a fractional constant factor
     /// (see [`FastRmq`])
+    ///
+    /// # Panics
+    /// This function will panic if the input is larger than 2^40 elements.
     #[must_use]
     pub fn from_vec(data: Vec<u64>) -> Self {
+        assert!(data.len() < 1 << 40, "input too large for fast rmq");
+
         let mut block_minima = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);
         let mut block_min_indices = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);
         let mut blocks = Vec::with_capacity(data.len() / BLOCK_SIZE + 1);
