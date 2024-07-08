@@ -482,13 +482,13 @@ fn test_from_bits() {
 
 #[test]
 fn test_from_words() {
-    let bv = BitVec::from_words(&[1, 0, u64::MAX]);
+    let bv = BitVec::from_limbs(&[1, 0, u64::MAX]);
     assert_eq!(bv.len, 192);
     assert_eq!(bv.get_bits(0, 64), Some(1));
     assert_eq!(bv.get_bits(64, 64), Some(0));
     assert_eq!(bv.get_bits(128, 64), Some(u64::MAX));
 
-    let bv = BitVec::from_words(&[]);
+    let bv = BitVec::from_limbs(&[]);
     assert_eq!(bv.len, 0);
     assert_eq!(bv.get_bits(0, 0), None);
 }
