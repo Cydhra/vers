@@ -59,7 +59,7 @@ struct SuperBlockDescriptor {
 /// Meta-data for the select query. Each entry i in the select vector contains the indices to find
 /// the i * `SELECT_BLOCK_SIZE`'th 0- and 1-bit in the bitvector. Those indices may be very far apart.
 /// The indices do not point into the bit-vector, but into the select-block vector.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct SelectSuperBlockDescriptor {
     index_0: usize,
