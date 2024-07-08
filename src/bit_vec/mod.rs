@@ -847,8 +847,8 @@ impl BitVec {
     ///
     /// let bv = BitVec::from_bits(&[1, 0, 1, 1, 1, 1]);
     ///
-    /// assert!(bv.is_bit_set(1).unwrap());
-    /// assert!(!bv.is_bit_set(2).unwrap());
+    /// assert!(!bv.is_bit_set(1).unwrap());
+    /// assert!(bv.is_bit_set(2).unwrap());
     /// ```
     ///
     /// [`is_bit_set_unchecked`]: BitVec::is_bit_set_unchecked
