@@ -63,7 +63,8 @@ fn test_range_operators() {
 
 #[test]
 fn test_empty_rmq() {
-    let _rmq = BinaryRmq::from_vec(Vec::<u64>::new());
+    let rmq = BinaryRmq::from_vec(Vec::<u64>::new());
+    assert!(rmq.is_empty());
     // calling functions on an empty rmq will panic because the upper bound is inclusive, but there
     // is no valid index in an empty array, so we can't test anything else
 }
