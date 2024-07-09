@@ -36,6 +36,8 @@ The only unsafe call is the compiler intrinsic for the arithmetic instruction `p
 - `simd`: Enables the use of SIMD instructions for rank and select operations.
 This feature requires AVX-512 support and uses unsafe code.
 It also enables a special iterator for the rank/select bit vector that uses vectorized operations.
+The feature only works on nightly Rust.
+Enabling it on stable Rust is a no-op, because the required CPU features are not available there.
 - `serde`: Enables serialization and deserialization of the data structures using the `serde` crate.
 
 ## Benchmarks
