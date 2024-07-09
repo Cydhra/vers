@@ -938,12 +938,10 @@ impl BitVec {
     pub fn count_ones(&self) -> u64 {
         let mut ones: u64 = self.data[0..self.len / WORD_SIZE]
             .iter()
-            .map(|limb| <u32 as Into<u64>>::into(limb.count_ones()))
+            .map(|limb| limb.count_ones() as u64)
             .sum();
         if self.len % WORD_SIZE > 0 {
-            ones += <u32 as Into<u64>>::into(
-                (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones(),
-            );
+            ones += (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones() as u64;
         }
         ones
     }
