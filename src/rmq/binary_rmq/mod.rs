@@ -105,16 +105,6 @@ impl BinaryRmq {
         Self { data, results }
     }
 
-    /// Create a new RMQ data structure for the given data.
-    /// The iterator is consumed and the data is stored in a vector.
-    ///
-    /// See [`BinaryRmq::from_vec`] for more information.
-    ///
-    /// [`BinaryRmq::from_vec`]: BinaryRmq::from_vec
-    pub fn from_iter<I: IntoIterator<Item = u64>>(iter: I) -> Self {
-        Self::from_vec(iter.into_iter().collect())
-    }
-
     /// Convenience function for [`BinaryRmq::range_min`] for using range operators.
     /// The range is clamped to the length of the data structure, so this function will not panic,
     /// unless called on an empty data structure, because that does not have a valid index.
@@ -190,6 +180,18 @@ impl Deref for BinaryRmq {
 impl From<Vec<u64>> for BinaryRmq {
     fn from(data: Vec<u64>) -> Self {
         Self::from_vec(data)
+    }
+}
+
+/// Create a new RMQ data structure for the given data.
+/// The iterator is consumed and the data is stored in a vector.
+///
+/// See [`BinaryRmq::from_vec`] for more information.
+///
+/// [`BinaryRmq::from_vec`]: BinaryRmq::from_vec
+impl FromIterator<u64> for BinaryRmq {
+    fn from_iter<T: IntoIterator<Item = u64>>(iter: T) -> Self {
+        Self::from_vec(iter.into_iter().collect())
     }
 }
 
