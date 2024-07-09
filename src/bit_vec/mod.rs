@@ -1131,5 +1131,15 @@ impl From<Vec<u64>> for BitVec {
     }
 }
 
+/// Create a new bit vector from u64 values.
+/// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
+/// The function will append the bits of each element to the bit vector in the order they are
+/// given in the iterator (i.e. the first element takes bits `0..64` of the vector).
+impl FromIterator<u64> for BitVec {
+    fn from_iter<T: IntoIterator<Item = u64>>(iter: T) -> Self {
+        BitVec::from_limbs_iter(iter)
+    }
+}
+
 #[cfg(test)]
 mod tests;
