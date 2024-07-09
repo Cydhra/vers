@@ -27,10 +27,10 @@
 //!
 //! # Performance
 //! Performance was benchmarked against publicly available implementations of the same (or similar)
-//! data structures on crates.io at the time of writing. The benchmark results can be found
-//! in the [GitHub repository](https://github.com/Cydhra/vers). At the time of writing,
-//! this crate is among the fastest implementations of all data structures, and the most efficient
-//! with regard to memory usage.
+//! data structures on crates.io.
+//! Vers is among the fastest for all benchmarked operations.
+//! The benchmark results can be found
+//! in the [Benchmark repository](https://github.com/Cydhra/vers_benchmarks).
 //! Some tradeoffs between average time, worst-case time, and available API features should be taken
 //! into consideration when selecting among the fastest libraries
 //! (see the GitHub repository for a discussion).
@@ -47,10 +47,17 @@
 //! and `tzcnt` (supported with ``BMI1`` since Intel Haswell resp. AMD Jaguar, ca. 2013).
 //!
 //! # Safety
-//! This crate uses no unsafe code, with the only exception being compiler intrinsics for
-//! bit-manipulation. The intrinsics cannot fail with the provided inputs (provided they are
+//! When the `simd` crate feature is not enabled (default),
+//! this crate uses no unsafe code, with the only exception being compiler intrinsics for
+//! bit-manipulation. The intrinsics cannot fail with their inputs (provided they are
 //! supported by the target machine), so even if they were to be implemented incorrectly,
 //! no memory safety issues would arise.
+//!
+//! # Crate Features
+//! - `simd` (disabled by default): Enables the use of SIMD instructions in the `RsVec`
+//!   implementation, and an additional iterator for the `RsVec` data structure.
+//! - `serde` (disabled by default): Enables serialization and deserialization support for all
+//!   data structures in this crate using the `serde` crate.
 
 pub use crate::elias_fano::EliasFanoVec;
 pub use bit_vec::fast_rs_vec::RsVec;
