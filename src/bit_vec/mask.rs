@@ -7,6 +7,7 @@ use crate::BitVec;
 
 /// A bit vector that is masked with another bit vector via a masking function. Offers the same
 /// functions as an unmasked vector. The mask is applied lazily.
+#[derive(Debug, Clone)]
 pub struct MaskedBitVec<'a, 'b, F: Fn(u64, u64) -> u64> {
     vec: &'a BitVec,
     mask: &'b BitVec,
