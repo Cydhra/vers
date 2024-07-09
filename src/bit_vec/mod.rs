@@ -910,7 +910,7 @@ impl BitVec {
     /// [`get_bits`]: BitVec::get_bits
     #[must_use]
     #[allow(clippy::inline_always)]
-    #[allow(clippy::comparison_chain, clippy::collapsible_else_if)] // readability
+    #[allow(clippy::comparison_chain)] // readability
     #[inline(always)] // inline to gain loop optimization and pipeline advantages for elias fano
     pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
         debug_assert!(len <= WORD_SIZE);
@@ -920,12 +920,8 @@ impl BitVec {
         } else if pos % WORD_SIZE + len < WORD_SIZE {
             partial_word & ((1 << (len % WORD_SIZE)) - 1)
         } else {
-            if len == 64 {
-                partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE))
-            } else {
-                (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
-                    & ((1 << len) - 1)
-            }
+            (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
+                & 1u64.checked_shl(len as u32).unwrap_or(0).wrapping_sub(1)
         }
     }
 
