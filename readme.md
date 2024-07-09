@@ -107,9 +107,14 @@ Note that Vers worst-case query times are logarithmic, while `sucds` has linear 
 The Range Minimum Query implementations are compared against the 
 [range_minimum_query](https://crates.io/crates/range_minimum_query) and 
 [librualg](https://crates.io/crates/librualg) crate.
-Vers outperforms both crates by a significant margin.
+Vers outperforms both crates by a significant margin with both implementations.
 The x-axis is the number of elements in the sequence.
 An increase in runtime can be observed for input sizes exceeding the L3 cache size (64 MB).
+The increase is earlier for the `BinaryRMQ` implementation, because it has a substantially higher memory overhead.
+For the same reason, the final two measurements for the `BinaryRMQ` implementation are missing (the data structure
+exceeded the available 32 GB main memory).
+
+(Yes, the naming of both implementations is unfortunate, but they will stay until I do a major version bump.)
 
 ![RMQ Comparison](images/rmq_comparison.svg)
 
