@@ -125,7 +125,7 @@ impl super::RsVec {
     /// # Arguments
     /// * `rank` - the rank to search for, relative to the block
     /// * `block_index` - the index of the block to search in, this is the block in the blocks
-    /// vector that contains the rank
+    ///   vector that contains the rank
     #[inline(always)]
     pub(super) fn search_word_in_block0(&self, mut rank: usize, block_index: usize) -> usize {
         // linear search for word that contains the rank. Binary search is not possible here,
@@ -160,7 +160,7 @@ impl super::RsVec {
     ///
     /// # Arguments
     /// * `super_block` - the index of the super block to start the search from, this is the
-    ///  super block in the ``select_blocks`` vector that contains the rank
+    ///   super block in the ``select_blocks`` vector that contains the rank
     /// * `rank` - the rank to search for
     #[inline(always)]
     pub(super) fn search_super_block0(&self, mut super_block: usize, rank: usize) -> usize {
@@ -345,7 +345,7 @@ impl super::RsVec {
     /// # Arguments
     /// * `rank` - the rank to search for, relative to the block
     /// * `block_index` - the index of the block to search in, this is the block in the blocks
-    /// vector that contains the rank
+    ///   vector that contains the rank
     #[inline(always)]
     pub(super) fn search_word_in_block1(&self, mut rank: usize, block_index: usize) -> usize {
         // linear search for word that contains the rank. Binary search is not possible here,
@@ -380,7 +380,7 @@ impl super::RsVec {
     ///
     /// # Arguments
     /// * `super_block` - the index of the super block to start the search from, this is the
-    ///  super block in the ``select_blocks`` vector that contains the rank
+    ///   super block in the ``select_blocks`` vector that contains the rank
     /// * `rank` - the rank to search for
     #[inline(always)]
     pub(super) fn search_super_block1(&self, mut super_block: usize, rank: usize) -> usize {
