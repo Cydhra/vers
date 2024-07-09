@@ -25,7 +25,7 @@ impl SmallBitVector {
     #[allow(clippy::cast_sign_loss)]
     fn rank0(&self, i: usize) -> usize {
         debug_assert!(i <= 128);
-        let mask = ![(-1i128 << (i & 127)), 0][usize::from(i == 128)] as u128;
+        let mask = 1u128.checked_shl(i as u32).unwrap_or(0).wrapping_sub(1);
         (!self.0 & mask).count_ones() as usize
     }
 
