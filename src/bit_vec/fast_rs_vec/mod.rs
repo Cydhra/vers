@@ -371,6 +371,7 @@ impl RsVec {
     /// [`get_bits`]: #method.get_bits
     #[must_use]
     #[allow(clippy::comparison_chain)] // readability
+    #[allow(clippy::cast_possible_truncation)] // parameter must be out of scope for this to happen
     pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
         debug_assert!(len <= WORD_SIZE);
         let partial_word = self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE);

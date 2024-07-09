@@ -22,7 +22,7 @@ struct SmallBitVector(u128);
 impl SmallBitVector {
     /// Calculates the rank0 of the bitvector up to the i-th bit by masking out the bits after i
     /// and counting the ones of the bitwise-inverted bitvector.
-    #[allow(clippy::cast_sign_loss)]
+    #[allow(clippy::cast_possible_truncation)] // parameter must be out of scope for this to happen
     fn rank0(&self, i: usize) -> usize {
         debug_assert!(i <= 128);
         let mask = 1u128.checked_shl(i as u32).unwrap_or(0).wrapping_sub(1);

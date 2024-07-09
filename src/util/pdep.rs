@@ -1,6 +1,10 @@
 //! Parallel bits deposit intrinsics for all platforms.
 //! Uses the `PDEP` instruction on `x86`/`x86_64` platforms with the `bmi2` feature enabled.
 
+// bit manipulation generally doesn't care about sign, so the caller is aware of the consequences
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_possible_wrap)]
+
 // This file is part of the `bitintr` crate and is licensed under the terms of the MIT license.
 // Since this crate is dual-licensed, you may choose to use this file under either the MIT license
 // or the Apache License, Version 2.0, at your option (in compliance with the terms of the MIT license).

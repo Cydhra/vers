@@ -912,6 +912,7 @@ impl BitVec {
     #[allow(clippy::inline_always)]
     #[allow(clippy::comparison_chain)] // readability
     #[inline(always)] // inline to gain loop optimization and pipeline advantages for elias fano
+    #[allow(clippy::cast_possible_truncation)] // parameter must be out of scope for this to happen
     pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
         debug_assert!(len <= WORD_SIZE);
         let partial_word = self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE);
