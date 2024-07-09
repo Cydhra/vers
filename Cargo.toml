@@ -11,6 +11,7 @@ keywords = ["succinct", "elias-fano", "bitvector", "rank", "select"]
 categories = ["data-structures", "algorithms"]
 exclude = [
     "images/*",
+    ".github/*",
 ]
 
 [dependencies]
