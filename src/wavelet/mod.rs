@@ -15,13 +15,13 @@ impl WaveletMatrix {
     /// # Parameters
     /// - `bit_vec`: The sequence of `n` `k`-bit words to encode. The `i`-th word begins in the
     ///   `bits_per_element * i`-th bit of the bit vector. Words are stored from least significant
-    ///  bit to most significant bit.
+    ///    bit to most significant bit.
     /// - `bits_per_element`: The number of bits in each word. Cannot exceed 1 << 16.
     ///
     /// # Panics
     /// Panics if the number of bits in the bit vector is not a multiple of the number of bits per element.
     #[must_use]
-    pub fn from_bit_vec(bit_vec: BitVec, bits_per_element: u16) -> Self {
+    pub fn from_bit_vec(bit_vec: &BitVec, bits_per_element: u16) -> Self {
         assert_eq!(bit_vec.len() % bits_per_element as usize, 0, "The number of bits in the bit vector must be a multiple of the number of bits per element.");
         let element_len = bits_per_element as usize;
         let num_elements = bit_vec.len() / element_len;
@@ -89,7 +89,26 @@ impl WaveletMatrix {
     /// The `k`-bit word is returned as a `BitVec`.
     /// The first element of the bit vector is the least significant bit.
     #[must_use]
-    pub fn get_value(&self, i: usize) -> BitVec {
+    pub fn get_value(&self, i: usize) -> Option<BitVec> {
+        if self.data.is_empty() || i >= self.data[0].len() {
+            None
+        } else {
+            Some(self.get_value_unchecked(i))
+        }
+    }
+
+    /// Get the `i`-th element of the encoded sequence in a `k`-bit word.
+    /// The `k`-bit word is returned as a `BitVec`.
+    /// The first element of the bit vector is the least significant bit.
+    /// This function does not perform bounds checking.
+    /// Use [`get_value`] for a checked version.
+    ///
+    /// # Panics
+    /// May panic if the number of bits per element exceeds 64. May instead return an empty bit vector.
+    ///
+    /// [`get_value`]: WaveletMatrix::get_value
+    #[must_use]
+    pub fn get_value_unchecked(&self, i: usize) -> BitVec {
         let mut value = BitVec::from_zeros(self.bits_per_element as usize);
         let mut idx = self.bits_per_element - 1;
         self.reconstruct_value_unchecked(i, |bit| {
@@ -108,11 +127,26 @@ impl WaveletMatrix {
     /// # Panics
     /// Panics if the number of bits per element exceeds 64.
     #[must_use]
-    pub fn get_u64(&self, i: usize) -> u64 {
-        assert!(
-            self.bits_per_element <= 64,
-            "The number of bits per element must be at most 64."
-        );
+    pub fn get_u64(&self, i: usize) -> Option<u64> {
+        if self.bits_per_element > 64 || self.data.is_empty() || i >= self.data[0].len() {
+            None
+        } else {
+            Some(self.get_u64_unchecked(i))
+        }
+    }
+
+    /// Get the `i`-th element of the encoded sequence as a `u64` numeral.
+    /// The element is encoded in the lowest `k` bits of the numeral.
+    /// If the number of bits per element exceeds 64, the value is truncated.
+    /// This function does not perform bounds checking.
+    /// Use [`get_u64`] for a checked version.
+    ///
+    /// # Panic
+    /// May panic if the value of `i` is out of bounds. May instead return 0.
+    ///
+    /// [`get_u64`]: WaveletMatrix::get_u64
+    #[must_use]
+    pub fn get_u64_unchecked(&self, i: usize) -> u64 {
         let mut value = 0;
         self.reconstruct_value_unchecked(i, |bit| {
             value <<= 1;
