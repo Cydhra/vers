@@ -1,4 +1,5 @@
 use crate::{BitVec, RsVec};
+use std::mem;
 
 /// Encode a sequence of `n` `k`-bit words in a wavelet matrix.
 /// The wavelet matrix allows for rank and select queries for `k`-bit symbols on the encoded sequence.
@@ -31,29 +32,57 @@ impl WaveletMatrix {
         // for each following level, insert the next bit of each word into the next bit vector
         // sorted stably by the previous bit vector
         let mut permutation = (0..num_elements).collect::<Vec<_>>();
+        let mut next_permutation = vec![0; num_elements];
+
         for level in 0..element_len {
+            let mut total_zeros = 0;
             for i in 0..num_elements {
-                data[level]
-                    .set(
-                        i,
-                        bit_vec
-                            .get_unchecked(permutation[i] * element_len + element_len - level - 1),
-                    )
-                    .unwrap();
+                if bit_vec.get_unchecked(permutation[i] * element_len + element_len - level - 1)
+                    == 0
+                {
+                    total_zeros += 1;
+                } else {
+                    data[level].set(i, 1).unwrap();
+                }
             }
-            permutation.sort_by_key(|&i| data[level].get_unchecked(i));
+
+            // scan through the generated bit array and move the elements to the correct position
+            // for the next permutation
+            if level < element_len - 1 {
+                let mut zero_boundary = 0;
+                let mut one_boundary = total_zeros;
+                for i in 0..num_elements {
+                    if data[level].get_unchecked(i) == 0 {
+                        next_permutation[zero_boundary] = permutation[i];
+                        zero_boundary += 1;
+                    } else {
+                        next_permutation[one_boundary] = permutation[i];
+                        one_boundary += 1;
+                    }
+                }
+
+                mem::swap(&mut permutation, &mut next_permutation);
+            }
         }
 
         Self {
-            data: data.into_iter().map(RsVec::from_bit_vec).collect(),
+            data: data.into_iter().map(BitVec::into).collect(),
             bits_per_element,
         }
     }
 
-    /// Read a bit from the wavelet matrix and store it somewhere using the provided function.
+    /// Generic function to read a value from the wavelet matrix and consume it with a closure.
     #[inline(always)]
-    fn read_bit<F: FnMut(u64)>(&self, level: usize, i: usize, mut target: F) {
-        target(self.data[level].get_unchecked(i));
+    fn reconstruct_value_unchecked<F: FnMut(u64)>(&self, mut i: usize, mut target_func: F) {
+        for level in 0..self.bits_per_element as usize {
+            let bit = self.data[level].get_unchecked(i);
+            target_func(bit);
+            if bit == 0 {
+                i = self.data[level].rank0(i);
+            } else {
+                i = self.data[level].rank0 + self.data[level].rank1(i);
+            }
+        }
     }
 
     /// Get the `i`-th element of the encoded sequence in a `k`-bit word.
@@ -62,13 +91,11 @@ impl WaveletMatrix {
     #[must_use]
     pub fn get_value(&self, i: usize) -> BitVec {
         let mut value = BitVec::from_zeros(self.bits_per_element as usize);
-        for level in 0..self.bits_per_element {
-            self.read_bit(level as usize, i, |bit| {
-                value
-                    .set((self.bits_per_element - level - 1) as usize, bit)
-                    .unwrap()
-            });
-        }
+        let mut idx = self.bits_per_element - 1;
+        self.reconstruct_value_unchecked(i, |bit| {
+            value.set_unchecked(idx as usize, bit);
+            idx = idx.saturating_sub(1);
+        });
         value
     }
 
@@ -81,24 +108,16 @@ impl WaveletMatrix {
     /// # Panics
     /// Panics if the number of bits per element exceeds 64.
     #[must_use]
-    pub fn get_u64(&self, mut i: usize) -> u64 {
+    pub fn get_u64(&self, i: usize) -> u64 {
         assert!(
             self.bits_per_element <= 64,
             "The number of bits per element must be at most 64."
         );
         let mut value = 0;
-        for level in 0..self.bits_per_element {
-            self.read_bit(level as usize, i, |bit| {
-                value <<= 1;
-                value |= bit;
-            });
-            if value % 2 == 1 {
-                i = self.data[level as usize].rank1(i);
-            } else {
-                i = self.data[level as usize].rank1 + self.data[level as usize].rank0(i);
-            }
-            i = self.data[level as usize].rank1(i);
-        }
+        self.reconstruct_value_unchecked(i, |bit| {
+            value <<= 1;
+            value |= bit;
+        });
         value
     }
 
