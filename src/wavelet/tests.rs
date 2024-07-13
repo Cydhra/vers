@@ -88,3 +88,27 @@ fn test_empty_vec_rank() {
     assert_eq!(wavelet.rank_range(0..0, &BitVec::from_zeros(4)), None);
     assert_eq!(wavelet.rank_range(0..10, &BitVec::from_zeros(4)), None);
 }
+
+#[test]
+fn test_rank_randomized() {
+    let mut rng = StdRng::from_seed([100; 32]);
+
+    let data: Vec<u8> = (0..1000).map(|_| rng.gen_range(0..=u8::MAX)).collect();
+
+    let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
+
+    let mut symbols = data.clone();
+    symbols.sort();
+    symbols.dedup();
+
+    for symbol in symbols {
+        let symbol_bit_vec = BitVec::pack_sequence_u8(&[symbol], 8);
+        let mut rank = 0;
+        for i in 0..data.len() {
+            assert_eq!(wavelet.rank_unchecked(i, &symbol_bit_vec), rank);
+            if data[i] == symbol {
+                rank += 1;
+            }
+        }
+    }
+}
