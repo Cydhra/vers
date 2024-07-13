@@ -105,16 +105,16 @@ impl WaveletMatrix {
     /// Use [`get_value`] for a checked version.
     ///
     /// # Panics
-    /// May panic if the number of bits per element exceeds 64. May instead return an empty bit vector.
+    /// May panic if the index is out of bounds. May instead return an empty bit vector.
     ///
     /// [`get_value`]: WaveletMatrix::get_value
     #[must_use]
     pub fn get_value_unchecked(&self, i: usize) -> BitVec {
         let mut value = BitVec::from_zeros(self.bits_per_element as usize);
-        let mut idx = self.bits_per_element - 1;
+        let mut level = self.bits_per_element - 1;
         self.reconstruct_value_unchecked(i, |bit| {
-            value.set_unchecked(idx as usize, bit);
-            idx = idx.saturating_sub(1);
+            value.set_unchecked(level as usize, bit);
+            level = level.saturating_sub(1);
         });
         value
     }
@@ -248,7 +248,7 @@ impl WaveletMatrix {
     pub fn select_range_unchecked(
         &self,
         mut range: Range<usize>,
-        mut rank: usize,
+        rank: usize,
         symbol: &BitVec,
     ) -> usize {
         for (level, data) in self.data.iter().enumerate() {
@@ -259,6 +259,8 @@ impl WaveletMatrix {
             }
         }
 
+        // TODO the actual range end is ignored by this code, meaning we can select a symbol that is
+        //  not in the range.
         range.end = range.start + rank;
 
         for (level, data) in self.data.iter().enumerate().rev() {
