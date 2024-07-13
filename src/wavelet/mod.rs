@@ -245,6 +245,33 @@ impl WaveletMatrix {
         }
     }
 
+    pub fn select_range_unchecked(
+        &self,
+        mut range: Range<usize>,
+        mut rank: usize,
+        symbol: &BitVec,
+    ) -> usize {
+        for (level, data) in self.data.iter().enumerate() {
+            if symbol.get_unchecked((self.bits_per_element - 1) as usize - level) == 0 {
+                range.start = data.rank0(range.start);
+            } else {
+                range.start = data.rank0 + data.rank1(range.start);
+            }
+        }
+
+        range.end = range.start + rank;
+
+        for (level, data) in self.data.iter().enumerate().rev() {
+            if symbol.get_unchecked((self.bits_per_element - 1) as usize - level) == 0 {
+                range.end = data.select0(range.end);
+            } else {
+                range.end = data.select1(range.end - data.rank0);
+            }
+        }
+
+        range.end
+    }
+
     /// Get the number of elements stored in the encoded sequence.
     #[must_use]
     pub fn len(&self) -> usize {

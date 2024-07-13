@@ -112,3 +112,21 @@ fn test_rank_randomized() {
         }
     }
 }
+
+#[test]
+fn test_select_range() {
+    let data = BitVec::pack_sequence_u64(&[1, 4, 4, 1, 3, 1, 4, 3, 2, 0], 4);
+    let wavelet = WaveletMatrix::from_bit_vec(&data, 4);
+
+    let symbol_0 = BitVec::from_zeros(4);
+    let symbol_7 = BitVec::from_ones(4);
+    let symbol_4 = BitVec::pack_sequence_u8(&[4], 4);
+
+    assert_eq!(wavelet.select_range_unchecked(0..10, 0, &symbol_0), 9);
+    assert_eq!(wavelet.select_range_unchecked(0..9, 1, &symbol_0), 10);
+    assert_eq!(wavelet.select_range_unchecked(0..10, 0, &symbol_7), 10);
+    assert_eq!(wavelet.select_range_unchecked(0..10, 1, &symbol_4), 2);
+    assert_eq!(wavelet.select_range_unchecked(2..10, 0, &symbol_4), 2);
+    assert_eq!(wavelet.select_range_unchecked(2..10, 1, &symbol_4), 6);
+    assert_eq!(wavelet.select_range_unchecked(2..6, 9, &symbol_4), 10);
+}
