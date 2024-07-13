@@ -255,6 +255,12 @@ impl WaveletMatrix {
         }
     }
 
+    /// Check if the wavelet matrix is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Get the number of bytes allocated on the heap for the wavelet matrix.
     /// This does not include memory that is allocated but unused due to allocation policies of
     /// internal data structures.
