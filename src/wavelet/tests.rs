@@ -10,11 +10,11 @@ fn test_wavelet_encoding_randomized() {
         let data: Vec<u8> = (0..rng.gen_range(500..1000))
             .map(|_| rng.gen_range(0..=u8::MAX))
             .collect();
-        let wavelet = WaveletMatrix::from_bit_vec(BitVec::pack_sequence_u8(&data, 8), 8);
+        let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
         assert_eq!(wavelet.len(), data.len());
 
         for i in 0..data.len() {
-            assert_eq!(wavelet.get_u64(i), data[i] as u64);
+            assert_eq!(wavelet.get_u64_unchecked(i), data[i] as u64);
         }
     }
 }
@@ -28,16 +28,63 @@ fn test_wavelet_encoding_large_alphabet() {
         data.set(127 * 3 + i, 1).unwrap();
     }
 
-    let wavelet = WaveletMatrix::from_bit_vec(data, 127);
+    let wavelet = WaveletMatrix::from_bit_vec(&data, 127);
     assert_eq!(wavelet.len(), 6);
 
-    assert_eq!(wavelet.get_value(0), BitVec::from_zeros(127));
-    assert_eq!(wavelet.get_value(1), BitVec::from_zeros(127));
+    assert_eq!(wavelet.get_value_unchecked(0), BitVec::from_zeros(127));
+    assert_eq!(wavelet.get_value_unchecked(1), BitVec::from_zeros(127));
     assert_eq!(
-        wavelet.get_value(2),
+        wavelet.get_value_unchecked(2),
         BitVec::pack_sequence_u64(&[u64::MAX], 127)
     );
-    assert_eq!(wavelet.get_value(3), BitVec::from_ones(127));
-    assert_eq!(wavelet.get_value(4), BitVec::pack_sequence_u8(&[1], 127));
-    assert_eq!(wavelet.get_value(5), BitVec::pack_sequence_u8(&[2], 127));
+    assert_eq!(wavelet.get_value_unchecked(3), BitVec::from_ones(127));
+    assert_eq!(
+        wavelet.get_value_unchecked(4),
+        BitVec::pack_sequence_u8(&[1], 127)
+    );
+    assert_eq!(
+        wavelet.get_value_unchecked(5),
+        BitVec::pack_sequence_u8(&[2], 127)
+    );
+}
+
+#[test]
+fn test_rank_range() {
+    let data = BitVec::pack_sequence_u64(&[1, 4, 4, 1, 3, 1, 4, 3, 2, 0], 4);
+    let wavelet = WaveletMatrix::from_bit_vec(&data, 4);
+
+    let symbol_0 = BitVec::from_zeros(4);
+    assert_eq!(wavelet.rank_range_unchecked(0..10, &symbol_0), 1);
+    assert_eq!(wavelet.rank_range_unchecked(0..8, &symbol_0), 0);
+    assert_eq!(wavelet.rank_range_unchecked(0..9, &symbol_0), 0);
+    assert_eq!(wavelet.rank_range_unchecked(9..10, &symbol_0), 1);
+
+    let symbol_1 = BitVec::pack_sequence_u8(&[1], 4);
+    assert_eq!(wavelet.rank_range_unchecked(0..10, &symbol_1), 3);
+    assert_eq!(wavelet.rank_range_unchecked(0..6, &symbol_1), 3);
+    assert_eq!(wavelet.rank_range_unchecked(0..5, &symbol_1), 2);
+    assert_eq!(wavelet.rank_range_unchecked(5..6, &symbol_1), 1);
+
+    let symbol_5 = BitVec::pack_sequence_u8(&[5], 4);
+    assert_eq!(wavelet.rank_range_unchecked(0..10, &symbol_5), 0);
+    assert_eq!(wavelet.rank_range_unchecked(0..5, &symbol_5), 0);
+    assert_eq!(wavelet.rank_range_unchecked(5..10, &symbol_5), 0);
+    assert_eq!(wavelet.rank_range_unchecked(1..2, &symbol_5), 0);
+
+    // test if out-of-bounds range returns None
+    assert_eq!(wavelet.rank_range(0..11, &symbol_0), None);
+    assert_eq!(wavelet.rank_range(10..10, &symbol_1), None);
+
+    // test if empty range returns 0
+    assert_eq!(wavelet.rank_range_unchecked(9..9, &symbol_0), 0);
+}
+
+#[test]
+fn test_empty_vec_rank() {
+    let data = BitVec::new();
+    let wavelet = WaveletMatrix::from_bit_vec(&data, 4);
+
+    assert_eq!(wavelet.len(), 0);
+    assert_eq!(wavelet.rank_range(0..0, &BitVec::from_zeros(4)), None);
+    assert_eq!(wavelet.rank_range(0..10, &BitVec::from_zeros(4)), None);
 }
