@@ -1,5 +1,6 @@
 use crate::{BitVec, RsVec};
 use std::mem;
+use std::ops::Range;
 
 /// Encode a sequence of `n` `k`-bit words in a wavelet matrix.
 /// The wavelet matrix allows for rank and select queries for `k`-bit symbols on the encoded sequence.
@@ -153,6 +154,95 @@ impl WaveletMatrix {
             value |= bit;
         });
         value
+    }
+
+    /// Get the number of occurrences of the given `symbol` in the encoded sequence in the `range`.
+    /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
+    /// where the least significant bit is the first element, and `k` is the number of bits per element
+    /// in the wavelet matrix.
+    ///
+    /// This method does not perform bounds checking, nor does it check if the `symbol` is a valid
+    /// `k`-bit word.
+    ///
+    /// # Panics
+    /// May panic if the `range` is out of bounds.
+    /// May instead return 0.
+    /// If the number of bits in `symbol` exceeds `k`, the remaining bits are ignored.
+    ///
+    /// [`BitVec`]: BitVec
+    #[must_use]
+    pub fn rank_range_unchecked(&self, mut range: Range<usize>, symbol: &BitVec) -> usize {
+        for (level, data) in self.data.iter().enumerate() {
+            if symbol.get_unchecked((self.bits_per_element - 1) as usize - level) == 0 {
+                range.start = data.rank0(range.start);
+                range.end = data.rank0(range.end);
+            } else {
+                range.start = data.rank0 + data.rank1(range.start);
+                range.end = data.rank0 + data.rank1(range.end);
+            }
+        }
+
+        range.end - range.start
+    }
+
+    /// Get the number of occurrences of the given `symbol` in the encoded sequence in the `range`.
+    /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
+    /// where the least significant bit is the first element, and `k` is the number of bits per element
+    /// in the wavelet matrix.
+    /// Returns `None` if the `range` is out of bounds (greater than the length of the encoded sequence,
+    /// but since it is exclusive, it may be equal to the length),
+    /// or if the number of bits in `symbol` is not equal to `k`.
+    ///
+    /// [`BitVec`]: BitVec
+    #[must_use]
+    pub fn rank_range(&self, range: Range<usize>, symbol: &BitVec) -> Option<usize> {
+        if range.start >= self.len()
+            || range.end > self.len()
+            || symbol.len() != self.bits_per_element as usize
+        {
+            None
+        } else {
+            Some(self.rank_range_unchecked(range, symbol))
+        }
+    }
+
+    /// Get the number of occurrences of the given `symbol` in the encoded sequence up to the `i`-th
+    /// element (exclusive).
+    /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
+    /// where the least significant bit is the first element, and `k` is the number of bits per element
+    /// in the wavelet matrix.
+    ///
+    /// This method does not perform bounds checking, nor does it check if the `symbol` is a valid
+    /// `k`-bit word.
+    ///
+    /// # Panics
+    /// May panic if `i` is out of bounds, or if the number of bits in `symbol` is lower than `k`.
+    /// May instead return 0.
+    /// If the number of bits in `symbol` exceeds `k`, the remaining bits are ignored.
+    ///
+    /// [`BitVec`]: BitVec
+    #[must_use]
+    pub fn rank_unchecked(&self, i: usize, symbol: &BitVec) -> usize {
+        self.rank_range_unchecked(0..i, symbol)
+    }
+
+    /// Get the number of occurrences of the given `symbol` in the encoded sequence up to the `i`-th
+    /// element (exclusive).
+    /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
+    /// where the least significant bit is the first element, and `k` is the number of bits per element
+    /// in the wavelet matrix.
+    /// Returns `None` if `i` is out of bounds (greater than the length of the encoded sequence, but
+    /// since it is exclusive, it may be equal to the length),
+    /// or if the number of bits in `symbol` is not equal to `k`.
+    ///
+    /// [`BitVec`]: BitVec
+    #[must_use]
+    pub fn rank(&self, i: usize, symbol: &BitVec) -> Option<usize> {
+        if i > self.len() || symbol.len() != self.bits_per_element as usize {
+            None
+        } else {
+            Some(self.rank_range_unchecked(0..i, symbol))
+        }
     }
 
     /// Get the number of elements stored in the encoded sequence.
