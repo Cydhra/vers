@@ -168,9 +168,9 @@ impl WaveletMatrix {
     /// `k`-bit word.
     ///
     /// # Panics
-    /// May panic if the `range` is out of bounds.
+    /// May panic if the `range` is out of bounds,
+    /// or if the number of bits in `symbol` is lower than `k`.
     /// May instead return 0.
-    /// If the number of bits in `symbol` exceeds `k`, the remaining bits are ignored.
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
@@ -431,7 +431,6 @@ impl WaveletMatrix {
 
     /// Get the index of the `rank`-th occurrence of the given `symbol` in the encoded sequence,
     /// starting from the `offset`-th element.
-    ///
     /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
     /// where the least significant bit is the first element, and `k` is the number of bits per element
     /// in the wavelet matrix.
@@ -443,7 +442,9 @@ impl WaveletMatrix {
     /// or the length of the encoded sequence if the `rank`-th occurrence does not exist.
     ///
     /// # Panics
-    /// May panic if the `offset` is out of bounds. May instead return the length of the encoded sequence.
+    /// May panic if the `offset` is out of bounds,
+    /// or if the number of bits in `symbol` is lower than `k`.
+    /// May instead return the length of the encoded sequence.
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
@@ -473,7 +474,6 @@ impl WaveletMatrix {
 
     /// Get the index of the `rank`-th occurrence of the given `symbol` in the encoded sequence,
     /// starting from the `offset`-th element.
-    ///
     /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
     /// where the least significant bit is the first element, and `k` is the number of bits per element
     /// in the wavelet matrix.
@@ -488,6 +488,67 @@ impl WaveletMatrix {
             None
         } else {
             let idx = self.select_offset_unchecked(offset, rank, symbol);
+            if idx < self.len() {
+                Some(idx)
+            } else {
+                None
+            }
+        }
+    }
+
+    /// Get the index of the `rank`-th occurrence of the given `symbol` in the encoded sequence,
+    /// starting from the `offset`-th element.
+    /// The `symbol` is a `k`-bit word encoded in a u64 numeral,
+    /// where k is less than or equal to 64.
+    ///
+    /// This method does not perform bounds checking, nor does it check if the elements of the
+    /// wavelet matrix can be represented in a u64 numeral.
+    ///
+    /// Returns the index of the `rank`-th occurrence of the `symbol` in the encoded sequence,
+    /// or the length of the encoded sequence if the `rank`-th occurrence does not exist.
+    ///
+    /// # Panics
+    /// May panic if the `offset` is out of bounds,
+    /// or if the number of bits in wavelet matrix elements exceed `64`.
+    /// May instead return the length of the encoded sequence.
+    #[must_use]
+    pub fn select_offset_u64_unchecked(&self, offset: usize, rank: usize, symbol: u64) -> usize {
+        let mut range_start = offset;
+
+        for (level, data) in self.data.iter().enumerate() {
+            if (symbol >> ((self.bits_per_element - 1) as usize - level)) & 1 == 0 {
+                range_start = data.rank0(range_start);
+            } else {
+                range_start = data.rank0 + data.rank1(range_start);
+            }
+        }
+
+        let mut range_end = range_start + rank;
+
+        for (level, data) in self.data.iter().enumerate().rev() {
+            if (symbol >> ((self.bits_per_element - 1) as usize - level)) & 1 == 0 {
+                range_end = data.select0(range_end);
+            } else {
+                range_end = data.select1(range_end - data.rank0);
+            }
+        }
+
+        range_end
+    }
+
+    /// Get the index of the `rank`-th occurrence of the given `symbol` in the encoded sequence,
+    /// starting from the `offset`-th element.
+    /// The `symbol` is a `k`-bit word encoded in a u64 numeral,
+    /// where k is less than or equal to 64.
+    ///
+    /// Returns `None` if `offset` is out of bounds, or if the number of bits in the wavelet matrix
+    /// elements exceed `64`, or if the `rank`-th occurrence of the `symbol` does not exist.
+    #[must_use]
+    pub fn select_offset_u64(&self, offset: usize, rank: usize, symbol: u64) -> Option<usize> {
+        if offset >= self.len() || self.bits_per_element > 64 {
+            None
+        } else {
+            let idx = self.select_offset_u64_unchecked(offset, rank, symbol);
             if idx < self.len() {
                 Some(idx)
             } else {
@@ -532,6 +593,44 @@ impl WaveletMatrix {
             None
         } else {
             let idx = self.select_unchecked(rank, symbol);
+            if idx < self.len() {
+                Some(idx)
+            } else {
+                None
+            }
+        }
+    }
+
+    /// Get the index of the `rank`-th occurrence of the given `symbol` in the encoded sequence.
+    /// The `symbol` is a `k`-bit word encoded in a u64 numeral,
+    /// where k is less than or equal to 64.
+    ///
+    /// This method does not perform bounds checking, nor does it check if the elements of the
+    /// wavelet matrix can be represented in a u64 numeral.
+    ///
+    /// Returns the index of the `rank`-th occurrence of the `symbol` in the encoded sequence,
+    /// or the length of the encoded sequence if the `rank`-th occurrence does not exist.
+    ///
+    /// # Panics
+    /// May panic if the number of bits in wavelet matrix elements exceed `64`.
+    /// May instead return the length of the encoded sequence.
+    #[must_use]
+    pub fn select_u64_unchecked(&self, rank: usize, symbol: u64) -> usize {
+        self.select_offset_u64_unchecked(0, rank, symbol)
+    }
+
+    /// Get the index of the `rank`-th occurrence of the given `symbol` in the encoded sequence.
+    /// The `symbol` is a `k`-bit word encoded in a u64 numeral,
+    /// where k is less than or equal to 64.
+    ///
+    /// Returns `None` if the number of bits in the wavelet matrix elements exceed `64`,
+    /// or if the `rank`-th occurrence of the `symbol` does not exist.
+    #[must_use]
+    pub fn select_u64(&self, rank: usize, symbol: u64) -> Option<usize> {
+        if self.bits_per_element > 64 {
+            None
+        } else {
+            let idx = self.select_u64_unchecked(rank, symbol);
             if idx < self.len() {
                 Some(idx)
             } else {
