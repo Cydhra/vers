@@ -2,8 +2,11 @@ use crate::{BitVec, RsVec};
 use std::mem;
 use std::ops::Range;
 
-/// Encode a sequence of `n` `k`-bit words in a wavelet matrix.
-/// The wavelet matrix allows for rank and select queries for `k`-bit symbols on the encoded sequence.
+/// A wavelet matrix implementation implemented as described in
+/// [Navarro and Claude, 2021](http://dx.doi.org/10.1007/978-3-642-34109-0_18).
+///
+/// Encodes a sequence of `n` `k`-bit words into a wavelet matrix which supports constant-time
+/// rank and select queries on elements of its `k`-bit alphabet.
 #[derive(Clone, Debug)]
 pub struct WaveletMatrix {
     data: Box<[RsVec]>,
@@ -206,6 +209,49 @@ impl WaveletMatrix {
         }
     }
 
+    /// Get the rank of the `i`-th occurrence of the given `symbol` in the encoded sequence,
+    /// starting from the `offset`-th element.
+    /// This is equivalent to ``rank_range_unchecked(offset..index, symbol)``.
+    /// The interval is half-open, meaning ``rank_offset_unchecked(0, 0, symbol)`` tries to
+    /// compute the rank of an empty interval, which returns an unspecified value.
+    ///
+    /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
+    /// where the least significant bit is the first element, and `k` is the number of bits per element
+    /// in the wavelet matrix.
+    ///
+    /// This method does not perform bounds checking, nor does it check if the `symbol` is a valid
+    /// `k`-bit word.
+    ///
+    /// # Panics
+    /// May panic if `offset` or `index` is out of bounds, or if offset is larger than index.
+    /// May instead return 0.
+    #[must_use]
+    pub fn rank_offset_unchecked(&self, offset: usize, index: usize, symbol: &BitVec) -> usize {
+        self.rank_range_unchecked(offset..index, symbol)
+    }
+
+    /// Get the rank of the `i`-th occurrence of the given `symbol` in the encoded sequence,
+    /// starting from the `offset`-th element.
+    /// This is equivalent to ``rank_range(offset..index, symbol)``.
+    /// The interval is half-open, meaning ``rank_offset(0, 0, symbol)`` returns None, because the interval
+    /// is empty.
+    ///
+    /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
+    /// Returns `None` if `offset` or `index` is out of bounds, or if `offset` is larger than `index`,
+    /// or if the number of bits in `symbol` is not equal to `k`.
+    #[must_use]
+    pub fn rank_offset(&self, offset: usize, index: usize, symbol: &BitVec) -> Option<usize> {
+        if offset >= index
+            || offset >= self.len()
+            || index > self.len()
+            || symbol.len() != self.bits_per_element as usize
+        {
+            None
+        } else {
+            Some(self.rank_offset_unchecked(offset, index, symbol))
+        }
+    }
+
     /// Get the number of occurrences of the given `symbol` in the encoded sequence up to the `i`-th
     /// element (exclusive).
     /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
@@ -245,33 +291,44 @@ impl WaveletMatrix {
         }
     }
 
-    pub fn select_range_unchecked(
-        &self,
-        mut range: Range<usize>,
-        rank: usize,
-        symbol: &BitVec,
-    ) -> usize {
+    /// Get the index of the `rank`-th occurrence of the given `symbol` in the encoded sequence,
+    /// starting from the `offset`-th element.
+    ///
+    /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
+    /// where the least significant bit is the first element, and `k` is the number of bits per element
+    /// in the wavelet matrix.
+    ///
+    /// This method does not perform bounds checking, nor does it check if the `symbol` is a valid
+    /// `k`-bit word.
+    #[must_use]
+    pub fn select_offset_unchecked(&self, offset: usize, rank: usize, symbol: &BitVec) -> usize {
+        let mut range_start = offset;
+
         for (level, data) in self.data.iter().enumerate() {
             if symbol.get_unchecked((self.bits_per_element - 1) as usize - level) == 0 {
-                range.start = data.rank0(range.start);
+                range_start = data.rank0(range_start);
             } else {
-                range.start = data.rank0 + data.rank1(range.start);
+                range_start = data.rank0 + data.rank1(range_start);
             }
         }
 
-        // TODO the actual range end is ignored by this code, meaning we can select a symbol that is
-        //  not in the range.
-        range.end = range.start + rank;
+        let mut range_end = range_start + rank;
 
         for (level, data) in self.data.iter().enumerate().rev() {
             if symbol.get_unchecked((self.bits_per_element - 1) as usize - level) == 0 {
-                range.end = data.select0(range.end);
+                range_end = data.select0(range_end);
             } else {
-                range.end = data.select1(range.end - data.rank0);
+                range_end = data.select1(range_end - data.rank0);
             }
         }
 
-        range.end
+        range_end
+    }
+
+    /// Get the number of bits per element in the alphabet of the encoded sequence.
+    #[must_use]
+    pub fn bit_len(&self) -> u16 {
+        self.bits_per_element
     }
 
     /// Get the number of elements stored in the encoded sequence.
