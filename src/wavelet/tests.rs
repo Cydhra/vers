@@ -87,6 +87,11 @@ fn test_empty_vec_rank() {
     assert_eq!(wavelet.len(), 0);
     assert_eq!(wavelet.rank_range(0..0, &BitVec::from_zeros(4)), None);
     assert_eq!(wavelet.rank_range(0..10, &BitVec::from_zeros(4)), None);
+    assert_eq!(wavelet.rank_offset(10, 0, &BitVec::from_zeros(4)), None);
+    assert_eq!(wavelet.rank_offset(0, 10, &BitVec::from_zeros(4)), None);
+    assert_eq!(wavelet.rank_offset(0, 0, &BitVec::from_zeros(4)), None);
+    assert_eq!(wavelet.rank(0, &BitVec::from_zeros(4)), Some(0));
+    assert_eq!(wavelet.rank(10, &BitVec::from_zeros(4)), None);
 }
 
 #[test]

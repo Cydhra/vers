@@ -211,7 +211,7 @@ impl WaveletMatrix {
 
     /// Get the rank of the `i`-th occurrence of the given `symbol` in the encoded sequence,
     /// starting from the `offset`-th element.
-    /// This is equivalent to ``rank_range_unchecked(offset..index, symbol)``.
+    /// This is equivalent to ``rank_range_unchecked(offset..i, symbol)``.
     /// The interval is half-open, meaning ``rank_offset_unchecked(0, 0, symbol)`` tries to
     /// compute the rank of an empty interval, which returns an unspecified value.
     ///
@@ -223,36 +223,41 @@ impl WaveletMatrix {
     /// `k`-bit word.
     ///
     /// # Panics
-    /// May panic if `offset` or `index` is out of bounds, or if offset is larger than index.
+    /// May panic if `offset` is out of bounds,
+    /// or if `offset + i` is larger than the length of the encoded sequence,
+    /// or if offset is larger than index.
     /// May instead return 0.
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
-    pub fn rank_offset_unchecked(&self, offset: usize, index: usize, symbol: &BitVec) -> usize {
-        self.rank_range_unchecked(offset..index, symbol)
+    pub fn rank_offset_unchecked(&self, offset: usize, i: usize, symbol: &BitVec) -> usize {
+        self.rank_range_unchecked(offset..i, symbol)
     }
 
     /// Get the rank of the `i`-th occurrence of the given `symbol` in the encoded sequence,
     /// starting from the `offset`-th element.
-    /// This is equivalent to ``rank_range(offset..index, symbol)``.
+    /// This is equivalent to ``rank_range(offset..i, symbol)``.
     /// The interval is half-open, meaning ``rank_offset(0, 0, symbol)`` returns None, because the interval
     /// is empty.
     ///
     /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
-    /// Returns `None` if `offset` or `index` is out of bounds, or if `offset` is larger than `index`,
+    /// Returns `None` if `offset` is out of bounds,
+    /// or if `offset + i` is larger than the length of the encoded sequence,
     /// or if the number of bits in `symbol` is not equal to `k`.
+    /// `offset + i` may equal the length of the encoded sequence,
+    /// which will return the number of occurrences of the symbol up to the end of the sequence.
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
-    pub fn rank_offset(&self, offset: usize, index: usize, symbol: &BitVec) -> Option<usize> {
-        if offset >= index
+    pub fn rank_offset(&self, offset: usize, i: usize, symbol: &BitVec) -> Option<usize> {
+        if offset >= i
             || offset >= self.len()
-            || index > self.len()
+            || offset + i > self.len()
             || symbol.len() != self.bits_per_element as usize
         {
             None
         } else {
-            Some(self.rank_offset_unchecked(offset, index, symbol))
+            Some(self.rank_offset_unchecked(offset, i, symbol))
         }
     }
 
