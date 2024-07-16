@@ -7,6 +7,8 @@ use std::ops::Range;
 ///
 /// Encodes a sequence of `n` `k`-bit words into a wavelet matrix which supports constant-time
 /// rank and select queries on elements of its `k`-bit alphabet.
+/// The wavelet matrix supports queries where elements are encoded
+/// either in a `BitVec` or as `u64` numerals if `bits_per_element <= 64`.
 #[derive(Clone, Debug)]
 pub struct WaveletMatrix {
     data: Box<[RsVec]>,
