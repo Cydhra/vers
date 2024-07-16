@@ -225,6 +225,8 @@ impl WaveletMatrix {
     /// # Panics
     /// May panic if `offset` or `index` is out of bounds, or if offset is larger than index.
     /// May instead return 0.
+    ///
+    /// [`BitVec`]: BitVec
     #[must_use]
     pub fn rank_offset_unchecked(&self, offset: usize, index: usize, symbol: &BitVec) -> usize {
         self.rank_range_unchecked(offset..index, symbol)
@@ -239,6 +241,8 @@ impl WaveletMatrix {
     /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
     /// Returns `None` if `offset` or `index` is out of bounds, or if `offset` is larger than `index`,
     /// or if the number of bits in `symbol` is not equal to `k`.
+    ///
+    /// [`BitVec`]: BitVec
     #[must_use]
     pub fn rank_offset(&self, offset: usize, index: usize, symbol: &BitVec) -> Option<usize> {
         if offset >= index
@@ -300,6 +304,14 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking, nor does it check if the `symbol` is a valid
     /// `k`-bit word.
+    ///
+    /// Returns the index of the `rank`-th occurrence of the `symbol` in the encoded sequence,
+    /// or the length of the encoded sequence if the `rank`-th occurrence does not exist.
+    ///
+    /// # Panics
+    /// May panic if the `offset` is out of bounds. May instead return the length of the encoded sequence.
+    ///
+    /// [`BitVec`]: BitVec
     #[must_use]
     pub fn select_offset_unchecked(&self, offset: usize, rank: usize, symbol: &BitVec) -> usize {
         let mut range_start = offset;
@@ -323,6 +335,75 @@ impl WaveletMatrix {
         }
 
         range_end
+    }
+
+    /// Get the index of the `rank`-th occurrence of the given `symbol` in the encoded sequence,
+    /// starting from the `offset`-th element.
+    ///
+    /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
+    /// where the least significant bit is the first element, and `k` is the number of bits per element
+    /// in the wavelet matrix.
+    ///
+    /// Returns `None` if `offset` is out of bounds, or if the number of bits in `symbol` is not equal to `k`,
+    /// or if the `rank`-th occurrence of the `symbol` does not exist.
+    ///
+    /// [`BitVec`]: BitVec
+    #[must_use]
+    pub fn select_offset(&self, offset: usize, rank: usize, symbol: &BitVec) -> Option<usize> {
+        if offset >= self.len() || symbol.len() != self.bits_per_element as usize {
+            None
+        } else {
+            let idx = self.select_offset_unchecked(offset, rank, symbol);
+            if idx < self.len() {
+                Some(idx)
+            } else {
+                None
+            }
+        }
+    }
+
+    /// Get the index of the `rank`-th occurrence of the given `symbol` in the encoded sequence.
+    /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
+    /// where the least significant bit is the first element, and `k` is the number of bits per element
+    /// in the wavelet matrix.
+    ///
+    /// This method does not perform bounds checking, nor does it check if the `symbol` is a valid
+    /// `k`-bit word.
+    ///
+    /// Returns the index of the `rank`-th occurrence of the `symbol` in the encoded sequence,
+    /// or the length of the encoded sequence if the `rank`-th occurrence does not exist.
+    ///
+    /// # Panics
+    /// May panic if the number of bits in `symbol` is not equal to `k`.
+    /// May instead return the length of the encoded sequence.
+    ///
+    /// [`BitVec`]: BitVec
+    #[must_use]
+    pub fn select_unchecked(&self, rank: usize, symbol: &BitVec) -> usize {
+        self.select_offset_unchecked(0, rank, symbol)
+    }
+
+    /// Get the index of the `rank`-th occurrence of the given `symbol` in the encoded sequence.
+    /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
+    /// where the least significant bit is the first element, and `k` is the number of bits per element
+    /// in the wavelet matrix.
+    ///
+    /// Returns `None` if the number of bits in `symbol` is not equal to `k`,
+    /// or if the `rank`-th occurrence of the `symbol` does not exist.
+    ///
+    /// [`BitVec`]: BitVec
+    #[must_use]
+    pub fn select(&self, rank: usize, symbol: &BitVec) -> Option<usize> {
+        if symbol.len() != self.bits_per_element as usize {
+            None
+        } else {
+            let idx = self.select_unchecked(rank, symbol);
+            if idx < self.len() {
+                Some(idx)
+            } else {
+                None
+            }
+        }
     }
 
     /// Get the number of bits per element in the alphabet of the encoded sequence.
