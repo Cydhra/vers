@@ -209,6 +209,49 @@ impl WaveletMatrix {
         }
     }
 
+    /// Get the number of occurrences of the given `symbol` in the encoded sequence in the `range`.
+    /// The `symbol` is a `k`-bit word encoded in a u64 numeral,
+    /// where k is less than or equal to 64.
+    ///
+    /// This method does not perform bounds checking, nor does it check if the elements of the
+    /// wavelet matrix can be represented in a u64 numeral.
+    ///
+    /// # Panics
+    /// May panic if the `range` is out of bounds.
+    /// May instead return 0.
+    /// If the number of bits in wavelet matrix elements exceed `64`, the behavior is
+    /// platform-dependent.
+    #[must_use]
+    pub fn rank_range_u64_unchecked(&self, mut range: Range<usize>, symbol: u64) -> usize {
+        for (level, data) in self.data.iter().enumerate() {
+            if (symbol >> ((self.bits_per_element - 1) as usize - level)) & 1 == 0 {
+                range.start = data.rank0(range.start);
+                range.end = data.rank0(range.end);
+            } else {
+                range.start = data.rank0 + data.rank1(range.start);
+                range.end = data.rank0 + data.rank1(range.end);
+            }
+        }
+
+        range.end - range.start
+    }
+
+    /// Get the number of occurrences of the given `symbol` in the encoded sequence in the `range`.
+    /// The `symbol` is a `k`-bit word encoded in a u64 numeral,
+    /// where k is less than or equal to 64.
+    ///
+    /// Returns `None` if the `range` is out of bounds (greater than the length of the encoded sequence,
+    /// but since it is exclusive, it may be equal to the length),
+    /// or if the number of bits in the wavelet matrix elements exceed `64`. // todo panic instead?
+    #[must_use]
+    pub fn rank_range_u64(&self, range: Range<usize>, symbol: u64) -> Option<usize> {
+        if range.start >= self.len() || range.end > self.len() || self.bits_per_element > 64 {
+            None
+        } else {
+            Some(self.rank_range_u64_unchecked(range, symbol))
+        }
+    }
+
     /// Get the rank of the `i`-th occurrence of the given `symbol` in the encoded sequence,
     /// starting from the `offset`-th element.
     /// This is equivalent to ``rank_range_unchecked(offset..i, symbol)``.
