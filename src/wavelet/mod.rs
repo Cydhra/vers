@@ -252,10 +252,10 @@ impl WaveletMatrix {
         }
     }
 
-    /// Get the rank of the `i`-th occurrence of the given `symbol` in the encoded sequence,
-    /// starting from the `offset`-th element.
-    /// This is equivalent to ``rank_range_unchecked(offset..i, symbol)``.
-    /// The interval is half-open, meaning ``rank_offset_unchecked(0, 0, symbol)`` tries to
+    /// Get the number of occurrences of the given `symbol` in the encoded sequence between the
+    /// `offset`-th and `i`-th element (exclusive).
+    /// This is equivalent to ```rank_range_unchecked(offset..i, symbol)```.
+    /// The interval is half-open, meaning ```rank_offset_unchecked(0, 0, symbol)``` tries to
     /// compute the rank of an empty interval, which returns an unspecified value.
     ///
     /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
@@ -268,7 +268,8 @@ impl WaveletMatrix {
     /// # Panics
     /// May panic if `offset` is out of bounds,
     /// or if `offset + i` is larger than the length of the encoded sequence,
-    /// or if offset is larger than index.
+    /// or if `offset` is greater than `i`,
+    /// or if the number of bits in `symbol` is lower than `k`.
     /// May instead return 0.
     ///
     /// [`BitVec`]: BitVec
@@ -277,17 +278,21 @@ impl WaveletMatrix {
         self.rank_range_unchecked(offset..i, symbol)
     }
 
-    /// Get the rank of the `i`-th occurrence of the given `symbol` in the encoded sequence,
-    /// starting from the `offset`-th element.
+    /// Get the number of occurrences of the given `symbol` in the encoded sequence between the
+    /// `offset`-th and `i`-th element (exclusive).
     /// This is equivalent to ``rank_range(offset..i, symbol)``.
-    /// The interval is half-open, meaning ``rank_offset(0, 0, symbol)`` returns None, because the interval
-    /// is empty.
+    /// The interval is half-open, meaning ``rank_offset(0, 0, symbol)`` returns None,
+    /// because the interval is empty.
     ///
     /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
+    /// where the least significant bit is the first element, and `k` is the number of bits per element
+    /// in the wavelet matrix.
+    ///
     /// Returns `None` if `offset` is out of bounds,
-    /// or if `offset + i` is larger than the length of the encoded sequence,
+    /// or if `i` is larger than the length of the encoded sequence,
+    /// or if `offset` is greater than `i`,
     /// or if the number of bits in `symbol` is not equal to `k`.
-    /// `offset + i` may equal the length of the encoded sequence,
+    /// `i` may equal the length of the encoded sequence,
     /// which will return the number of occurrences of the symbol up to the end of the sequence.
     ///
     /// [`BitVec`]: BitVec
@@ -295,12 +300,59 @@ impl WaveletMatrix {
     pub fn rank_offset(&self, offset: usize, i: usize, symbol: &BitVec) -> Option<usize> {
         if offset >= i
             || offset >= self.len()
-            || offset + i > self.len()
+            || i > self.len()
             || symbol.len() != self.bits_per_element as usize
         {
             None
         } else {
             Some(self.rank_offset_unchecked(offset, i, symbol))
+        }
+    }
+
+    /// Get the number of occurrences of the given `symbol` in the encoded sequence between the
+    /// `offset`-th and `i`-th element (exclusive).
+    /// This is equivalent to ``rank_range(offset..i, symbol)``.
+    /// The interval is half-open, meaning ``rank_offset(0, 0, symbol)`` tries to compute the rank
+    /// of an empty interval, which returns an unspecified value.
+    ///
+    /// The `symbol` is a `k`-bit word encoded in a u64 numeral,
+    /// where k is less than or equal to 64.
+    ///
+    /// This method does not perform bounds checking, nor does it check if the elements of the
+    /// wavelet matrix can be represented in a u64 numeral.
+    ///
+    /// # Panics
+    /// May panic if `offset` is out of bounds,
+    /// or if `i` is larger than the length of the encoded sequence,
+    /// or if `offset` is greater than `i`,
+    /// or if the number of bits in wavelet matrix elements exceed `64`.
+    /// May instead return 0.
+    #[must_use]
+    pub fn rank_offset_u64_unchecked(&self, offset: usize, i: usize, symbol: u64) -> usize {
+        self.rank_range_u64_unchecked(offset..i, symbol)
+    }
+
+    /// Get the number of occurrences of the given `symbol` in the encoded sequence between the
+    /// `offset`-th and `i`-th element (exclusive).
+    /// This is equivalent to ``rank_range(offset..i, symbol)``.
+    /// The interval is half-open, meaning ``rank_offset(0, 0, symbol)`` returns None,
+    /// because the interval is empty.
+    ///
+    /// The `symbol` is a `k`-bit word encoded in a u64 numeral,
+    /// where k is less than or equal to 64.
+    ///
+    /// Returns `None` if `offset` is out of bounds,
+    /// or if `i` is larger than the length of the encoded sequence,
+    /// or if `offset` is greater than `i`,
+    /// or if the number of bits in the wavelet matrix elements exceed `64`.
+    /// `i` may equal the length of the encoded sequence,
+    /// which will return the number of occurrences of the symbol up to the end of the sequence.
+    #[must_use]
+    pub fn rank_offset_u64(&self, offset: usize, i: usize, symbol: u64) -> Option<usize> {
+        if offset >= i || offset >= self.len() || i > self.len() || self.bits_per_element > 64 {
+            None
+        } else {
+            Some(self.rank_offset_u64_unchecked(offset, i, symbol))
         }
     }
 
@@ -340,6 +392,40 @@ impl WaveletMatrix {
             None
         } else {
             Some(self.rank_range_unchecked(0..i, symbol))
+        }
+    }
+
+    /// Get the number of occurrences of the given `symbol` in the encoded sequence up to the `i`-th
+    /// element (exclusive).
+    /// The `symbol` is a `k`-bit word encoded in a u64 numeral,
+    /// where k is less than or equal to 64.
+    ///
+    /// This method does not perform bounds checking, nor does it check if the elements of the
+    /// wavelet matrix can be represented in a u64 numeral.
+    ///
+    /// # Panics
+    /// May panic if `i` is out of bounds,
+    /// or if the number of bits in wavelet matrix elements exceed `64`.
+    /// May instead return 0.
+    #[must_use]
+    pub fn rank_u64_unchecked(&self, i: usize, symbol: u64) -> usize {
+        self.rank_range_u64_unchecked(0..i, symbol)
+    }
+
+    /// Get the number of occurrences of the given `symbol` in the encoded sequence up to the `i`-th
+    /// element (exclusive).
+    /// The `symbol` is a `k`-bit word encoded in a u64 numeral,
+    /// where k is less than or equal to 64.
+    ///
+    /// Returns `None` if `i` is out of bounds (greater than the length of the encoded sequence, but
+    /// since it is exclusive, it may be equal to the length),
+    /// or if the number of bits in the wavelet matrix elements exceed `64`. // todo panic instead?
+    #[must_use]
+    pub fn rank_u64(&self, i: usize, symbol: u64) -> Option<usize> {
+        if i > self.len() || self.bits_per_element > 64 {
+            None
+        } else {
+            Some(self.rank_range_u64_unchecked(0..i, symbol))
         }
     }
 
