@@ -122,11 +122,11 @@ fn test_select_range() {
     let symbol_7 = BitVec::from_ones(4);
     let symbol_4 = BitVec::pack_sequence_u8(&[4], 4);
 
-    assert_eq!(wavelet.select_range_unchecked(0..10, 0, &symbol_0), 9);
-    assert_eq!(wavelet.select_range_unchecked(0..9, 1, &symbol_0), 10);
-    assert_eq!(wavelet.select_range_unchecked(0..10, 0, &symbol_7), 10);
-    assert_eq!(wavelet.select_range_unchecked(0..10, 1, &symbol_4), 2);
-    assert_eq!(wavelet.select_range_unchecked(2..10, 0, &symbol_4), 2);
-    assert_eq!(wavelet.select_range_unchecked(2..10, 1, &symbol_4), 6);
-    assert_eq!(wavelet.select_range_unchecked(2..6, 9, &symbol_4), 10);
+    assert_eq!(wavelet.select_offset_unchecked(0, 0, &symbol_0), 9);
+    assert_eq!(wavelet.select_offset_unchecked(0, 1, &symbol_0), 10);
+    assert_eq!(wavelet.select_offset_unchecked(0, 0, &symbol_7), 10);
+    assert_eq!(wavelet.select_offset_unchecked(0, 1, &symbol_4), 2);
+    assert_eq!(wavelet.select_offset_unchecked(2, 0, &symbol_4), 2);
+    assert_eq!(wavelet.select_offset_unchecked(2, 1, &symbol_4), 6);
+    assert_eq!(wavelet.select_offset_unchecked(2, 9, &symbol_4), 10);
 }
