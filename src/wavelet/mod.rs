@@ -641,6 +641,17 @@ impl WaveletMatrix {
         }
     }
 
+    /// Get the `k`-th smallest element in the encoded sequence in the specified `range`,
+    /// where `k = 0` returns the smallest element.
+    /// The `range` is a half-open interval, meaning that the `end` index is exclusive.
+    /// The `k`-th smallest element is returned as a `BitVec`,
+    /// where the least significant bit is the first element.
+    ///
+    /// This method does not perform bounds checking.
+    /// It returns a nonsensical result if the `k` is greater than the size of the range.
+    ///
+    /// # Panics
+    /// May panic if the `range` is out of bounds. May instead return an empty bit vector.
     #[must_use]
     pub fn quantile_unchecked(&self, mut range: Range<usize>, mut k: usize) -> BitVec {
         let mut result = BitVec::from_zeros(self.bits_per_element as usize);
@@ -669,6 +680,13 @@ impl WaveletMatrix {
         result
     }
 
+    /// Get the `k`-th smallest element in the encoded sequence in the specified `range`,
+    /// where `k = 0` returns the smallest element.
+    /// The `range` is a half-open interval, meaning that the `end` index is exclusive.
+    /// The `k`-th smallest element is returned as a `BitVec`,
+    /// where the least significant bit is the first element.
+    ///
+    /// Returns `None` if the `range` is out of bounds, or if `k` is greater than the size of the range.
     #[must_use]
     pub fn quantile(&self, range: Range<usize>, k: usize) -> Option<BitVec> {
         if range.start >= self.len() || range.end > self.len() || k >= range.end - range.start {
