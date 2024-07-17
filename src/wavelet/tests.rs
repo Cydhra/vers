@@ -135,3 +135,38 @@ fn test_select_range() {
     assert_eq!(wavelet.select_offset_unchecked(2, 1, &symbol_4), 6);
     assert_eq!(wavelet.select_offset_unchecked(2, 9, &symbol_4), 10);
 }
+
+#[test]
+fn test_quantile() {
+    let mut sequence = [1, 4, 4, 1, 3, 1, 4, 3, 2, 0];
+    let data = BitVec::pack_sequence_u64(&sequence, 4);
+    let wavelet = WaveletMatrix::from_bit_vec(&data, 4);
+
+    sequence.sort();
+
+    for i in 0..sequence.len() {
+        assert_eq!(
+            wavelet.quantile(0..10, i),
+            Some(BitVec::pack_sequence_u8(&[sequence[i] as u8], 4))
+        );
+    }
+
+    assert_eq!(wavelet.quantile(0..10, 10), None);
+
+    assert_eq!(
+        wavelet.quantile(0..5, 0),
+        Some(BitVec::pack_sequence_u8(&[1], 4))
+    );
+    assert_eq!(
+        wavelet.quantile(1..5, 0),
+        Some(BitVec::pack_sequence_u8(&[1], 4))
+    );
+    assert_eq!(
+        wavelet.quantile(1..4, 1),
+        Some(BitVec::pack_sequence_u8(&[4], 4))
+    );
+    assert_eq!(
+        wavelet.quantile(1..5, 1),
+        Some(BitVec::pack_sequence_u8(&[3], 4))
+    );
+}

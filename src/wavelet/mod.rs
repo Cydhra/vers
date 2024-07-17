@@ -641,6 +641,43 @@ impl WaveletMatrix {
         }
     }
 
+    #[must_use]
+    pub fn quantile_unchecked(&self, mut range: Range<usize>, mut k: usize) -> BitVec {
+        let mut result = BitVec::from_zeros(self.bits_per_element as usize);
+
+        // sort of binary search, but the partitions are not equally sized, but divided by
+        // the middle of the bit pattern
+        for (level, data) in self.data.iter().enumerate() {
+            let zeros_start = data.rank0(range.start);
+            let zeros_end = data.rank0(range.end);
+            let zeros = zeros_end - zeros_start;
+
+            // if k < zeros, the element is among the zeros
+            if k < zeros {
+                range.start = zeros_start;
+                range.end = zeros_end;
+            } else {
+                // the element is among the ones, so we set the bit to 1, and move the range
+                // into the 1-partition of the next level
+                result.set_unchecked((self.bits_per_element - 1) as usize - level, 1);
+                k -= zeros;
+                range.start = data.rank0 + (range.start - zeros_start); // range.start - zeros_start is the rank1 of range.start
+                range.end = data.rank0 + (range.end - zeros_end); // same here
+            }
+        }
+
+        result
+    }
+
+    #[must_use]
+    pub fn quantile(&self, range: Range<usize>, k: usize) -> Option<BitVec> {
+        if range.start >= self.len() || range.end > self.len() || k >= range.end - range.start {
+            None
+        } else {
+            Some(self.quantile_unchecked(range, k))
+        }
+    }
+
     /// Get the number of bits per element in the alphabet of the encoded sequence.
     #[must_use]
     pub fn bit_len(&self) -> u16 {
