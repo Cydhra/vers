@@ -696,6 +696,126 @@ impl WaveletMatrix {
         }
     }
 
+    /// Get the `k`-th smallest element in the encoded sequence in the specified `range`,
+    /// where `k = 0` returns the smallest element.
+    /// The `range` is a half-open interval, meaning that the `end` index is exclusive.
+    /// The `k`-th smallest element is returned as a `u64` numeral.
+    /// If the number of bits per element exceeds 64, the value is truncated.
+    ///
+    /// This method does not perform bounds checking.
+    /// It returns a nonsensical result if the `k` is greater than the size of the range.
+    ///
+    /// # Panics
+    /// May panic if the `range` is out of bounds.
+    /// May instead return 0.
+    #[must_use]
+    pub fn quantile_u64_unchecked(&self, mut range: Range<usize>, mut k: usize) -> u64 {
+        let mut result = 0;
+
+        for data in self.data.iter() {
+            result <<= 1;
+            let zeros_start = data.rank0(range.start);
+            let zeros_end = data.rank0(range.end);
+            let zeros = zeros_end - zeros_start;
+
+            if k < zeros {
+                range.start = zeros_start;
+                range.end = zeros_end;
+            } else {
+                result |= 1;
+                k -= zeros;
+                range.start = data.rank0 + (range.start - zeros_start);
+                range.end = data.rank0 + (range.end - zeros_end);
+            }
+        }
+
+        result
+    }
+
+    /// Get the `k`-th smallest element in the encoded sequence in the specified `range`,
+    /// where `k = 0` returns the smallest element.
+    /// The `range` is a half-open interval, meaning that the `end` index is exclusive.
+    /// The `k`-th smallest element is returned as a `u64` numeral.
+    ///
+    /// Returns `None` if the `range` is out of bounds, or if the number of bits per element exceeds 64,
+    /// or if `k` is greater than the size of the range.
+    #[must_use]
+    pub fn quantile_u64(&self, range: Range<usize>, k: usize) -> Option<u64> {
+        if range.start >= self.len()
+            || range.end > self.len()
+            || self.bits_per_element > 64
+            || k >= range.end - range.start
+        {
+            None
+        } else {
+            Some(self.quantile_u64_unchecked(range, k))
+        }
+    }
+
+    pub fn range_min_unchecked(&self, range: Range<usize>) -> BitVec {
+        self.quantile_unchecked(range, 0)
+    }
+
+    pub fn range_min(&self, range: Range<usize>) -> Option<BitVec> {
+        self.quantile(range, 0)
+    }
+
+    pub fn range_min_u64_unchecked(&self, range: Range<usize>) -> u64 {
+        self.quantile_u64_unchecked(range, 0)
+    }
+
+    pub fn range_min_u64(&self, range: Range<usize>) -> Option<u64> {
+        self.quantile_u64(range, 0)
+    }
+
+    pub fn range_max_unchecked(&self, range: Range<usize>) -> BitVec {
+        let k = range.end - range.start - 1;
+        self.quantile_unchecked(range, k)
+    }
+
+    pub fn range_max(&self, range: Range<usize>) -> Option<BitVec> {
+        if range.is_empty() {
+            None
+        } else {
+            let k = range.end - range.start - 1;
+            Some(self.quantile_unchecked(range, k))
+        }
+    }
+
+    pub fn range_max_u64_unchecked(&self, range: Range<usize>) -> u64 {
+        let k = range.end - range.start - 1;
+        self.quantile_u64_unchecked(range, k)
+    }
+
+    pub fn range_max_u64(&self, range: Range<usize>) -> Option<u64> {
+        if range.is_empty() {
+            None
+        } else {
+            let k = range.end - range.start - 1;
+            Some(self.quantile_u64_unchecked(range, k))
+        }
+    }
+
+    pub fn range_median_unchecked(&self, range: Range<usize>) -> BitVec {
+        let k = (range.end - range.start) / 2;
+        self.quantile_unchecked(range, k)
+    }
+
+    pub fn range_median(&self, range: Range<usize>) -> Option<BitVec> {
+        let k = (range.end - range.start) / 2;
+        self.quantile(range, k)
+    }
+
+    pub fn range_median_u64_unchecked(&self, range: Range<usize>) -> u64 {
+        let k = (range.end - range.start) / 2;
+        self.quantile_u64_unchecked(range, k)
+    }
+
+    pub fn range_median_u64(&self, range: Range<usize>) -> Option<u64> {
+        let k = (range.end - range.start) / 2;
+        self.quantile_u64(range, k)
+    }
+
     /// Get the number of bits per element in the alphabet of the encoded sequence.
     #[must_use]
     pub fn bit_len(&self) -> u16 {

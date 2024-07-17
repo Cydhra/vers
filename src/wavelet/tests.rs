@@ -1,6 +1,7 @@
 use super::*;
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
+use std::cmp::{max, min};
 
 #[test]
 fn test_wavelet_encoding_randomized() {
@@ -149,6 +150,7 @@ fn test_quantile() {
             wavelet.quantile(0..10, i),
             Some(BitVec::pack_sequence_u8(&[sequence[i] as u8], 4))
         );
+        assert_eq!(wavelet.quantile_u64(0..10, i), Some(sequence[i]));
     }
 
     assert_eq!(wavelet.quantile(0..10, 10), None);
@@ -157,16 +159,69 @@ fn test_quantile() {
         wavelet.quantile(0..5, 0),
         Some(BitVec::pack_sequence_u8(&[1], 4))
     );
+    assert_eq!(wavelet.quantile_u64(0..5, 0), Some(1));
     assert_eq!(
         wavelet.quantile(1..5, 0),
         Some(BitVec::pack_sequence_u8(&[1], 4))
     );
+    assert_eq!(wavelet.quantile_u64(1..5, 0), Some(1));
     assert_eq!(
         wavelet.quantile(1..4, 1),
         Some(BitVec::pack_sequence_u8(&[4], 4))
     );
+    assert_eq!(wavelet.quantile_u64(1..4, 1), Some(4));
     assert_eq!(
         wavelet.quantile(1..5, 1),
         Some(BitVec::pack_sequence_u8(&[3], 4))
     );
+    assert_eq!(wavelet.quantile_u64(1..5, 1), Some(3));
+}
+
+#[test]
+fn test_quantile_randomized() {
+    let mut rng = StdRng::from_seed([100; 32]);
+
+    let data: Vec<u8> = (0..1000).map(|_| rng.gen_range(0..=u8::MAX)).collect();
+
+    let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
+
+    for _ in 0..1000 {
+        let range_i = rng.gen_range(0..data.len());
+        let range_j = rng.gen_range(0..data.len());
+        let range = min(range_i, range_j)..max(range_i, range_j);
+
+        let k = if range.is_empty() {
+            0
+        } else {
+            rng.gen_range(range.clone()) - range.start
+        };
+
+        let mut range_data = data[range.clone()].iter().copied().collect::<Vec<u8>>();
+        range_data.sort_unstable();
+
+        assert_eq!(
+            wavelet.quantile_u64(range.clone(), k),
+            if range.is_empty() {
+                None
+            } else {
+                Some(range_data[k] as u64)
+            }
+        );
+        assert_eq!(
+            wavelet.range_max_u64(range.clone()),
+            range_data.last().map(|&x| x as u64)
+        );
+        assert_eq!(
+            wavelet.range_min_u64(range.clone()),
+            range_data.first().map(|&x| x as u64)
+        );
+        assert_eq!(
+            wavelet.range_median_u64(range.clone()),
+            if range.is_empty() {
+                None
+            } else {
+                Some(range_data[range_data.len() / 2] as u64)
+            }
+        );
+    }
 }
