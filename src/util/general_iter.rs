@@ -214,8 +214,10 @@ macro_rules! impl_into_iterator_impls {
 /// The macro accepts the name of the vector type as its first mandatory argument.
 /// It then expects two identifiers for the two iterator types.
 ///
-/// It then optionally accepts two identifiers for the getter functions that should be used.
-/// If not provided, it defaults to `get_unchecked` and `get`.
+/// It then optionally accepts two identifiers for the getter functions that should be used, and
+/// a type for the return value of the getter functions.
+/// If not provided, it defaults to `get_unchecked` and `get` as the function names and `u64` as
+/// the return type.
 ///
 /// The macro expects the vector type to implement a function called `len()`.
 ///
@@ -226,8 +228,8 @@ macro_rules! impl_into_iterator_impls {
 /// - A struct named `VecTypeIter` that implements `Iterator<Item = u64>` for `VecType`.
 /// - A struct named `VecTypeRefIter` that implements `Iterator<Item = u64>` for `&VecType` and `$mut VecType`.
 macro_rules! impl_vector_iterator {
-    ($type:ty, $own:ident, $bor:ident) => { impl_vector_iterator! { $type, $own, $bor, get_unchecked, get } };
-    ($type:ty, $own:ident, $bor:ident, $get_unchecked:ident, $get:ident) => {
+    ($type:ty, $own:ident, $bor:ident) => { impl_vector_iterator! { $type, $own, $bor, get_unchecked, get, u64 } };
+    ($type:ty, $own:ident, $bor:ident, $get_unchecked:ident, $get:ident, $return_type:ty) => {
         #[doc = concat!("An owning iterator for `", stringify!($type), "`.")]
         #[doc = concat!("This struct is created by the `into_iter` trait implementation of `", stringify!($type), "`.")]
         #[derive(Clone, Debug)]
@@ -260,9 +262,9 @@ macro_rules! impl_vector_iterator {
 
         crate::util::impl_into_iterator_impls!($type, $own, $bor);
 
-        crate::util::gen_vector_iter_impl!($own, $type, u64, $get_unchecked, $get);
+        crate::util::gen_vector_iter_impl!($own, $type, $return_type, $get_unchecked, $get);
 
-        crate::util::gen_vector_iter_impl!('a, $bor, $type, u64, $get_unchecked, $get);
+        crate::util::gen_vector_iter_impl!('a, $bor, $type, $return_type, $get_unchecked, $get);
     }
 }
 
