@@ -1,7 +1,7 @@
 # Vers - Very Efficient Rank and Select
 
 [![crates.io](https://img.shields.io/crates/v/vers-vecs.svg)](https://crates.io/crates/vers-vecs)
-![rust](https://github.com/cydhra/vers/actions/workflows/rust.yml/badge.svg)
+[![rust](https://github.com/cydhra/vers/actions/workflows/rust.yml/badge.svg)](https://github.com/Cydhra/vers)
 [![docs](https://docs.rs/vers-vecs/badge.svg)](https://docs.rs/vers-vecs)
 
 Vers (vers-vecs on crates.io)
