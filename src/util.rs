@@ -13,7 +13,7 @@ macro_rules! gen_bv_iter_impl {
                     };
                 }
 
-                let last = vec.len - 1;
+                let last = vec.len() - 1;
                 Self {
                     vec,
                     index: 0,
@@ -358,7 +358,7 @@ macro_rules! unroll {
 /// Misuse of this token tree will result in compile errors regarding the Iterator trait.
 ///
 /// The macro expects the vector type to implement a function `get_unchecked` that returns a
-/// u64, a function `get` that returns an `Option<u64>` and a usize struct member `len`.
+/// u64, a function `get` that returns an `Option<u64>` and a usize function `len()`.
 ///
 /// The macro generates the following items:
 /// - An `impl` block for `VecType` that implements `IntoIterator<Item = u64>` for `VecType`.
@@ -405,6 +405,21 @@ macro_rules! impl_into_iterator_impls {
     };
 }
 
+/// Internal macro to implement iterators for vector types.
+/// This macro accepts more patterns than it should, but it isn't exported.
+/// The macro accepts the name of the vector type as its first mandatory argument.
+/// It then expects two identifiers for the two iterator types.
+/// It then optionally accepts an entire unrestricted token tree, which it will paste into the
+/// Iterator implementation.
+/// This is useful for implementing functions that are only available on certain vector types.
+/// Misuse of this token tree will result in compile errors regarding the Iterator trait.
+///
+/// The macro expects the vector type to implement a function `get_unchecked` that returns a
+/// u64, a function `get` that returns an `Option<u64>` and a usize function `len()`.
+///
+/// This macro is not used for the EliasFanoVec, because that exploits internal structure for faster
+/// iteration, while this macro just calls get() repeatedly
+///
 /// The macro generates the following items:
 /// - A struct named `VecTypeIter` that implements `Iterator<Item = u64>` for `VecType`.
 /// - A struct named `VecTypeRefIter` that implements `Iterator<Item = u64>` for `&VecType` and `$mut VecType`.
