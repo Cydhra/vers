@@ -821,7 +821,7 @@ impl WaveletMatrix {
     /// The iterator yields `u64` elements.
     /// If the number of bits per element exceeds 64, the iterator may truncate the values or
     /// be empty.
-    pub fn iter_u64(&self) -> impl Iterator<Item = u64> + '_ {
+    pub fn iter_u64(&self) -> WaveletNumRefIter {
         WaveletNumRefIter::new(self)
     }
 
@@ -829,7 +829,7 @@ impl WaveletMatrix {
     /// The iterator yields `u64` elements.
     /// If the number of bits per element exceeds 64, the iterator may truncate the values or
     /// be empty.
-    pub fn into_iter_u64(self) -> impl Iterator<Item = u64> {
+    pub fn into_iter_u64(self) -> WaveletNumIter {
         WaveletNumIter::new(self)
     }
 
