@@ -257,3 +257,26 @@ fn test_wavelet_iter() {
     assert_eq!(iter.next(), Some(0));
     assert_eq!(iter.next(), None);
 }
+
+#[test]
+
+fn test_wavelet_iter_randomized() {
+    let mut rng = StdRng::from_seed([100; 32]);
+
+    for _ in 0..50 {
+        let data: Vec<u8> = (0..1000).map(|_| rng.gen_range(0..=u8::MAX)).collect();
+        let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
+
+        let mut iter = wavelet.iter();
+        for i in 0..data.len() {
+            assert_eq!(iter.next(), Some(BitVec::pack_sequence_u8(&[data[i]], 8)));
+        }
+        assert_eq!(iter.next(), None);
+
+        let mut iter = wavelet.iter_u64();
+        for i in 0..data.len() {
+            assert_eq!(iter.next(), Some(data[i] as u64));
+        }
+        assert_eq!(iter.next(), None);
+    }
+}
