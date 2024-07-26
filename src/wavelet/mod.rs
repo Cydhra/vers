@@ -1,3 +1,4 @@
+use crate::util::impl_vector_iterator;
 use crate::{BitVec, RsVec};
 use std::mem;
 use std::ops::Range;
@@ -816,6 +817,22 @@ impl WaveletMatrix {
         self.quantile_u64(range, k)
     }
 
+    /// Get an iterator over the elements of the encoded sequence.
+    /// The iterator yields `u64` elements.
+    /// If the number of bits per element exceeds 64, the iterator may truncate the values or
+    /// be empty.
+    pub fn iter_u64(&self) -> impl Iterator<Item = u64> + '_ {
+        WaveletNumRefIter::new(self)
+    }
+
+    /// Turn the encoded sequence into an iterator.
+    /// The iterator yields `u64` elements.
+    /// If the number of bits per element exceeds 64, the iterator may truncate the values or
+    /// be empty.
+    pub fn into_iter_u64(self) -> impl Iterator<Item = u64> {
+        WaveletNumIter::new(self)
+    }
+
     /// Get the number of bits per element in the alphabet of the encoded sequence.
     #[must_use]
     pub fn bit_len(&self) -> u16 {
@@ -846,6 +863,25 @@ impl WaveletMatrix {
         self.data.iter().map(RsVec::heap_size).sum::<usize>()
     }
 }
+
+impl_vector_iterator!(
+    WaveletMatrix,
+    WaveletIter,
+    WaveletRefIter,
+    get_value_unchecked,
+    get_value,
+    BitVec
+);
+
+impl_vector_iterator!(
+    WaveletMatrix,
+    WaveletNumIter,
+    WaveletNumRefIter,
+    get_u64_unchecked,
+    get_u64,
+    u64,
+    special
+);
 
 #[cfg(test)]
 mod tests;
