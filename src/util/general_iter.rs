@@ -1,7 +1,7 @@
 // This macro generates the implementations for the iterator trait and relevant other traits for the
 // vector types.
 macro_rules! gen_vector_iter_impl {
-    ($($life:lifetime, )? $name:ident, $type:ty, $item:ty) => {
+    ($($life:lifetime, )? $name:ident, $type:ty, $item:ty, $get_unchecked:ident, $get:ident) => {
         impl $(<$life>)? $name $(<$life>)? {
             #[must_use]
             fn new(vec: $(&$life)? $type) -> Self {
@@ -82,7 +82,7 @@ macro_rules! gen_vector_iter_impl {
                 if self.is_iter_empty() {
                     return None;
                 }
-                self.vec.get(self.index).map(|v| {
+                self.vec.$get(self.index).map(|v| {
                     self.index += 1;
                     v
                 })
@@ -115,7 +115,7 @@ macro_rules! gen_vector_iter_impl {
                     return None;
                 }
 
-                Some(self.vec.get_unchecked(*self.back_index.as_ref().unwrap()))
+                Some(self.vec.$get_unchecked(*self.back_index.as_ref().unwrap()))
             }
 
             /// Returns the nth element of the iterator. Does not call `next` internally, but advances
@@ -140,7 +140,7 @@ macro_rules! gen_vector_iter_impl {
                 if Some(self.index) > self.back_index {
                     return None;
                 }
-                self.vec.get(*self.back_index.as_ref().unwrap()).map(|v| {
+                self.vec.$get(*self.back_index.as_ref().unwrap()).map(|v| {
                     if *self.back_index.as_ref().unwrap() == 0 {
                         self.back_index = None;
                     } else {
@@ -160,7 +160,7 @@ macro_rules! gen_vector_iter_impl {
 
 /// Internal macro to implement iterators for the vector types.
 /// The macro accepts the name of the data structure as its first mandatory argument.
-/// It then expects the identifier for the iterator type
+/// It then expects the identifiers for the iterator types
 /// It generates three `IntoIterator` implementations for the vector type.
 ///
 /// It expects that the iterator type has a constructor named `new` that takes only a
@@ -213,13 +213,11 @@ macro_rules! impl_into_iterator_impls {
 /// This macro accepts more patterns than it should, but it isn't exported.
 /// The macro accepts the name of the vector type as its first mandatory argument.
 /// It then expects two identifiers for the two iterator types.
-/// It then optionally accepts an entire unrestricted token tree, which it will paste into the
-/// Iterator implementation.
-/// This is useful for implementing functions that are only available on certain vector types.
-/// Misuse of this token tree will result in compile errors regarding the Iterator trait.
 ///
-/// The macro expects the vector type to implement a function `get_unchecked` that returns a
-/// u64, a function `get` that returns an `Option<u64>` and a usize function `len()`.
+/// It then optionally accepts two identifiers for the getter functions that should be used.
+/// If not provided, it defaults to `get_unchecked` and `get`.
+///
+/// The macro expects the vector type to implement a function called `len()`.
 ///
 /// This macro is not used for the EliasFanoVec, because that exploits internal structure for faster
 /// iteration, while this macro just calls get() repeatedly
@@ -228,7 +226,8 @@ macro_rules! impl_into_iterator_impls {
 /// - A struct named `VecTypeIter` that implements `Iterator<Item = u64>` for `VecType`.
 /// - A struct named `VecTypeRefIter` that implements `Iterator<Item = u64>` for `&VecType` and `$mut VecType`.
 macro_rules! impl_vector_iterator {
-    ($type:ty, $own:ident, $bor:ident) => {
+    ($type:ty, $own:ident, $bor:ident) => { impl_vector_iterator! { $type, $own, $bor, get_unchecked, get } };
+    ($type:ty, $own:ident, $bor:ident, $get_unchecked:ident, $get:ident) => {
         #[doc = concat!("An owning iterator for `", stringify!($type), "`.")]
         #[doc = concat!("This struct is created by the `into_iter` trait implementation of `", stringify!($type), "`.")]
         #[derive(Clone, Debug)]
@@ -261,9 +260,9 @@ macro_rules! impl_vector_iterator {
 
         crate::util::impl_into_iterator_impls!($type, $own, $bor);
 
-        crate::util::gen_vector_iter_impl!($own, $type, u64);
+        crate::util::gen_vector_iter_impl!($own, $type, u64, $get_unchecked, $get);
 
-        crate::util::gen_vector_iter_impl!('a, $bor, $type, u64);
+        crate::util::gen_vector_iter_impl!('a, $bor, $type, u64, $get_unchecked, $get);
     }
 }
 
