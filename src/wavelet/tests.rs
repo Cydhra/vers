@@ -226,6 +226,7 @@ fn test_quantile_randomized() {
     }
 }
 
+// test iterators exist and work correctly
 #[test]
 fn test_wavelet_iter() {
     let data = BitVec::pack_sequence_u64(&[1, 4, 4, 1, 3, 1, 4, 3, 2, 0], 4);
@@ -244,6 +245,20 @@ fn test_wavelet_iter() {
     assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[0], 4)));
     assert_eq!(iter.next(), None);
 
+    let mut iter = wavelet.iter();
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[1], 4)));
+    assert_eq!(iter.next_back(), Some(BitVec::pack_sequence_u64(&[0], 4)));
+    assert_eq!(iter.next_back(), Some(BitVec::pack_sequence_u64(&[2], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[4], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[4], 4)));
+    assert_eq!(iter.next_back(), Some(BitVec::pack_sequence_u64(&[3], 4)));
+    assert_eq!(iter.next_back(), Some(BitVec::pack_sequence_u64(&[4], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[1], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[3], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[1], 4)));
+    assert_eq!(iter.next(), None);
+    assert_eq!(iter.next_back(), None);
+
     let mut iter = wavelet.iter_u64();
     assert_eq!(iter.next(), Some(1));
     assert_eq!(iter.next(), Some(4));
@@ -258,8 +273,24 @@ fn test_wavelet_iter() {
     assert_eq!(iter.next(), None);
 }
 
+// test into_iter exists and works
 #[test]
+fn test_wavelet_into_iter() {
+    let data = BitVec::pack_sequence_u64(&[1], 1);
+    let wavelet = WaveletMatrix::from_bit_vec(&data, 1);
 
+    let mut iter = wavelet.clone().into_iter();
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[1], 1)));
+    assert_eq!(iter.next(), None);
+
+    let mut iter = wavelet.into_iter_u64();
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), None);
+}
+
+// fuzz the iterators. don't bother with into_iter, as they should have the same implementation
+// anyway, and we already tested that they exist in the previous test
+#[test]
 fn test_wavelet_iter_randomized() {
     let mut rng = StdRng::from_seed([100; 32]);
 
@@ -279,4 +310,18 @@ fn test_wavelet_iter_randomized() {
         }
         assert_eq!(iter.next(), None);
     }
+}
+
+#[test]
+fn test_wavelet_empty_iter() {
+    let data = BitVec::new();
+    let wavelet = WaveletMatrix::from_bit_vec(&data, 4);
+
+    let mut iter = wavelet.iter();
+    assert_eq!(iter.next_back(), None);
+    assert_eq!(iter.next(), None);
+
+    let mut iter = wavelet.iter_u64();
+    assert_eq!(iter.next_back(), None);
+    assert_eq!(iter.next(), None);
 }
