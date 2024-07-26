@@ -1,6 +1,7 @@
 pub(crate) mod pdep;
 
 pub(crate) mod elias_fano;
+pub(crate) mod unroll;
 
 macro_rules! gen_bv_iter_impl {
     ($($life:lifetime, )? $name:ident, $type:ty, $item:ty) => {
@@ -160,17 +161,6 @@ macro_rules! gen_bv_iter_impl {
     };
 }
 
-macro_rules! unroll {
-    (1, |$i:ident = {$e:expr}| $s:stmt, $inc:expr) => { let mut $i: usize = $e; $s };
-    (2, |$i:ident = {$e:expr}| $s:stmt, $inc:expr) => { unroll!(1, |$i = {$e}| $s, $inc); $inc; $s };
-    (3, |$i:ident = {$e:expr}| $s:stmt, $inc:expr) => { unroll!(2, |$i = {$e}| $s, $inc); $inc; $s };
-    (4, |$i:ident = {$e:expr}| $s:stmt, $inc:expr) => { unroll!(3, |$i = {$e}| $s, $inc); $inc; $s };
-    (5, |$i:ident = {$e:expr}| $s:stmt, $inc:expr) => { unroll!(4, |$i = {$e}| $s, $inc); $inc; $s };
-    (6, |$i:ident = {$e:expr}| $s:stmt, $inc:expr) => { unroll!(5, |$i = {$e}| $s, $inc); $inc; $s };
-    (7, |$i:ident = {$e:expr}| $s:stmt, $inc:expr) => { unroll!(6, |$i = {$e}| $s, $inc); $inc; $s };
-    (8, |$i:ident = {$e:expr}| $s:stmt, $inc:expr) => { unroll!(7, |$i = {$e}| $s, $inc); $inc; $s };
-}
-
 /// Internal macro to implement iterators for the vector types.
 /// This macro accepts more patterns than it should, but it isn't exported.
 /// The macro accepts the name of the vector type as its first mandatory argument.
@@ -286,9 +276,10 @@ macro_rules! impl_bv_iterator {
     }
 }
 
+// reexport all macros at toplevel for convenience
 pub(crate) use elias_fano::gen_ef_iter_impl;
 pub(crate) use elias_fano::impl_ef_iterator;
 pub(crate) use gen_bv_iter_impl;
 pub(crate) use impl_bv_iterator;
 pub(crate) use impl_into_iterator_impls;
-pub(crate) use unroll;
+pub(crate) use unroll::unroll;
