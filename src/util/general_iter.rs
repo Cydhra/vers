@@ -174,8 +174,11 @@ macro_rules! gen_vector_iter_impl {
 /// - An `impl` block for `&mut VecType` that implements `IntoIterator<Item = u64>` for `&mut VecType`.
 macro_rules! impl_into_iterator_impls {
     ($type:ty, $own:ident, $bor:ident) => {
+        crate::util::impl_into_iterator_impls! { $type, $own, $bor, u64 }
+    };
+    ($type:ty, $own:ident, $bor:ident, $element_type:ty) => {
         impl IntoIterator for $type {
-            type Item = u64;
+            type Item = $element_type;
             type IntoIter = $own;
 
             #[must_use]
@@ -185,7 +188,7 @@ macro_rules! impl_into_iterator_impls {
         }
 
         impl<'a> IntoIterator for &'a $type {
-            type Item = u64;
+            type Item = $element_type;
             type IntoIter = $bor<'a>;
 
             #[must_use]
@@ -198,7 +201,7 @@ macro_rules! impl_into_iterator_impls {
         // but an iter_mut() function on an immutable data structure would be nonsensical
         #[allow(clippy::into_iter_without_iter)]
         impl<'a> IntoIterator for &'a mut $type {
-            type Item = u64;
+            type Item = $element_type;
             type IntoIter = $bor<'a>;
 
             #[must_use]
@@ -260,7 +263,7 @@ macro_rules! impl_vector_iterator {
             back_index: Option<usize>,
         }
 
-        crate::util::impl_into_iterator_impls!($type, $own, $bor);
+        crate::util::impl_into_iterator_impls!($type, $own, $bor, $return_type);
 
         crate::util::gen_vector_iter_impl!($own, $type, $return_type, $get_unchecked, $get);
 
