@@ -222,6 +222,11 @@ macro_rules! impl_into_iterator_impls {
 /// If not provided, it defaults to `get_unchecked` and `get` as the function names and `u64` as
 /// the return type.
 ///
+/// If the optional parameters are supplied, it also accepts an optional token "special", which
+/// generates the iterators but not the `iter` and `into_iter` functions.
+/// This way the macro can be used to generate specialized iterators that are constructed
+/// differently.
+///
 /// The macro expects the vector type to implement a function called `len()`.
 ///
 /// This macro is not used for the EliasFanoVec, because that exploits internal structure for faster
@@ -232,9 +237,8 @@ macro_rules! impl_into_iterator_impls {
 /// - A struct named `VecTypeRefIter` that implements `Iterator<Item = u64>` for `&VecType` and `$mut VecType`.
 macro_rules! impl_vector_iterator {
     ($type:ty, $own:ident, $bor:ident) => { impl_vector_iterator! { $type, $own, $bor, get_unchecked, get, u64 } };
-    ($type:ty, $own:ident, $bor:ident, $get_unchecked:ident, $get:ident, $return_type:ty) => {
+    ($type:ty, $own:ident, $bor:ident, $get_unchecked:ident, $get:ident, $return_type:ty, special) => {
         #[doc = concat!("An owning iterator for `", stringify!($type), "`.")]
-        #[doc = concat!("This struct is created by the `into_iter` trait implementation of `", stringify!($type), "`.")]
         #[derive(Clone, Debug)]
         pub struct $own {
             vec: $type,
@@ -244,16 +248,7 @@ macro_rules! impl_vector_iterator {
             back_index: Option<usize>,
         }
 
-        impl $type {
-            #[doc = concat!("Returns an iterator over the elements of `", stringify!($type), "`.")]
-            #[must_use]
-            pub fn iter(&self) -> $bor<'_> {
-                $bor::new(self)
-            }
-        }
-
         #[doc = concat!("A borrowing iterator for `", stringify!($type), "`.")]
-        #[doc = concat!("This struct is created by the `iter` method of `", stringify!($type), "`.")]
         #[derive(Clone, Debug)]
         pub struct $bor<'a> {
             vec: &'a $type,
@@ -263,11 +258,23 @@ macro_rules! impl_vector_iterator {
             back_index: Option<usize>,
         }
 
-        crate::util::impl_into_iterator_impls!($type, $own, $bor, $return_type);
-
         crate::util::gen_vector_iter_impl!($own, $type, $return_type, $get_unchecked, $get);
 
         crate::util::gen_vector_iter_impl!('a, $bor, $type, $return_type, $get_unchecked, $get);
+    };
+    ($type:ty, $own:ident, $bor:ident, $get_unchecked:ident, $get:ident, $return_type:ty) => {
+        impl_vector_iterator! { $type, $own, $bor, $get_unchecked, $get, $return_type, special }
+
+        impl $type {
+            #[doc = concat!("Returns an iterator over the elements of `", stringify!($type), "`.")]
+            #[doc = concat!("The iterator returns `", stringify!($return_type), "` elements.")]
+            #[must_use]
+            pub fn iter(&self) -> $bor<'_> {
+                $bor::new(self)
+            }
+        }
+
+        crate::util::impl_into_iterator_impls!($type, $own, $bor, $return_type);
     }
 }
 
