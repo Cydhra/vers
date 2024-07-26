@@ -14,7 +14,7 @@ use std::mem::size_of;
 pub use bitset::*;
 pub use iter::*;
 
-use crate::util::impl_bv_iterator;
+use crate::util::impl_vector_iterator;
 use crate::BitVec;
 
 use super::WORD_SIZE;
@@ -473,7 +473,7 @@ impl RsVec {
     }
 }
 
-impl_bv_iterator! { RsVec, RsVecIter, RsVecRefIter }
+impl_vector_iterator! { RsVec, RsVecIter, RsVecRefIter }
 
 impl PartialEq for RsVec {
     /// Check if two `RsVec`s are equal. This method calls [`sparse_equals`] if the vector has more

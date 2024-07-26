@@ -1,6 +1,6 @@
 // This macro generates the implementations for the iterator trait and relevant other traits for the
 // vector types.
-macro_rules! gen_bv_iter_impl {
+macro_rules! gen_vector_iter_impl {
     ($($life:lifetime, )? $name:ident, $type:ty, $item:ty) => {
         impl $(<$life>)? $name $(<$life>)? {
             #[must_use]
@@ -159,25 +159,19 @@ macro_rules! gen_bv_iter_impl {
 }
 
 /// Internal macro to implement iterators for the vector types.
-/// This macro accepts more patterns than it should, but it isn't exported.
-/// The macro accepts the name of the vector type as its first mandatory argument.
-/// It then expects two identifiers for the two iterator types.
-/// It then optionally accepts an entire unrestricted token tree, which it will paste into the
-/// Iterator implementation.
-/// This is useful for implementing functions that are only available on certain vector types.
-/// Misuse of this token tree will result in compile errors regarding the Iterator trait.
+/// The macro accepts the name of the data structure as its first mandatory argument.
+/// It then expects the identifier for the iterator type
+/// It generates three `IntoIterator` implementations for the vector type.
 ///
-/// The macro expects the vector type to implement a function `get_unchecked` that returns a
-/// u64, a function `get` that returns an `Option<u64>` and a usize function `len()`.
+/// It expects that the iterator type has a constructor named `new` that takes only a
+/// reference to / value of the data structure and returns an iterator.
+///
+/// This macro is used by all vector types including EliasFanoVec
 ///
 /// The macro generates the following items:
 /// - An `impl` block for `VecType` that implements `IntoIterator<Item = u64>` for `VecType`.
 /// - An `impl` block for `&VecType` that implements `IntoIterator<Item = u64>` for `&VecType`.
 /// - An `impl` block for `&mut VecType` that implements `IntoIterator<Item = u64>` for `&mut VecType`.
-/// - An `impl` block for `VecType` that implements `ExactSizeIterator` for `VecTypeIter`.
-/// - An `impl` block for `&VecType` that implements `ExactSizeIterator` for `VecTypeRefIter`.
-/// - An `impl` block for `&mut VecType` that implements `FuseIterator` for `VecTypeIter`.
-/// - An `impl` block for `&mut VecType` that implements `FuseIterator` for `VecTypeRefIter`.
 macro_rules! impl_into_iterator_impls {
     ($type:ty, $own:ident, $bor:ident) => {
         impl IntoIterator for $type {
@@ -233,7 +227,7 @@ macro_rules! impl_into_iterator_impls {
 /// The macro generates the following items:
 /// - A struct named `VecTypeIter` that implements `Iterator<Item = u64>` for `VecType`.
 /// - A struct named `VecTypeRefIter` that implements `Iterator<Item = u64>` for `&VecType` and `$mut VecType`.
-macro_rules! impl_bv_iterator {
+macro_rules! impl_vector_iterator {
     ($type:ty, $own:ident, $bor:ident) => {
         #[doc = concat!("An owning iterator for `", stringify!($type), "`.")]
         #[doc = concat!("This struct is created by the `into_iter` trait implementation of `", stringify!($type), "`.")]
@@ -267,12 +261,12 @@ macro_rules! impl_bv_iterator {
 
         crate::util::impl_into_iterator_impls!($type, $own, $bor);
 
-        crate::util::gen_bv_iter_impl!($own, $type, u64);
+        crate::util::gen_vector_iter_impl!($own, $type, u64);
 
-        crate::util::gen_bv_iter_impl!('a, $bor, $type, u64);
+        crate::util::gen_vector_iter_impl!('a, $bor, $type, u64);
     }
 }
 
-pub(crate) use gen_bv_iter_impl;
-pub(crate) use impl_bv_iterator;
+pub(crate) use gen_vector_iter_impl;
 pub(crate) use impl_into_iterator_impls;
+pub(crate) use impl_vector_iterator;

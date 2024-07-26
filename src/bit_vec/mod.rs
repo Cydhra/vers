@@ -2,7 +2,7 @@
 //! bit vector implementation with [rank and select queries][fast_rs_vec::RsVec].
 
 use crate::bit_vec::mask::MaskedBitVec;
-use crate::util::impl_bv_iterator;
+use crate::util::impl_vector_iterator;
 use std::cmp::min;
 use std::mem::size_of;
 
@@ -938,7 +938,8 @@ impl BitVec {
             .map(|limb| limb.count_ones() as u64)
             .sum();
         if self.len % WORD_SIZE > 0 {
-            ones += (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones() as u64;
+            ones += (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones()
+                as u64;
         }
         ones
     }
@@ -1110,7 +1111,7 @@ impl BitVec {
     }
 }
 
-impl_bv_iterator! { BitVec, BitVecIter, BitVecRefIter }
+impl_vector_iterator! { BitVec, BitVecIter, BitVecRefIter }
 
 /// Create a new bit vector from a slice of u64 values.
 /// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
