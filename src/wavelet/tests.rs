@@ -225,3 +225,35 @@ fn test_quantile_randomized() {
         );
     }
 }
+
+#[test]
+fn test_wavelet_iter() {
+    let data = BitVec::pack_sequence_u64(&[1, 4, 4, 1, 3, 1, 4, 3, 2, 0], 4);
+    let wavelet = WaveletMatrix::from_bit_vec(&data, 4);
+
+    let mut iter = wavelet.iter();
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[1], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[4], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[4], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[1], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[3], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[1], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[4], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[3], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[2], 4)));
+    assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[0], 4)));
+    assert_eq!(iter.next(), None);
+
+    let mut iter = wavelet.iter_u64();
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(4));
+    assert_eq!(iter.next(), Some(4));
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(3));
+    assert_eq!(iter.next(), Some(1));
+    assert_eq!(iter.next(), Some(4));
+    assert_eq!(iter.next(), Some(3));
+    assert_eq!(iter.next(), Some(2));
+    assert_eq!(iter.next(), Some(0));
+    assert_eq!(iter.next(), None);
+}
