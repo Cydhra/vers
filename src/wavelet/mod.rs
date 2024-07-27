@@ -249,7 +249,7 @@ impl WaveletMatrix {
     ///
     /// Returns `None` if the `range` is out of bounds (greater than the length of the encoded sequence,
     /// but since it is exclusive, it may be equal to the length),
-    /// or if the number of bits in the wavelet matrix elements exceed `64`. // todo panic instead?
+    /// or if the number of bits in the wavelet matrix elements exceed `64`.
     #[must_use]
     pub fn rank_range_u64(&self, range: Range<usize>, symbol: u64) -> Option<usize> {
         if range.start >= self.len() || range.end > self.len() || self.bits_per_element > 64 {
@@ -424,7 +424,7 @@ impl WaveletMatrix {
     ///
     /// Returns `None` if `i` is out of bounds (greater than the length of the encoded sequence, but
     /// since it is exclusive, it may be equal to the length),
-    /// or if the number of bits in the wavelet matrix elements exceed `64`. // todo panic instead?
+    /// or if the number of bits in the wavelet matrix elements exceed `64`.
     #[must_use]
     pub fn rank_u64(&self, i: usize, symbol: u64) -> Option<usize> {
         if i > self.len() || self.bits_per_element > 64 {
