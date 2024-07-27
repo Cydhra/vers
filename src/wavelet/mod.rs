@@ -203,7 +203,8 @@ impl WaveletMatrix {
     /// [`BitVec`]: BitVec
     #[must_use]
     pub fn rank_range(&self, range: Range<usize>, symbol: &BitVec) -> Option<usize> {
-        if range.start >= self.len()
+        if range.is_empty()
+            || range.start >= self.len()
             || range.end > self.len()
             || symbol.len() != self.bits_per_element as usize
         {

@@ -120,6 +120,27 @@ fn test_rank_randomized() {
 }
 
 #[test]
+fn test_rank_bounds() {
+    let data = BitVec::pack_sequence_u64(&[1, 4, 4, 1, 3, 1, 4, 3, 2, 0], 4);
+    let wavelet = WaveletMatrix::from_bit_vec(&data, 4);
+
+    let long_data = BitVec::from_zeros(90);
+    let long_wavelet = WaveletMatrix::from_bit_vec(&long_data, 90);
+
+    let symbol_0 = BitVec::from_zeros(4);
+
+    assert_eq!(wavelet.rank_offset(0, 11, &symbol_0), None);
+    assert_eq!(wavelet.rank_offset(11, 0, &symbol_0), None);
+    assert_eq!(wavelet.rank_offset(11, 11, &symbol_0), None);
+    assert_eq!(wavelet.rank_offset(0, 0, &symbol_0), None);
+    assert_eq!(wavelet.rank_range(0..11, &symbol_0), None);
+    assert_eq!(wavelet.rank_range(0..0, &symbol_0), None);
+    assert_eq!(wavelet.rank_range(11..11, &symbol_0), None);
+    assert_eq!(long_wavelet.rank_offset(0, 1, &long_data), Some(1));
+    assert_eq!(long_wavelet.rank_offset_u64(0, 1, 0), None);
+}
+
+#[test]
 fn test_select_range() {
     let data = BitVec::pack_sequence_u64(&[1, 4, 4, 1, 3, 1, 4, 3, 2, 0], 4);
     let wavelet = WaveletMatrix::from_bit_vec(&data, 4);
