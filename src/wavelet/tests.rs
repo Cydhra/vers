@@ -220,10 +220,70 @@ fn test_quantile_randomized() {
             if range.is_empty() {
                 None
             } else {
-                Some(range_data[range_data.len() / 2] as u64)
+                Some(range_data[(range_data.len() - 1) / 2] as u64)
             }
         );
     }
+}
+
+#[test]
+fn test_convenience_bounds() {
+    let data = BitVec::pack_sequence_u64(&[1, 4, 4, 1, 3, 1, 4, 3, 2, 0], 4);
+    let wavelet = WaveletMatrix::from_bit_vec(&data, 4);
+
+    let long_data = BitVec::from_zeros(90);
+    let long_wavelet = WaveletMatrix::from_bit_vec(&long_data, 90);
+
+    assert_eq!(
+        wavelet.range_max(0..10),
+        Some(BitVec::pack_sequence_u8(&[4], 4))
+    );
+    assert_eq!(
+        wavelet.range_max_unchecked(0..10),
+        BitVec::pack_sequence_u8(&[4], 4)
+    );
+    assert_eq!(wavelet.range_max_u64(0..10), Some(4));
+    assert_eq!(wavelet.range_max_u64_unchecked(0..10), 4);
+    assert_eq!(wavelet.range_max(0..11), None);
+    assert_eq!(wavelet.range_max_u64(0..11), None);
+    assert_eq!(wavelet.range_max(1..1), None);
+    assert_eq!(wavelet.range_max_u64(1..1), None);
+    assert_eq!(long_wavelet.range_max(0..1), Some(long_data.clone()));
+    assert_eq!(long_wavelet.range_max_u64(0..1), None);
+
+    assert_eq!(
+        wavelet.range_min(0..10),
+        Some(BitVec::pack_sequence_u8(&[0], 4))
+    );
+    assert_eq!(
+        wavelet.range_min_unchecked(0..10),
+        BitVec::pack_sequence_u8(&[0], 4)
+    );
+    assert_eq!(wavelet.range_min_u64(0..10), Some(0));
+    assert_eq!(wavelet.range_min_u64_unchecked(0..10), 0);
+    assert_eq!(wavelet.range_min(0..11), None);
+    assert_eq!(wavelet.range_min_u64(0..11), None);
+    assert_eq!(wavelet.range_min(1..1), None);
+    assert_eq!(wavelet.range_min_u64(1..1), None);
+    assert_eq!(long_wavelet.range_min(0..1), Some(long_data.clone()));
+    assert_eq!(long_wavelet.range_min_u64(0..1), None);
+
+    assert_eq!(
+        wavelet.range_median(0..10),
+        Some(BitVec::pack_sequence_u8(&[2], 4))
+    );
+    assert_eq!(
+        wavelet.range_median_unchecked(0..10),
+        BitVec::pack_sequence_u8(&[2], 4)
+    );
+    assert_eq!(wavelet.range_median_u64(0..10), Some(2));
+    assert_eq!(wavelet.range_median_u64_unchecked(0..10), 2);
+    assert_eq!(wavelet.range_median(0..11), None);
+    assert_eq!(wavelet.range_median_u64(0..11), None);
+    assert_eq!(wavelet.range_median(1..1), None);
+    assert_eq!(wavelet.range_median_u64(1..1), None);
+    assert_eq!(long_wavelet.range_median(0..1), Some(long_data.clone()));
+    assert_eq!(long_wavelet.range_median_u64(0..1), None);
 }
 
 #[test]

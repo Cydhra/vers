@@ -883,7 +883,7 @@ impl WaveletMatrix {
     /// May instead return an empty bit vector.
     #[must_use]
     pub fn range_median_unchecked(&self, range: Range<usize>) -> BitVec {
-        let k = (range.end - range.start) / 2;
+        let k = (range.end - 1 - range.start) / 2;
         self.quantile_unchecked(range, k)
     }
 
@@ -897,8 +897,12 @@ impl WaveletMatrix {
     /// Returns `None` if the `range` is out of bounds or if the range is empty.
     #[must_use]
     pub fn range_median(&self, range: Range<usize>) -> Option<BitVec> {
-        let k = (range.end - range.start) / 2;
-        self.quantile(range, k)
+        if range.is_empty() {
+            None
+        } else {
+            let k = (range.end - 1 - range.start) / 2;
+            self.quantile(range, k)
+        }
     }
 
     /// Get the median element in the encoded sequence in the specified `range`.
@@ -915,7 +919,7 @@ impl WaveletMatrix {
     /// May instead return 0.
     #[must_use]
     pub fn range_median_u64_unchecked(&self, range: Range<usize>) -> u64 {
-        let k = (range.end - range.start) / 2;
+        let k = (range.end - 1 - range.start) / 2;
         self.quantile_u64_unchecked(range, k)
     }
 
@@ -933,8 +937,12 @@ impl WaveletMatrix {
     /// May instead return 0.
     #[must_use]
     pub fn range_median_u64(&self, range: Range<usize>) -> Option<u64> {
-        let k = (range.end - range.start) / 2;
-        self.quantile_u64(range, k)
+        if range.is_empty() {
+            None
+        } else {
+            let k = (range.end - 1 - range.start) / 2;
+            self.quantile_u64(range, k)
+        }
     }
 
     /// Get an iterator over the elements of the encoded sequence.
