@@ -259,7 +259,7 @@ fn test_wavelet_iter() {
     assert_eq!(iter.next(), None);
     assert_eq!(iter.next_back(), None);
 
-    let mut iter = wavelet.iter_u64();
+    let mut iter = wavelet.iter_u64().unwrap();
     assert_eq!(iter.next(), Some(1));
     assert_eq!(iter.next(), Some(4));
     assert_eq!(iter.next(), Some(4));
@@ -283,7 +283,7 @@ fn test_wavelet_into_iter() {
     assert_eq!(iter.next(), Some(BitVec::pack_sequence_u64(&[1], 1)));
     assert_eq!(iter.next(), None);
 
-    let mut iter = wavelet.into_iter_u64();
+    let mut iter = wavelet.into_iter_u64().unwrap();
     assert_eq!(iter.next(), Some(1));
     assert_eq!(iter.next(), None);
 }
@@ -304,7 +304,7 @@ fn test_wavelet_iter_randomized() {
         }
         assert_eq!(iter.next(), None);
 
-        let mut iter = wavelet.iter_u64();
+        let mut iter = wavelet.iter_u64().unwrap();
         for i in 0..data.len() {
             assert_eq!(iter.next(), Some(data[i] as u64));
         }
@@ -321,7 +321,7 @@ fn test_wavelet_empty_iter() {
     assert_eq!(iter.next_back(), None);
     assert_eq!(iter.next(), None);
 
-    let mut iter = wavelet.iter_u64();
+    let mut iter = wavelet.iter_u64().unwrap();
     assert_eq!(iter.next_back(), None);
     assert_eq!(iter.next(), None);
 }

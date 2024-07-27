@@ -819,18 +819,26 @@ impl WaveletMatrix {
 
     /// Get an iterator over the elements of the encoded sequence.
     /// The iterator yields `u64` elements.
-    /// If the number of bits per element exceeds 64, the iterator may truncate the values or
-    /// be empty.
-    pub fn iter_u64(&self) -> WaveletNumRefIter {
-        WaveletNumRefIter::new(self)
+    /// If the number of bits per element exceeds 64, `None` is returned.
+    #[must_use]
+    pub fn iter_u64(&self) -> Option<WaveletNumRefIter> {
+        if self.bits_per_element > 64 {
+            None
+        } else {
+            Some(WaveletNumRefIter::new(self))
+        }
     }
 
     /// Turn the encoded sequence into an iterator.
     /// The iterator yields `u64` elements.
-    /// If the number of bits per element exceeds 64, the iterator may truncate the values or
-    /// be empty.
-    pub fn into_iter_u64(self) -> WaveletNumIter {
-        WaveletNumIter::new(self)
+    /// If the number of bits per element exceeds 64, `None` is returned.
+    #[must_use]
+    pub fn into_iter_u64(self) -> Option<WaveletNumIter> {
+        if self.bits_per_element > 64 {
+            None
+        } else {
+            Some(WaveletNumIter::new(self))
+        }
     }
 
     /// Get the number of bits per element in the alphabet of the encoded sequence.
