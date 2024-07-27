@@ -79,6 +79,7 @@ impl WaveletMatrix {
     }
 
     /// Generic function to read a value from the wavelet matrix and consume it with a closure.
+    /// The function is used by the `get_value` and `get_u64` functions, deduplicating code.
     #[inline(always)]
     fn reconstruct_value_unchecked<F: FnMut(u64)>(&self, mut i: usize, mut target_func: F) {
         for level in 0..self.bits_per_element as usize {
@@ -753,27 +754,79 @@ impl WaveletMatrix {
         }
     }
 
+    /// Get the smallest element in the encoded sequence in the specified `range`.
+    /// The range is a half-open interval, meaning that the `end` index is exclusive.
+    /// The smallest element is returned as a `BitVec`,
+    ///
+    /// This method does not perform bounds checking.
+    ///
+    /// # Panics
+    /// May panic if the `range` is out of bounds or if the range is empty.
+    /// May instead return an empty bit vector.
+    #[must_use]
     pub fn range_min_unchecked(&self, range: Range<usize>) -> BitVec {
         self.quantile_unchecked(range, 0)
     }
 
+    /// Get the smallest element in the encoded sequence in the specified `range`.
+    /// The range is a half-open interval, meaning that the `end` index is exclusive.
+    /// The smallest element is returned as a `BitVec`,
+    ///
+    /// Returns `None` if the `range` is out of bounds or if the range is empty.
+    #[must_use]
     pub fn range_min(&self, range: Range<usize>) -> Option<BitVec> {
         self.quantile(range, 0)
     }
 
+    /// Get the smallest element in the encoded sequence in the specified `range`.
+    /// The range is a half-open interval, meaning that the `end` index is exclusive.
+    /// The smallest element is returned as a `u64` numeral.
+    /// If the number of bits per element exceeds 64, the value is truncated.
+    ///
+    /// This method does not perform bounds checking.
+    ///
+    /// # Panics
+    /// May panic if the `range` is out of bounds or if the range is empty.
+    /// May instead return 0.
+    #[must_use]
     pub fn range_min_u64_unchecked(&self, range: Range<usize>) -> u64 {
         self.quantile_u64_unchecked(range, 0)
     }
 
+    /// Get the smallest element in the encoded sequence in the specified `range`.
+    /// The range is a half-open interval, meaning that the `end` index is exclusive.
+    /// The smallest element is returned as a `u64` numeral.
+    ///
+    /// Returns `None` if the `range` is out of bounds, if the range is empty, or if the number of bits
+    /// per element exceeds 64.
+    #[must_use]
     pub fn range_min_u64(&self, range: Range<usize>) -> Option<u64> {
         self.quantile_u64(range, 0)
     }
 
+    /// Get the largest element in the encoded sequence in the specified `range`.
+    /// The range is a half-open interval, meaning that the `end` index is exclusive.
+    /// The largest element is returned as a `BitVec`,
+    /// where the least significant bit is the first element.
+    ///
+    /// This method does not perform bounds checking.
+    ///
+    /// # Panics
+    /// May panic if the `range` is out of bounds or if the range is empty.
+    /// May instead return an empty bit vector.
+    #[must_use]
     pub fn range_max_unchecked(&self, range: Range<usize>) -> BitVec {
         let k = range.end - range.start - 1;
         self.quantile_unchecked(range, k)
     }
 
+    /// Get the largest element in the encoded sequence in the specified `range`.
+    /// The range is a half-open interval, meaning that the `end` index is exclusive.
+    /// The largest element is returned as a `BitVec`,
+    /// where the least significant bit is the first element.
+    ///
+    /// Returns `None` if the `range` is out of bounds or if the range is empty.
+    #[must_use]
     pub fn range_max(&self, range: Range<usize>) -> Option<BitVec> {
         if range.is_empty() {
             None
@@ -783,11 +836,29 @@ impl WaveletMatrix {
         }
     }
 
+    /// Get the largest element in the encoded sequence in the specified `range`.
+    /// The range is a half-open interval, meaning that the `end` index is exclusive.
+    /// The largest element is returned as a `u64` numeral.
+    /// If the number of bits per element exceeds 64, the value is truncated.
+    ///
+    /// This method does not perform bounds checking.
+    ///
+    /// # Panics
+    /// May panic if the `range` is out of bounds or if the range is empty.
+    /// May instead return 0.
+    #[must_use]
     pub fn range_max_u64_unchecked(&self, range: Range<usize>) -> u64 {
         let k = range.end - range.start - 1;
         self.quantile_u64_unchecked(range, k)
     }
 
+    /// Get the largest element in the encoded sequence in the specified `range`.
+    /// The range is a half-open interval, meaning that the `end` index is exclusive.
+    /// The largest element is returned as a `u64` numeral.
+    ///
+    /// Returns `None` if the `range` is out of bounds, if the range is empty, or if the number of bits
+    /// per element exceeds 64.
+    #[must_use]
     pub fn range_max_u64(&self, range: Range<usize>) -> Option<u64> {
         if range.is_empty() {
             None
@@ -797,21 +868,69 @@ impl WaveletMatrix {
         }
     }
 
+    /// Get the median element in the encoded sequence in the specified `range`.
+    /// The range is a half-open interval, meaning that the `end` index is exclusive.
+    /// The median element is returned as a `BitVec`,
+    /// where the least significant bit is the first element.
+    ///
+    /// If the range does not contain an odd number of elements, the position is rounded down.
+    ///
+    /// This method does not perform bounds checking.
+    ///
+    /// # Panics
+    /// May panic if the `range` is out of bounds or if the range is empty.
+    /// May instead return an empty bit vector.
+    #[must_use]
     pub fn range_median_unchecked(&self, range: Range<usize>) -> BitVec {
         let k = (range.end - range.start) / 2;
         self.quantile_unchecked(range, k)
     }
 
+    /// Get the median element in the encoded sequence in the specified `range`.
+    /// The range is a half-open interval, meaning that the `end` index is exclusive.
+    /// The median element is returned as a `BitVec`,
+    /// where the least significant bit is the first element.
+    ///
+    /// If the range does not contain an odd number of elements, the position is rounded down.
+    ///
+    /// Returns `None` if the `range` is out of bounds or if the range is empty.
+    #[must_use]
     pub fn range_median(&self, range: Range<usize>) -> Option<BitVec> {
         let k = (range.end - range.start) / 2;
         self.quantile(range, k)
     }
 
+    /// Get the median element in the encoded sequence in the specified `range`.
+    /// The range is a half-open interval, meaning that the `end` index is exclusive.
+    /// The median element is returned as a `u64` numeral.
+    /// If the number of bits per element exceeds 64, the value is truncated.
+    ///
+    /// If the range does not contain an odd number of elements, the position is rounded down.
+    ///
+    /// This method does not perform bounds checking.
+    ///
+    /// # Panics
+    /// May panic if the `range` is out of bounds or if the range is empty.
+    /// May instead return 0.
+    #[must_use]
     pub fn range_median_u64_unchecked(&self, range: Range<usize>) -> u64 {
         let k = (range.end - range.start) / 2;
         self.quantile_u64_unchecked(range, k)
     }
 
+    /// Get the median element in the encoded sequence in the specified `range`.
+    /// The range is a half-open interval, meaning that the `end` index is exclusive.
+    /// The median element is returned as a `u64` numeral.
+    ///
+    /// If the range does not contain an odd number of elements, the position is rounded down.
+    ///
+    /// Returns `None` if the `range` is out of bounds, if the range is empty, or if the number of bits
+    /// per element exceeds 64.
+    ///
+    /// # Panics
+    /// May panic if the `range` is out of bounds or if the range is empty.
+    /// May instead return 0.
+    #[must_use]
     pub fn range_median_u64(&self, range: Range<usize>) -> Option<u64> {
         let k = (range.end - range.start) / 2;
         self.quantile_u64(range, k)
