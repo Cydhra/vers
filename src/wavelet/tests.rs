@@ -130,12 +130,20 @@ fn test_rank_bounds() {
     let symbol_0 = BitVec::from_zeros(4);
 
     assert_eq!(wavelet.rank_offset(0, 11, &symbol_0), None);
+    assert_eq!(wavelet.rank_offset_u64(0, 11, 0), None);
     assert_eq!(wavelet.rank_offset(11, 0, &symbol_0), None);
+    assert_eq!(wavelet.rank_offset_u64(11, 0, 0), None);
     assert_eq!(wavelet.rank_offset(11, 11, &symbol_0), None);
-    assert_eq!(wavelet.rank_offset(0, 0, &symbol_0), None);
+    assert_eq!(wavelet.rank_offset_u64(11, 11, 0), None);
+    assert_eq!(wavelet.rank_offset(0, 0, &symbol_0), Some(0));
+    assert_eq!(wavelet.rank_offset_u64(0, 0, 0), Some(0));
+
     assert_eq!(wavelet.rank_range(0..11, &symbol_0), None);
-    assert_eq!(wavelet.rank_range(0..0, &symbol_0), None);
+    assert_eq!(wavelet.rank_range_u64(0..11, 0), None);
+    assert_eq!(wavelet.rank_range(0..0, &symbol_0), Some(0));
+    assert_eq!(wavelet.rank_range_u64(0..0, 0), Some(0));
     assert_eq!(wavelet.rank_range(11..11, &symbol_0), None);
+    assert_eq!(wavelet.rank_range_u64(11..11, 0), None);
     assert_eq!(long_wavelet.rank_offset(0, 1, &long_data), Some(1));
     assert_eq!(long_wavelet.rank_offset_u64(0, 1, 0), None);
 }
