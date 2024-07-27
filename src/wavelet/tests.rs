@@ -226,6 +226,26 @@ fn test_quantile_randomized() {
     }
 }
 
+#[test]
+fn test_empty_matrix() {
+    let wavelet = WaveletMatrix::from_bit_vec(&BitVec::new(), 4);
+
+    assert_eq!(wavelet.len(), 0);
+    assert_eq!(wavelet.rank(0, &BitVec::from_zeros(4)), Some(0));
+    assert_eq!(wavelet.rank(100, &BitVec::from_ones(4)), None);
+
+    assert_eq!(wavelet.select(0, &BitVec::from_zeros(4)), None);
+    assert_eq!(wavelet.select(100, &BitVec::from_ones(4)), None);
+
+    assert_eq!(wavelet.quantile(0..0, 0), None);
+    assert_eq!(wavelet.quantile(0..100, 10), None);
+
+    assert_eq!(wavelet.range_max(0..0), None);
+    assert_eq!(wavelet.range_max(0..100), None);
+    assert_eq!(wavelet.range_min(0..0), None);
+    assert_eq!(wavelet.range_min(0..100), None);
+}
+
 // test iterators exist and work correctly
 #[test]
 fn test_wavelet_iter() {

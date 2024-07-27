@@ -385,6 +385,7 @@ impl WaveletMatrix {
     /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
     /// where the least significant bit is the first element, and `k` is the number of bits per element
     /// in the wavelet matrix.
+    ///
     /// Returns `None` if `i` is out of bounds (greater than the length of the encoded sequence, but
     /// since it is exclusive, it may be equal to the length),
     /// or if the number of bits in `symbol` is not equal to `k`.
@@ -832,7 +833,7 @@ impl WaveletMatrix {
             None
         } else {
             let k = range.end - range.start - 1;
-            Some(self.quantile_unchecked(range, k))
+            self.quantile(range, k)
         }
     }
 
@@ -864,7 +865,7 @@ impl WaveletMatrix {
             None
         } else {
             let k = range.end - range.start - 1;
-            Some(self.quantile_u64_unchecked(range, k))
+            self.quantile_u64(range, k)
         }
     }
 
