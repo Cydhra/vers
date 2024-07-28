@@ -488,32 +488,33 @@ fn test_successor() {
         wavelet.successor(0..6, &BitVec::pack_sequence_u8(&[0], 4)),
         Some(BitVec::pack_sequence_u8(&[1], 4))
     );
-
+    assert_eq!(wavelet.successor_u64(0..6, 0), Some(1));
     assert_eq!(
         wavelet.successor(0..6, &BitVec::pack_sequence_u8(&[1], 4)),
         Some(BitVec::pack_sequence_u8(&[1], 4))
     );
-
+    assert_eq!(wavelet.successor_u64(0..6, 1), Some(1));
     assert_eq!(
         wavelet.successor(0..6, &BitVec::pack_sequence_u8(&[2], 4)),
         Some(BitVec::pack_sequence_u8(&[3], 4))
     );
-
+    assert_eq!(wavelet.successor_u64(0..6, 2), Some(3));
     assert_eq!(
         wavelet.successor(0..6, &BitVec::pack_sequence_u8(&[3], 4)),
         Some(BitVec::pack_sequence_u8(&[3], 4))
     );
-
+    assert_eq!(wavelet.successor_u64(0..6, 3), Some(3));
     assert_eq!(
         wavelet.successor(0..6, &BitVec::pack_sequence_u8(&[4], 4)),
         Some(BitVec::pack_sequence_u8(&[5], 4))
     );
+    assert_eq!(wavelet.successor_u64(0..6, 4), Some(5));
 
     assert_eq!(
         wavelet.successor(0..6, &BitVec::pack_sequence_u8(&[9], 4)),
         Some(BitVec::pack_sequence_u8(&[9], 4))
     );
-
+    assert_eq!(wavelet.successor_u64(0..6, 9), Some(9));
     assert_eq!(
         wavelet.successor(0..6, &BitVec::pack_sequence_u8(&[10], 4)),
         Some(BitVec::pack_sequence_u8(&[10], 4))
@@ -523,11 +524,12 @@ fn test_successor() {
         wavelet.successor(0..6, &BitVec::pack_sequence_u8(&[11], 4)),
         None
     );
-
+    assert_eq!(wavelet.successor_u64(0..6, 11), None);
     assert_eq!(
         wavelet.successor(0..6, &BitVec::pack_sequence_u8(&[15], 4)),
         None
     );
+    assert_eq!(wavelet.successor_u64(0..6, 15), None);
 }
 
 // test iterators exist and work correctly
