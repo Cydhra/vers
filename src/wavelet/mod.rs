@@ -1098,9 +1098,7 @@ impl WaveletMatrix {
             |bit, level, result| {
                 result.set_unchecked((self.bits_per_element - 1) as usize - level, bit)
             },
-            |matrix, range, idx, level, result| {
-                matrix.partial_quantile_search_unchecked(range, idx, level, result)
-            },
+            Self::partial_quantile_search_unchecked,
         )
     }
 
@@ -1135,9 +1133,7 @@ impl WaveletMatrix {
                 *result <<= 1;
                 *result |= bit;
             },
-            |matrix, range, idx, level, result| {
-                matrix.partial_quantile_search_u64_unchecked(range, idx, level, result)
-            },
+            Self::partial_quantile_search_u64_unchecked,
         )
     }
 
@@ -1256,9 +1252,7 @@ impl WaveletMatrix {
             |bit, level, result| {
                 result.set_unchecked((self.bits_per_element - 1) as usize - level, bit)
             },
-            |matrix, range, idx, level, result| {
-                matrix.partial_quantile_search_unchecked(range, idx, level, result)
-            },
+            Self::partial_quantile_search_unchecked,
         )
     }
 
@@ -1293,9 +1287,7 @@ impl WaveletMatrix {
                 *result <<= 1;
                 *result |= bit;
             },
-            |matrix, range, idx, level, result| {
-                matrix.partial_quantile_search_u64_unchecked(range, idx, level, result)
-            },
+            Self::partial_quantile_search_u64_unchecked,
         )
     }
 
