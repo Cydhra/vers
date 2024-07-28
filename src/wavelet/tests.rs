@@ -565,6 +565,37 @@ fn test_successor_large_gap() {
     );
 }
 
+#[test]
+fn test_pred_succ_randomized() {
+    let mut rng = StdRng::from_seed([100; 32]);
+
+    let data: Vec<u64> = (0..1000).map(|_| rng.gen_range(0..=u64::MAX)).collect();
+    let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u64(&data, 64), 64);
+
+    let mut sorted_data = data.clone();
+    sorted_data.sort();
+
+    for _ in 0..1000 {
+        let query = rng.gen_range(0..u64::MAX);
+
+        let pred = sorted_data
+            .iter()
+            .rev()
+            .position(|&x| x <= query)
+            .map(|x| sorted_data.len() - x - 1);
+        let succ = sorted_data.iter().position(|&x| x >= query);
+
+        assert_eq!(
+            wavelet.predecessor_u64(0..1000, query),
+            pred.map(|x| sorted_data[x]),
+        );
+        assert_eq!(
+            wavelet.successor_u64(0..1000, query),
+            succ.map(|x| sorted_data[x])
+        );
+    }
+}
+
 // test iterators exist and work correctly
 #[test]
 fn test_wavelet_iter() {
