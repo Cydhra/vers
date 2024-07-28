@@ -983,6 +983,93 @@ impl WaveletMatrix {
     }
 
     /// Get the predecessor of the given `symbol` in the given `range`.
+    /// This is a private generic helper function to implement the public `predecessor` functions.
+    ///
+    /// The read and write access to the query and result values are abstracted by the `Reader` and `Writer` closures.
+    #[inline(always)] // even though the function is pretty large, inlining probably gets rid of the closure calls in favor of static calls
+    fn predecessor_generic_unchecked<
+        T: Clone,
+        Reader: Fn(usize, &T) -> u64,
+        Writer: FnMut(u64, usize, &mut T) -> (),
+        Quantile: Fn(&Self, Range<usize>, usize, usize, T) -> T,
+    >(
+        &self,
+        mut range: Range<usize>,
+        symbol: &T,
+        mut result_value: T,
+        bit_reader: Reader,
+        mut result_writer: Writer,
+        quantile_search: Quantile,
+    ) -> Option<T> {
+        // the bit-prefix at the last node where we could go to an interval with smaller elements,
+        // i.e. where we need to go if the current prefix has no elements smaller than the query
+        let mut last_smaller_prefix = result_value.clone();
+        // the level of the last node where we could go to an interval with smaller elements
+        let mut last_one_level: Option<usize> = None;
+        // the range of the last node where we could go to an interval with smaller elements
+        let mut next_smaller_range: Option<Range<usize>> = None;
+
+        for (level, data) in self.data.iter().enumerate() {
+            let query_bit = bit_reader(level, symbol);
+
+            // read the amount of elements with the current result-prefix plus one 0 bit.
+            // if the query_bit is 1, we can calculate the amount of elements with the result-prefix
+            // plus one 1 from there
+            let zeros_start = data.rank0(range.start);
+            let zeros_end = data.rank0(range.end);
+            let elements_zero = zeros_end - zeros_start;
+
+            if query_bit == 0 {
+                if elements_zero == 0 {
+                    // if our query bit is zero in this level and suddenly our new interval is empty,
+                    // all elements that were in the previous interval are bigger than the query element,
+                    // because they all have a 1 in the current level.
+                    // this means the predecessor is the largest element in the last smaller interval,
+                    // i.e. the interval that has a 0 bit at the last level where our prefix had a 1 bit.
+
+                    return next_smaller_range.map(|r| {
+                        let idx = r.end - r.start - 1;
+                        quantile_search(self, r, idx, last_one_level.unwrap(), last_smaller_prefix)
+                    });
+                }
+
+                // update the prefix
+                result_writer(0, level, &mut result_value);
+
+                // update the range to the interval of the new prefix
+                range.start = zeros_start;
+                range.end = zeros_end;
+            } else {
+                if elements_zero == range.end - range.start {
+                    // if our query element is 1 in this level and suddenly our new interval is empty,
+                    // all elements that were in the previous interval are smaller than the query element,
+                    // because they all have a 0 in the current level.
+                    // this means the predecessor is the largest element in the last level's interval.
+
+                    let idx = range.end - range.start - 1;
+                    return Some(quantile_search(self, range, idx, level, result_value));
+                }
+
+                // if the other interval is not empty, we update the last smaller interval to the last interval where we can switch to a 0 prefix
+                if !(zeros_start..zeros_end).is_empty() {
+                    last_one_level = Some(level);
+                    next_smaller_range = Some(zeros_start..zeros_end);
+                    last_smaller_prefix = result_value.clone();
+                }
+
+                // update the prefix
+                result_writer(1, level, &mut result_value);
+
+                // update the range to the interval of the new prefix
+                range.start = data.rank0 + (range.start - zeros_start);
+                range.end = data.rank0 + (range.end - zeros_end);
+            }
+        }
+
+        Some(result_value)
+    }
+
+    /// Get the predecessor of the given `symbol` in the given `range`.
     /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
     /// where the least significant bit is the first element, and `k` is the number of bits per element
     /// in the wavelet matrix.
@@ -994,7 +1081,7 @@ impl WaveletMatrix {
     /// if the range is empty, if the wavelet matrix is empty, if the range is out of bounds,
     /// or if the `symbol` is smaller than all elements in the range.
     #[must_use]
-    pub fn predecessor(&self, mut range: Range<usize>, symbol: &BitVec) -> Option<BitVec> {
+    pub fn predecessor(&self, range: Range<usize>, symbol: &BitVec) -> Option<BitVec> {
         if symbol.len() != self.bits_per_element as usize
             || range.is_empty()
             || self.is_empty()
@@ -1003,63 +1090,18 @@ impl WaveletMatrix {
             return None;
         }
 
-        let mut result = BitVec::from_zeros(self.bits_per_element as usize);
-        let mut last_one_level: Option<usize> = None;
-        let mut next_smaller_range: Option<Range<usize>> = None;
-
-        for (level, data) in self.data.iter().enumerate() {
-            let bit = symbol.get_unchecked((self.bits_per_element - 1) as usize - level);
-            let zeros_start = data.rank0(range.start);
-            let zeros_end = data.rank0(range.end);
-            let zeros = zeros_end - zeros_start;
-
-            if bit == 0 {
-                if zeros == 0 {
-                    // if our query element is zero in this level and suddenly our new interval is empty,
-                    // all elements that were in the previous interval are bigger than the query element,
-                    // because they all have a 1 in the current level.
-                    // this means the predecessor is the smallest element in the previous interval,
-                    // which we keep track of in the next_smaller_range variable. If the variable is none,
-                    // we know that the query is smaller than all elements in the provided range.
-                    // if it isnt, we begin the quantile search from the next smaller range,
-                    // with the current prefix sans the last 1, as that is the next smaller prefix.
-
-                    return next_smaller_range.filter(|r| !r.is_empty()).map(|r| {
-                        result.set_unchecked(
-                            (self.bits_per_element - 1) as usize - last_one_level.unwrap(),
-                            0,
-                        );
-                        let idx = r.end - r.start - 1;
-                        self.partial_quantile_search_unchecked(
-                            r,
-                            idx,
-                            last_one_level.unwrap(),
-                            result,
-                        )
-                    });
-                }
-                range.start = zeros_start;
-                range.end = zeros_end;
-            } else {
-                if zeros == range.end - range.start {
-                    // if our query element is one in this level and suddenly our new interval is empty,
-                    // all elements that were in the previous interval are smaller than the query element,
-                    // because they all have a 0 in the current level.
-                    // this means the predecessor is the largest element in the previous interval.
-
-                    let idx = range.end - range.start - 1;
-                    return Some(self.partial_quantile_search_unchecked(range, idx, level, result));
-                } else {
-                    result.set_unchecked((self.bits_per_element - 1) as usize - level, 1);
-                    last_one_level = Some(level);
-                    next_smaller_range = Some(zeros_start..zeros_end)
-                }
-                range.start = data.rank0 + (range.start - zeros_start);
-                range.end = data.rank0 + (range.end - zeros_end);
-            }
-        }
-
-        Some(result)
+        self.predecessor_generic_unchecked(
+            range,
+            symbol,
+            BitVec::from_zeros(self.bits_per_element as usize),
+            |level, symbol| symbol.get_unchecked((self.bits_per_element - 1) as usize - level),
+            |bit, level, result| {
+                result.set_unchecked((self.bits_per_element - 1) as usize - level, bit)
+            },
+            |matrix, range, idx, level, result| {
+                matrix.partial_quantile_search_unchecked(range, idx, level, result)
+            },
+        )
     }
 
     /// Get the predecessor of the given `symbol` in the given `range`.
@@ -1073,7 +1115,7 @@ impl WaveletMatrix {
     /// if the range is empty, if the wavelet matrix is empty, if the range is out of bounds,
     /// or if the `symbol` is smaller than all elements in the range.
     #[must_use]
-    pub fn predecessor_u64(&self, mut range: Range<usize>, symbol: u64) -> Option<u64> {
+    pub fn predecessor_u64(&self, range: Range<usize>, symbol: u64) -> Option<u64> {
         if self.bits_per_element > 64
             || range.is_empty()
             || self.is_empty()
@@ -1082,52 +1124,107 @@ impl WaveletMatrix {
             return None;
         }
 
-        let mut result = 0;
-        let mut last_one_level: Option<usize> = None;
-        let mut next_smaller_range: Option<Range<usize>> = None;
+        self.predecessor_generic_unchecked(
+            range,
+            &symbol,
+            0,
+            |level, symbol| symbol >> ((self.bits_per_element - 1) as usize - level) & 1,
+            |bit, _level, result| {
+                // we ignore the level here, and instead rely on the fact that the bits are set in order.
+                // we have to do that, because the quantile_search_u64 does the same.
+                *result <<= 1;
+                *result |= bit;
+            },
+            |matrix, range, idx, level, result| {
+                matrix.partial_quantile_search_u64_unchecked(range, idx, level, result)
+            },
+        )
+    }
+
+    #[inline(always)]
+    fn successor_generic_unchecked<
+        T: Clone,
+        Reader: Fn(usize, &T) -> u64,
+        Writer: FnMut(u64, usize, &mut T) -> (),
+        Quantile: Fn(&Self, Range<usize>, usize, usize, T) -> T,
+    >(
+        &self,
+        mut range: Range<usize>,
+        symbol: &T,
+        mut result_value: T,
+        bit_reader: Reader,
+        mut result_writer: Writer,
+        quantile_search: Quantile,
+    ) -> Option<T> {
+        // the bit-prefix at the last node where we could go to an interval with larger elements,
+        // i.e. where we need to go if the current prefix has no elements larger than the query
+        let mut last_larger_prefix = result_value.clone();
+        // the level of the last node where we could go to an interval with larger elements
+        let mut last_zero_level: Option<usize> = None;
+        // the range of the last node where we could go to an interval with larger elements
+        let mut next_larger_range: Option<Range<usize>> = None;
 
         for (level, data) in self.data.iter().enumerate() {
-            let bit = (symbol >> ((self.bits_per_element - 1) as usize - level)) & 1;
+            let query_bit = bit_reader(level, symbol);
+
+            // read the amount of elements with the current result-prefix plus one 0 bit.
+            // if the query_bit is 1, we can calculate the amount of elements with the result-prefix
+            // plus one 1 from there
             let zeros_start = data.rank0(range.start);
             let zeros_end = data.rank0(range.end);
-            let zeros = zeros_end - zeros_start;
+            let elements_zero = zeros_end - zeros_start;
 
-            if bit == 0 {
-                if zeros == 0 {
-                    return next_smaller_range.filter(|r| !r.is_empty()).map(|r| {
-                        result >>= self.bits_per_element as usize - last_one_level.unwrap(); // undo the steps from the last one level, plus one additional step
-                        result <<= 1; // replace the last one with a zero
-                        let idx = r.end - r.start - 1;
-                        self.partial_quantile_search_u64_unchecked(
-                            r,
-                            idx,
-                            last_one_level.unwrap(),
-                            result,
-                        )
-                    });
+            if query_bit == 0 {
+                if elements_zero == 0 {
+                    // if our query element is 0 in this level and suddenly our new interval is empty,
+                    // all elements that were in the previous interval are larger than the query element,
+                    // because they all have a 1 in the current level.
+                    // this means the successor is the smallest element in the last level's interval.
+
+                    return Some(quantile_search(self, range, 0, level, result_value));
                 }
 
-                result <<= 1;
+                // if the other interval is not empty, we update the last interval where we can switch to a prefix with a 1
+                if !(data.rank0 + (range.start - zeros_start)..data.rank0 + (range.end - zeros_end))
+                    .is_empty()
+                {
+                    last_zero_level = Some(level);
+                    next_larger_range = Some(
+                        data.rank0 + (range.start - zeros_start)
+                            ..data.rank0 + (range.end - zeros_end),
+                    );
+                    last_larger_prefix = result_value.clone();
+                }
+
+                // update the prefix
+                result_writer(0, level, &mut result_value);
+
+                // update the range to the interval of the new prefix
                 range.start = zeros_start;
                 range.end = zeros_end;
             } else {
-                if zeros == range.end - range.start {
-                    let idx = range.end - range.start - 1;
-                    return Some(
-                        self.partial_quantile_search_u64_unchecked(range, idx, level, result),
-                    );
+                if elements_zero == range.end - range.start {
+                    // if our query bit is 1 in this level and suddenly our new interval is empty,
+                    // all elements that were in the previous interval are smaller than the query element,
+                    // because they all have a 0 in the current level.
+                    // this means the successor is the smallest element in the last interval with a larger prefix,
+                    // i.e. the interval that has a 1 bit at the last level where our prefix had a 0 bit.
+
+                    return next_larger_range.map(|r| {
+                        quantile_search(self, r, 0, last_zero_level.unwrap(), last_larger_prefix)
+                    });
                 }
 
-                result <<= 1;
-                result |= 1;
-                last_one_level = Some(level);
-                next_smaller_range = Some(zeros_start..zeros_end);
+                // update the prefix
+                result_writer(1, level, &mut result_value);
+
+                // update the range to the interval of the new prefix
                 range.start = data.rank0 + (range.start - zeros_start);
                 range.end = data.rank0 + (range.end - zeros_end);
             }
         }
 
-        Some(result)
+        Some(result_value)
     }
 
     /// Get the successor of the given `symbol` in the given range.
@@ -1142,7 +1239,7 @@ impl WaveletMatrix {
     /// if the range is empty, if the wavelet matrix is empty, if the range is out of bounds,
     /// or if the `symbol` is greater than all elements in the range.
     #[must_use]
-    pub fn successor(&self, mut range: Range<usize>, symbol: &BitVec) -> Option<BitVec> {
+    pub fn successor(&self, range: Range<usize>, symbol: &BitVec) -> Option<BitVec> {
         if symbol.len() != self.bits_per_element as usize
             || range.is_empty()
             || self.is_empty()
@@ -1151,69 +1248,18 @@ impl WaveletMatrix {
             return None;
         }
 
-        let mut result = BitVec::from_zeros(self.bits_per_element as usize);
-        let mut last_zero_level: Option<usize> = None;
-        let mut next_greater_range: Option<Range<usize>> = None;
-
-        for (level, data) in self.data.iter().enumerate() {
-            let bit = symbol.get_unchecked((self.bits_per_element - 1) as usize - level);
-            let zeros_start = data.rank0(range.start);
-            let zeros_end = data.rank0(range.end);
-            let zeros = zeros_end - zeros_start;
-
-            if bit == 0 {
-                if zeros == 0 {
-                    // if our query element is zero in this level and suddenly our new interval is empty,
-                    // all elements that were in the previous interval are greater than the query element,
-                    // because they all have a 1 in the current level.
-                    // this means the successor is the smallest element in the previous interval.
-                    return Some(self.partial_quantile_search_unchecked(range, 0, level, result));
-                }
-
-                if !(data.rank0 + (range.start - zeros_start)..data.rank0 + (range.end - zeros_end))
-                    .is_empty()
-                {
-                    last_zero_level = Some(level);
-                    next_greater_range = Some(
-                        data.rank0 + (range.start - zeros_start)
-                            ..data.rank0 + (range.end - zeros_end),
-                    );
-                }
-
-                range.start = zeros_start;
-                range.end = zeros_end;
-            } else {
-                if zeros == range.end - range.start {
-                    // if our query element is 1 in this level and suddenly our new interval is empty,
-                    // all elements that were in the previous interval are smaller than the query element,
-                    // because they all have a 0 in the current level.
-                    // this means the successor is the smallest element in the next greater prefix,
-                    // which we keep track of in the next_greater_range variable. If the variable is none,
-                    // we know that the query is greater than all elements in the provided range.
-                    // if it isnt, we begin the quantile search from the next greater prefix,
-                    // with the current prefix sans the last 0.
-
-                    return next_greater_range.filter(|r| !r.is_empty()).map(|r| {
-                        result.set_unchecked(
-                            (self.bits_per_element - 1) as usize - last_zero_level.unwrap(),
-                            1,
-                        );
-                        self.partial_quantile_search_unchecked(
-                            r,
-                            0,
-                            last_zero_level.unwrap(),
-                            result,
-                        )
-                    });
-                }
-
-                result.set_unchecked((self.bits_per_element - 1) as usize - level, 1);
-                range.start = data.rank0 + (range.start - zeros_start);
-                range.end = data.rank0 + (range.end - zeros_end);
-            }
-        }
-
-        Some(result)
+        self.successor_generic_unchecked(
+            range,
+            symbol,
+            BitVec::from_zeros(self.bits_per_element as usize),
+            |level, symbol| symbol.get_unchecked((self.bits_per_element - 1) as usize - level),
+            |bit, level, result| {
+                result.set_unchecked((self.bits_per_element - 1) as usize - level, bit)
+            },
+            |matrix, range, idx, level, result| {
+                matrix.partial_quantile_search_unchecked(range, idx, level, result)
+            },
+        )
     }
 
     /// Get the successor of the given `symbol` in the given range.
@@ -1227,7 +1273,7 @@ impl WaveletMatrix {
     /// if the range is empty, if the wavelet matrix is empty, if the range is out of bounds,
     /// or if the `symbol` is greater than all elements in the range.
     #[must_use]
-    pub fn successor_u64(&self, mut range: Range<usize>, symbol: u64) -> Option<u64> {
+    pub fn successor_u64(&self, range: Range<usize>, symbol: u64) -> Option<u64> {
         if self.bits_per_element > 64
             || range.is_empty()
             || self.is_empty()
@@ -1236,57 +1282,21 @@ impl WaveletMatrix {
             return None;
         }
 
-        let mut result = 0;
-        let mut last_zero_level: Option<usize> = None;
-        let mut next_greater_range: Option<Range<usize>> = None;
-
-        for (level, data) in self.data.iter().enumerate() {
-            let bit = (symbol >> ((self.bits_per_element - 1) as usize - level)) & 1;
-            let zeros_start = data.rank0(range.start);
-            let zeros_end = data.rank0(range.end);
-            let zeros = zeros_end - zeros_start;
-
-            if bit == 0 {
-                if zeros == 0 {
-                    return Some(
-                        self.partial_quantile_search_u64_unchecked(range, 0, level, result),
-                    );
-                }
-
-                if !(data.rank0 + (range.start - zeros_start)..data.rank0 + (range.end - zeros_end))
-                    .is_empty()
-                {
-                    last_zero_level = Some(level);
-                    next_greater_range = Some(
-                        data.rank0 + (range.start - zeros_start)
-                            ..data.rank0 + (range.end - zeros_end),
-                    );
-                }
-                result <<= 1;
-                range.start = zeros_start;
-                range.end = zeros_end;
-            } else {
-                if zeros == range.end - range.start {
-                    return next_greater_range.filter(|r| !r.is_empty()).map(|r| {
-                        result >>= self.bits_per_element as usize - last_zero_level.unwrap(); // undo the steps from the last zero level, plus one additional step
-                        result <<= 1; // replace the last zero with a one
-                        self.partial_quantile_search_u64_unchecked(
-                            r,
-                            0,
-                            last_zero_level.unwrap(),
-                            result,
-                        )
-                    });
-                }
-
-                result <<= 1;
-                result |= 1;
-                range.start = data.rank0 + (range.start - zeros_start);
-                range.end = data.rank0 + (range.end - zeros_end);
-            }
-        }
-
-        Some(result)
+        self.successor_generic_unchecked(
+            range,
+            &symbol,
+            0,
+            |level, symbol| symbol >> ((self.bits_per_element - 1) as usize - level) & 1,
+            |bit, _level, result| {
+                // we ignore the level here, and instead rely on the fact that the bits are set in order.
+                // we have to do that, because the quantile_search_u64 does the same.
+                *result <<= 1;
+                *result |= bit;
+            },
+            |matrix, range, idx, level, result| {
+                matrix.partial_quantile_search_u64_unchecked(range, idx, level, result)
+            },
+        )
     }
 
     /// Get an iterator over the elements of the encoded sequence.
