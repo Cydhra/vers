@@ -727,6 +727,31 @@ impl WaveletMatrix {
         }
     }
 
+    /// Get the `i`-th smallest element in the entire wavelet matrix.
+    /// The `i`-th smallest element is returned as a `BitVec`,
+    /// where the least significant bit is the first element.
+    ///
+    /// This method does not perform bounds checking.
+    ///
+    /// # Panics
+    /// May panic if the `i` is out of bounds, or returns an empty bit vector.
+    pub fn get_sorted_unchecked(&self, i: usize) -> BitVec {
+        self.quantile_unchecked(0..self.len(), i)
+    }
+
+    /// Get the `i`-th smallest element in the entire wavelet matrix.
+    /// The `i`-th smallest element is returned as a `BitVec`,
+    /// where the least significant bit is the first element.
+    ///
+    /// Returns `None` if the `i` is out of bounds.
+    pub fn get_sorted(&self, i: usize) -> Option<BitVec> {
+        if i >= self.len() {
+            None
+        } else {
+            Some(self.get_sorted_unchecked(i))
+        }
+    }
+
     /// Get the `k`-th smallest element in the encoded sequence in the specified `range`,
     /// where `k = 0` returns the smallest element.
     /// The `range` is a half-open interval, meaning that the `end` index is exclusive.
@@ -799,6 +824,31 @@ impl WaveletMatrix {
             None
         } else {
             Some(self.quantile_u64_unchecked(range, k))
+        }
+    }
+
+    /// Get the `i`-th smallest element in the entire wavelet matrix.
+    /// The `i`-th smallest element is returned as a u64 numeral.
+    ///
+    /// If the number of bits per element exceeds 64, the value is truncated.
+    ///
+    /// This method does not perform bounds checking.
+    ///
+    /// # Panics
+    /// May panic if the `i` is out of bounds, or returns an empty bit vector.
+    pub fn get_sorted_u64_unchecked(&self, i: usize) -> u64 {
+        self.quantile_u64_unchecked(0..self.len(), i)
+    }
+
+    /// Get the `i`-th smallest element in the entire wavelet matrix.
+    /// The `i`-th smallest element is returned as a u64 numeral.
+    ///
+    /// Returns `None` if the `i` is out of bounds, or if the number of bits per element exceeds 64.
+    pub fn get_sorted_u64(&self, i: usize) -> Option<u64> {
+        if i >= self.len() || self.bits_per_element > 64 {
+            None
+        } else {
+            Some(self.get_sorted_u64_unchecked(i))
         }
     }
 
@@ -1325,6 +1375,44 @@ impl WaveletMatrix {
         }
     }
 
+    /// Get an iterator over the sorted elements of the encoded sequence.
+    /// The iterator yields `BitVec` elements.
+    #[must_use]
+    pub fn iter_sorted(&self) -> WaveletSortedRefIter {
+        WaveletSortedRefIter::new(self)
+    }
+
+    /// Turn the encoded sequence into an iterator over the sorted sequence.
+    /// The iterator yields `BitVec` elements.
+    #[must_use]
+    pub fn into_iter_sorted(self) -> WaveletSortedIter {
+        WaveletSortedIter::new(self)
+    }
+
+    /// Get an iterator over the sorted elements of the encoded sequence.
+    /// The iterator yields `u64` elements.
+    /// If the number of bits per element exceeds 64, `None` is returned.
+    #[must_use]
+    pub fn iter_sorted_u64(&self) -> Option<WaveletSortedNumRefIter> {
+        if self.bits_per_element > 64 {
+            None
+        } else {
+            Some(WaveletSortedNumRefIter::new(self))
+        }
+    }
+
+    /// Turn the encoded sequence into an iterator over the sorted sequence.
+    /// The iterator yields `u64` elements.
+    /// If the number of bits per element exceeds 64, `None` is returned.
+    #[must_use]
+    pub fn into_iter_sorted_u64(self) -> Option<WaveletSortedNumIter> {
+        if self.bits_per_element > 64 {
+            None
+        } else {
+            Some(WaveletSortedNumIter::new(self))
+        }
+    }
+
     /// Get the number of bits per element in the alphabet of the encoded sequence.
     #[must_use]
     pub fn bit_len(&self) -> u16 {
@@ -1371,6 +1459,26 @@ impl_vector_iterator!(
     WaveletNumRefIter,
     get_u64_unchecked,
     get_u64,
+    u64,
+    special
+);
+
+impl_vector_iterator!(
+    WaveletMatrix,
+    WaveletSortedIter,
+    WaveletSortedRefIter,
+    get_sorted_unchecked,
+    get_sorted,
+    BitVec,
+    special
+);
+
+impl_vector_iterator!(
+    WaveletMatrix,
+    WaveletSortedNumIter,
+    WaveletSortedNumRefIter,
+    get_sorted_u64_unchecked,
+    get_sorted_u64,
     u64,
     special
 );

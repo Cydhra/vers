@@ -664,3 +664,25 @@ fn test_wavelet_empty_iter() {
     assert_eq!(iter.next_back(), None);
     assert_eq!(iter.next(), None);
 }
+
+#[test]
+fn test_sorted_iter() {
+    let mut data = [
+        1, 4, 4, 1, 3, 1, 4, 3, 13, 11, 12, 13, 2, 0, 4, 6, 7, 5, 8, 9, 10,
+    ];
+    let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u64(&data, 4), 4);
+
+    data.sort();
+
+    let mut iter = wavelet.iter_sorted();
+    let mut iter64 = wavelet.iter_sorted_u64().unwrap();
+    for i in 0..data.len() {
+        assert_eq!(
+            iter.next(),
+            Some(BitVec::pack_sequence_u64(&data[i..i + 1], 4))
+        );
+        assert_eq!(iter64.next(), Some(data[i]));
+    }
+    assert_eq!(iter.next(), None);
+    assert_eq!(iter64.next(), None);
+}
