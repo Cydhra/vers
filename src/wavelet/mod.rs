@@ -8,8 +8,18 @@ use std::ops::Range;
 ///
 /// Encodes a sequence of `n` `k`-bit words into a wavelet matrix which supports constant-time
 /// rank and select queries on elements of its `k`-bit alphabet.
-/// The wavelet matrix supports queries where elements are encoded
-/// either in a `BitVec` or as `u64` numerals if `bits_per_element <= 64`.
+/// All query functions are mirrored for both `BitVec` and `u64` query elements, so
+/// if `k <= 64`, no heap allocation is needed for the query element.
+///
+/// All operations implemented on the matrix are `O(k)` time complexity.
+/// The space complexity of the wavelet matrix is `O(n * k)` with a small linear overhead
+/// (see [`RsVec`]).
+///
+/// Other than rank and select queries, the matrix also supports quantile queries (range select i), and
+/// range-predecessor and -successor queries, all of which are loosely based on
+/// [Külekci and Thankachan](https://doi.org/10.1016/j.jda.2017.01.002) with better time complexity.
+///
+/// [`RsVec`]: RsVec
 #[derive(Clone, Debug)]
 pub struct WaveletMatrix {
     data: Box<[RsVec]>,
