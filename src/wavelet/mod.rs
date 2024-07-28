@@ -990,7 +990,7 @@ impl WaveletMatrix {
     fn predecessor_generic_unchecked<
         T: Clone,
         Reader: Fn(usize, &T) -> u64,
-        Writer: FnMut(u64, usize, &mut T) -> (),
+        Writer: Fn(u64, usize, &mut T) -> (),
         Quantile: Fn(&Self, Range<usize>, usize, usize, T) -> T,
     >(
         &self,
@@ -998,7 +998,7 @@ impl WaveletMatrix {
         symbol: &T,
         mut result_value: T,
         bit_reader: Reader,
-        mut result_writer: Writer,
+        result_writer: Writer,
         quantile_search: Quantile,
     ) -> Option<T> {
         // the bit-prefix at the last node where we could go to an interval with smaller elements,
@@ -1145,7 +1145,7 @@ impl WaveletMatrix {
     fn successor_generic_unchecked<
         T: Clone,
         Reader: Fn(usize, &T) -> u64,
-        Writer: FnMut(u64, usize, &mut T) -> (),
+        Writer: Fn(u64, usize, &mut T) -> (),
         Quantile: Fn(&Self, Range<usize>, usize, usize, T) -> T,
     >(
         &self,
@@ -1153,7 +1153,7 @@ impl WaveletMatrix {
         symbol: &T,
         mut result_value: T,
         bit_reader: Reader,
-        mut result_writer: Writer,
+        result_writer: Writer,
         quantile_search: Quantile,
     ) -> Option<T> {
         // the bit-prefix at the last node where we could go to an interval with larger elements,
