@@ -532,6 +532,40 @@ fn test_successor() {
     assert_eq!(wavelet.successor_u64(0..6, 15), None);
 }
 
+#[test]
+fn test_successor_large_gap() {
+    let data = BitVec::pack_sequence_u64(&[3, 9000], 16);
+    let wavelet = WaveletMatrix::from_bit_vec(&data, 16);
+
+    assert_eq!(
+        wavelet.successor(0..2, &BitVec::pack_sequence_u16(&[0], 16)),
+        Some(BitVec::pack_sequence_u16(&[3], 16))
+    );
+    assert_eq!(wavelet.successor_u64(0..2, 0), Some(3));
+    assert_eq!(
+        wavelet.successor(0..2, &BitVec::pack_sequence_u16(&[3], 16)),
+        Some(BitVec::pack_sequence_u16(&[3], 16))
+    );
+    assert_eq!(wavelet.successor_u64(0..2, 3), Some(3));
+    assert_eq!(
+        wavelet.successor(0..2, &BitVec::pack_sequence_u16(&[4], 16)),
+        Some(BitVec::pack_sequence_u16(&[9000], 16))
+    );
+
+    assert_eq!(wavelet.successor_u64(0..2, 4), Some(9000));
+    assert_eq!(
+        wavelet.successor(0..2, &BitVec::pack_sequence_u16(&[9000], 16)),
+        Some(BitVec::pack_sequence_u16(&[9000], 16))
+    );
+    assert_eq!(wavelet.successor_u64(0..2, 9000), Some(9000));
+
+    assert_eq!(
+        wavelet.successor(0..2, &BitVec::pack_sequence_u16(&[10000], 16)),
+        None
+    );
+    assert_eq!(wavelet.successor_u64(0..2, 10000), None);
+}
+
 // test iterators exist and work correctly
 #[test]
 fn test_wavelet_iter() {

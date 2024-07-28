@@ -1170,10 +1170,16 @@ impl WaveletMatrix {
                     return Some(self.partial_quantile_search_unchecked(range, 0, level, result));
                 }
 
-                last_zero_level = Some(level);
-                next_greater_range = Some(
-                    data.rank0 + (range.start - zeros_start)..data.rank0 + (range.end - zeros_end),
-                );
+                if !(data.rank0 + (range.start - zeros_start)..data.rank0 + (range.end - zeros_end))
+                    .is_empty()
+                {
+                    last_zero_level = Some(level);
+                    next_greater_range = Some(
+                        data.rank0 + (range.start - zeros_start)
+                            ..data.rank0 + (range.end - zeros_end),
+                    );
+                }
+
                 range.start = zeros_start;
                 range.end = zeros_end;
             } else {
@@ -1247,10 +1253,15 @@ impl WaveletMatrix {
                     );
                 }
 
-                last_zero_level = Some(level);
-                next_greater_range = Some(
-                    data.rank0 + (range.start - zeros_start)..data.rank0 + (range.end - zeros_end),
-                );
+                if !(data.rank0 + (range.start - zeros_start)..data.rank0 + (range.end - zeros_end))
+                    .is_empty()
+                {
+                    last_zero_level = Some(level);
+                    next_greater_range = Some(
+                        data.rank0 + (range.start - zeros_start)
+                            ..data.rank0 + (range.end - zeros_end),
+                    );
+                }
                 result <<= 1;
                 range.start = zeros_start;
                 range.end = zeros_end;
