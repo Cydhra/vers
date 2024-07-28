@@ -982,17 +982,18 @@ impl WaveletMatrix {
         }
     }
 
-    /// Get the predecessor of the given `symbol` in the encoded sequence.
+    /// Get the predecessor of the given `symbol` in the given `range`.
     /// The `symbol` is a `k`-bit word encoded in a [`BitVec`],
     /// where the least significant bit is the first element, and `k` is the number of bits per element
     /// in the wavelet matrix.
     /// The `symbol` does not have to be in the encoded sequence.
-    /// The predecessor is the largest element in the encoded sequence that is smaller than or equal
+    /// The predecessor is the largest element in the `range` that is smaller than or equal
     /// to the `symbol`.
     ///
     /// Returns `None` if the number of bits in the `symbol` is not equal to `k`,
     /// if the range is empty, if the wavelet matrix is empty, if the range is out of bounds,
     /// or if the `symbol` is smaller than all elements in the range.
+    #[must_use]
     pub fn predecessor(&self, mut range: Range<usize>, symbol: &BitVec) -> Option<BitVec> {
         if symbol.len() != self.bits_per_element as usize
             || range.is_empty()
@@ -1023,7 +1024,7 @@ impl WaveletMatrix {
                     // if it isnt, we begin the quantile search from the next smaller range,
                     // with the current prefix sans the last 1, as that is the next smaller prefix.
 
-                    return next_smaller_range.map(|r| {
+                    return next_smaller_range.filter(|r| !r.is_empty()).map(|r| {
                         result.set_unchecked(
                             (self.bits_per_element - 1) as usize - last_one_level.unwrap(),
                             0,
@@ -1061,16 +1062,17 @@ impl WaveletMatrix {
         Some(result)
     }
 
-    /// Get the predecessor of the given `symbol` in the encoded sequence.
+    /// Get the predecessor of the given `symbol` in the given `range`.
     /// The `symbol` is a `k`-bit word encoded in a `u64` numeral,
     /// where k is less than or equal to 64.
     /// The `symbol` does not have to be in the encoded sequence.
-    /// The predecessor is the largest element in the encoded sequence that is smaller than or equal
+    /// The predecessor is the largest element in the `range` that is smaller than or equal
     /// to the `symbol`.
     ///
     /// Returns `None` if the number of bits in the matrix is greater than 64,
     /// if the range is empty, if the wavelet matrix is empty, if the range is out of bounds,
     /// or if the `symbol` is smaller than all elements in the range.
+    #[must_use]
     pub fn predecessor_u64(&self, mut range: Range<usize>, symbol: u64) -> Option<u64> {
         if self.bits_per_element > 64
             || range.is_empty()
@@ -1092,7 +1094,7 @@ impl WaveletMatrix {
 
             if bit == 0 {
                 if zeros == 0 {
-                    return next_smaller_range.map(|r| {
+                    return next_smaller_range.filter(|r| !r.is_empty()).map(|r| {
                         result >>= self.bits_per_element as usize - last_one_level.unwrap(); // undo the steps from the last one level, plus one additional step
                         result <<= 1; // replace the last one with a zero
                         let idx = r.end - r.start - 1;
