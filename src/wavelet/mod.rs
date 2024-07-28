@@ -1089,7 +1089,14 @@ impl WaveletMatrix {
 
                     return next_smaller_range.map(|r| {
                         let idx = r.end - r.start - 1;
-                        quantile_search(self, r, idx, last_one_level.unwrap(), last_smaller_prefix)
+                        result_writer(0, last_one_level.unwrap(), &mut last_smaller_prefix);
+                        quantile_search(
+                            self,
+                            r,
+                            idx,
+                            last_one_level.unwrap() + 1,
+                            last_smaller_prefix,
+                        )
                     });
                 }
 
@@ -1267,7 +1274,14 @@ impl WaveletMatrix {
                     // i.e. the interval that has a 1 bit at the last level where our prefix had a 0 bit.
 
                     return next_larger_range.map(|r| {
-                        quantile_search(self, r, 0, last_zero_level.unwrap(), last_larger_prefix)
+                        result_writer(1, last_zero_level.unwrap(), &mut last_larger_prefix);
+                        quantile_search(
+                            self,
+                            r,
+                            0,
+                            last_zero_level.unwrap() + 1,
+                            last_larger_prefix,
+                        )
                     });
                 }
 
