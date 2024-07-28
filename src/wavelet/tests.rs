@@ -282,6 +282,7 @@ fn test_quantile_randomized() {
     }
 }
 
+// test bounds for the quantile-convenience functions
 #[test]
 fn test_convenience_bounds() {
     let data = BitVec::pack_sequence_u64(&[1, 4, 4, 1, 3, 1, 4, 3, 2, 0], 4);
@@ -360,6 +361,86 @@ fn test_empty_matrix() {
     assert_eq!(wavelet.range_max(0..100), None);
     assert_eq!(wavelet.range_min(0..0), None);
     assert_eq!(wavelet.range_min(0..100), None);
+}
+
+#[test]
+fn test_predecessor() {
+    let data = BitVec::pack_sequence_u64(&[1, 10, 1, 3, 9, 5], 4);
+    let wavelet = WaveletMatrix::from_bit_vec(&data, 4);
+
+    assert_eq!(
+        wavelet.predecessor(0..6, &BitVec::pack_sequence_u8(&[0], 4)),
+        None
+    );
+    assert_eq!(wavelet.predecessor_u64(0..6, 0), None);
+    assert_eq!(
+        wavelet.predecessor(0..6, &BitVec::pack_sequence_u8(&[1], 4)),
+        Some(BitVec::pack_sequence_u8(&[1], 4))
+    );
+    assert_eq!(wavelet.predecessor_u64(0..6, 1), Some(1));
+    assert_eq!(
+        wavelet.predecessor(0..6, &BitVec::pack_sequence_u8(&[2], 4)),
+        Some(BitVec::pack_sequence_u8(&[1], 4))
+    );
+    assert_eq!(wavelet.predecessor_u64(0..6, 2), Some(1));
+    assert_eq!(
+        wavelet.predecessor(0..6, &BitVec::pack_sequence_u8(&[3], 4)),
+        Some(BitVec::pack_sequence_u8(&[3], 4))
+    );
+    assert_eq!(wavelet.predecessor_u64(0..6, 3), Some(3));
+    assert_eq!(
+        wavelet.predecessor(0..6, &BitVec::pack_sequence_u8(&[4], 4)),
+        Some(BitVec::pack_sequence_u8(&[3], 4))
+    );
+    assert_eq!(wavelet.predecessor_u64(0..6, 4), Some(3));
+
+    assert_eq!(
+        wavelet.predecessor(0..6, &BitVec::pack_sequence_u8(&[9], 4)),
+        Some(BitVec::pack_sequence_u8(&[9], 4))
+    );
+    assert_eq!(wavelet.predecessor_u64(0..6, 9), Some(9));
+    assert_eq!(
+        wavelet.predecessor(0..6, &BitVec::pack_sequence_u8(&[10], 4)),
+        Some(BitVec::pack_sequence_u8(&[10], 4))
+    );
+    assert_eq!(wavelet.predecessor_u64(0..6, 10), Some(10));
+    assert_eq!(
+        wavelet.predecessor(0..6, &BitVec::pack_sequence_u8(&[11], 4)),
+        Some(BitVec::pack_sequence_u8(&[10], 4))
+    );
+    assert_eq!(wavelet.predecessor_u64(0..6, 11), Some(10));
+    assert_eq!(
+        wavelet.predecessor(0..6, &BitVec::pack_sequence_u8(&[15], 4)),
+        Some(BitVec::pack_sequence_u8(&[10], 4))
+    );
+    assert_eq!(wavelet.predecessor_u64(0..6, 15), Some(10));
+
+    assert_eq!(
+        wavelet.predecessor(2..4, &BitVec::pack_sequence_u8(&[5], 4)),
+        Some(BitVec::pack_sequence_u8(&[3], 4))
+    );
+    assert_eq!(wavelet.predecessor_u64(2..4, 5), Some(3));
+    assert_eq!(
+        wavelet.predecessor(0..3, &BitVec::pack_sequence_u8(&[3], 4)),
+        Some(BitVec::pack_sequence_u8(&[1], 4))
+    );
+    assert_eq!(wavelet.predecessor_u64(0..3, 3), Some(1));
+    assert_eq!(
+        wavelet.predecessor(3..6, &BitVec::pack_sequence_u8(&[10], 4)),
+        Some(BitVec::pack_sequence_u8(&[9], 4))
+    );
+    assert_eq!(wavelet.predecessor_u64(3..6, 10), Some(9));
+
+    assert_eq!(
+        wavelet.predecessor(0..6, &BitVec::pack_sequence_u8(&[0], 4)),
+        None
+    );
+    assert_eq!(wavelet.predecessor_u64(0..6, 0), None);
+    assert_eq!(
+        wavelet.predecessor(3..5, &BitVec::pack_sequence_u8(&[1], 4)),
+        None
+    );
+    assert_eq!(wavelet.predecessor_u64(3..5, 1), None);
 }
 
 // test iterators exist and work correctly
