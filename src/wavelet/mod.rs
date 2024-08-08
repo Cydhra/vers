@@ -1,3 +1,14 @@
+//! This module contains the implementation of a [wavelet matrix].
+//! The wavelet matrix is a data structure that encodes a sequence of `n` `k`-bit words
+//! into a matrix of bit vectors, allowing for fast rank and select queries on the encoded sequence.
+//!
+//! This implementation further supports quantile queries, and range-predecessor and -successor queries.
+//! All operations are `O(k)` time complexity.
+//!
+//! See the struct documentation for more information.
+//!
+//! [wavelet matrix]: WaveletMatrix
+
 use crate::util::impl_vector_iterator;
 use crate::{BitVec, RsVec};
 use std::mem;
@@ -33,7 +44,7 @@ use std::ops::Range;
 /// assert_eq!(wavelet_matrix.get_u64(0), Some(1));
 /// assert_eq!(wavelet_matrix.get_u64(1), Some(4));
 ///
-/// // rank and select queries
+// // rank and select queries
 /// assert_eq!(wavelet_matrix.rank_u64(3, 4), Some(2));
 /// assert_eq!(wavelet_matrix.rank_u64(3, 1), Some(1));
 /// assert_eq!(wavelet_matrix.select_u64(0, 7), Some(5));
