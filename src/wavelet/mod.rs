@@ -1028,13 +1028,9 @@ impl WaveletMatrix {
     ///
     /// Returns `None` if the `range` is out of bounds, if the range is empty, or if the number of bits
     /// per element exceeds 64.
-    ///
-    /// # Panics
-    /// May panic if the `range` is out of bounds or if the range is empty.
-    /// May instead return 0.
     #[must_use]
     pub fn range_median_u64(&self, range: Range<usize>) -> Option<u64> {
-        if range.is_empty() {
+        if range.is_empty() || self.bits_per_element > 64 || range.end > self.len() {
             None
         } else {
             let k = (range.end - 1 - range.start) / 2;
