@@ -4,6 +4,26 @@ use rand::{Rng, SeedableRng};
 use std::cmp::{max, min};
 
 #[test]
+fn test_wavelet_encoding_pc() {
+    let data = vec![1, 5, 3];
+    let wavelet = WaveletMatrix::from_bit_vec_pc(&BitVec::pack_sequence_u8(&data, 3), 3);
+
+    assert_eq!(wavelet.len(), 3);
+    assert_eq!(
+        wavelet.get_value_unchecked(0),
+        BitVec::pack_sequence_u8(&[1], 3)
+    );
+    assert_eq!(
+        wavelet.get_value_unchecked(1),
+        BitVec::pack_sequence_u8(&[5], 3)
+    );
+    assert_eq!(
+        wavelet.get_value_unchecked(2),
+        BitVec::pack_sequence_u8(&[3], 3)
+    );
+}
+
+#[test]
 fn test_wavelet_encoding_randomized() {
     let mut rng = StdRng::from_seed([1; 32]);
 
@@ -14,11 +34,15 @@ fn test_wavelet_encoding_randomized() {
         let data_u64: Vec<u64> = data.iter().map(|&x| x as u64).collect();
         let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
         let wavelet_from_slice = WaveletMatrix::from_slice(&data_u64, 8);
+        let wavelet_prefix_counting =
+            WaveletMatrix::from_bit_vec_pc(&BitVec::pack_sequence_u8(&data, 8), 8);
+
         assert_eq!(wavelet.len(), data.len());
 
         for i in 0..data.len() {
             assert_eq!(wavelet.get_u64_unchecked(i), data[i] as u64);
             assert_eq!(wavelet_from_slice.get_u64_unchecked(i), data[i] as u64);
+            assert_eq!(wavelet_prefix_counting.get_u64_unchecked(i), data[i] as u64);
         }
     }
 }

@@ -160,6 +160,131 @@ impl WaveletMatrix {
         })
     }
 
+    /// Generic constructor that constructs the wavelet matrix by counting the prefixes of the elements.
+    /// The runtime complexity is `O(kn)`.
+    /// This constructor is only recommended for small alphabets.
+    ///
+    /// # Parameters
+    /// - `bits_per_element`: The number of bits in each word. Cannot exceed 64.
+    /// - `num_elements`: The number of elements in the sequence.
+    /// - `bit_lookup`: A closure that returns the `bit`-th bit of the `element`-th word.
+    /// - `element_lookup`: A closure that returns the `element`-th word.
+    #[inline(always)] // should get rid of closures in favor of static calls
+    fn prefix_counting<LOOKUP: Fn(usize, usize) -> u64, ELEMENT: Fn(usize) -> u64>(
+        bits_per_element: u16,
+        num_elements: usize,
+        bit_lookup: LOOKUP,
+        element_lookup: ELEMENT,
+    ) -> Self {
+        let element_len = bits_per_element as usize;
+        let mut histogram = vec![0usize; 1 << bits_per_element];
+        let mut borders = vec![0usize; 1 << bits_per_element];
+        let mut data = vec![BitVec::from_zeros(num_elements); element_len];
+
+        for i in 0..num_elements {
+            histogram[element_lookup(i) as usize] += 1;
+            data[0].set_unchecked(i, bit_lookup(i, element_len - 1));
+        }
+
+        for level in (1..element_len).rev() {
+            // combine histograms of prefixes
+            for h in 0..1 << level {
+                histogram[h] = histogram[2 * h] + histogram[2 * h + 1];
+            }
+
+            // compute borders of current level, using bit reverse patterns because of the weird
+            // node ordering in wavelet matrices
+            borders[0] = 0;
+            for h in 1usize..1 << level {
+                let h_minus_1 = (h - 1).reverse_bits() >> (64 - level);
+                borders[h.reverse_bits() >> (64 - level)] =
+                    borders[h_minus_1] + histogram[h_minus_1];
+            }
+
+            for i in 0..num_elements {
+                let bit = bit_lookup(i, element_len - level - 1);
+                data[level].set_unchecked(
+                    borders[element_lookup(i) as usize >> (element_len - level)],
+                    bit,
+                );
+                borders[element_lookup(i) as usize >> (element_len - level)] += 1;
+            }
+        }
+
+        Self {
+            data: data.into_iter().map(BitVec::into).collect(),
+            bits_per_element,
+        }
+    }
+
+    /// Create a new wavelet matrix from a sequence of `n` `k`-bit words using the prefix counting
+    /// algorithm [Dinklage et al.](https://doi.org/10.1145/3457197)
+    /// The constructor runs in `O(kn)` time complexity but requires `O(2^k)` space during construction,
+    /// so it is only recommended for small alphabets.
+    /// Use the [`from_bit_vec`] or [`from_slice`] constructors for larger alphabets.
+    ///
+    /// # Parameters
+    /// - `bit_vec`: A packed sequence of `n` `k`-bit words. The `i`-th word begins in the
+    ///   `bits_per_element * i`-th bit of the bit vector. Words are stored from least to most
+    ///   significant bit.
+    /// - `bits_per_element`: The number `k` of bits in each word. Cannot exceed 1 << 16.
+    ///
+    /// # Panics
+    /// Panics if the number of bits in the bit vector is not a multiple of the number of bits per element,
+    /// or if the number of bits per element exceeds 64.
+    ///
+    /// [`from_bit_vec`]: WaveletMatrix::from_bit_vec
+    /// [`from_slice`]: WaveletMatrix::from_slice
+    #[must_use]
+    pub fn from_bit_vec_pc(bit_vec: &BitVec, bits_per_element: u16) -> Self {
+        assert_eq!(bit_vec.len() % bits_per_element as usize, 0, "The number of bits in the bit vector must be a multiple of the number of bits per element.");
+        assert!(
+            bits_per_element <= 64,
+            "The number of bits per element cannot exceed 64."
+        );
+        let num_elements = bit_vec.len() / bits_per_element as usize;
+        Self::prefix_counting(
+            bits_per_element,
+            num_elements,
+            |element, bit| bit_vec.get_unchecked(element * bits_per_element as usize + bit),
+            |element| {
+                bit_vec.get_bits_unchecked(
+                    element * bits_per_element as usize,
+                    bits_per_element as usize,
+                )
+            },
+        )
+    }
+
+    /// Create a new wavelet matrix from a sequence of `n` `k`-bit words using the prefix counting
+    /// algorithm [Dinklage et al.](https://doi.org/10.1145/3457197)
+    /// The constructor runs in `O(kn)` time complexity but requires `O(2^k)` space during construction,
+    /// so it is only recommended for small alphabets.
+    /// Use the [`from_bit_vec`] or [`from_slice`] constructors for larger alphabets.
+    ///
+    /// # Parameters
+    /// - `sequence`: A slice of `n` u64 values, each encoding a `k`-bit word.
+    /// - `bits_per_element`: The number `k` of bits in each word. Cannot exceed 64.
+    ///
+    /// # Panics
+    /// Panics if the number of bits per element exceeds 64.
+    ///
+    /// [`from_bit_vec`]: WaveletMatrix::from_bit_vec
+    /// [`from_slice`]: WaveletMatrix::from_slice
+    #[must_use]
+    pub fn from_slice_pc(sequence: &[u64], bits_per_element: u16) -> Self {
+        assert!(
+            bits_per_element <= 64,
+            "The number of bits per element cannot exceed 64."
+        );
+        Self::prefix_counting(
+            bits_per_element,
+            sequence.len(),
+            |element, bit| (sequence[element] >> bit) & 1,
+            |element| sequence[element],
+        )
+    }
+
     /// Generic function to read a value from the wavelet matrix and consume it with a closure.
     /// The function is used by the `get_value` and `get_u64` functions, deduplicating code.
     #[inline(always)]
