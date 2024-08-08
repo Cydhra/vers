@@ -5,19 +5,43 @@ use std::ops::Range;
 
 /// A wavelet matrix implementation implemented as described in
 /// [Navarro and Claude, 2021](http://dx.doi.org/10.1007/978-3-642-34109-0_18).
+/// The implementation is designed to allow for extremely large alphabet sizes, without
+/// sacrificing performance for small alphabets.
 ///
 /// Encodes a sequence of `n` `k`-bit words into a wavelet matrix which supports constant-time
 /// rank and select queries on elements of its `k`-bit alphabet.
 /// All query functions are mirrored for both `BitVec` and `u64` query elements, so
 /// if `k <= 64`, no heap allocation is needed for the query element.
 ///
+/// Other than rank and select queries, the matrix also supports quantile queries (range select i), and
+/// range-predecessor and -successor queries, all of which are loosely based on
+/// [Külekci and Thankachan](https://doi.org/10.1016/j.jda.2017.01.002) with better time complexity.
+///
 /// All operations implemented on the matrix are `O(k)` time complexity.
 /// The space complexity of the wavelet matrix is `O(n * k)` with a small linear overhead
 /// (see [`RsVec`]).
 ///
-/// Other than rank and select queries, the matrix also supports quantile queries (range select i), and
-/// range-predecessor and -successor queries, all of which are loosely based on
-/// [Külekci and Thankachan](https://doi.org/10.1016/j.jda.2017.01.002) with better time complexity.
+/// # Examples
+/// ```
+/// use vers_vecs::{BitVec, WaveletMatrix};
+///
+/// // pack elements from a 3-bit alphabet into a bit vector and construct a wavelet matrix from them
+/// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+/// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+///
+/// // query the wavelet matrix
+/// assert_eq!(wavelet_matrix.get_u64(0), Some(1));
+/// assert_eq!(wavelet_matrix.get_u64(1), Some(4));
+///
+/// // rank and select queries
+/// assert_eq!(wavelet_matrix.rank_u64(3, 4), Some(2));
+/// assert_eq!(wavelet_matrix.rank_u64(3, 1), Some(1));
+/// assert_eq!(wavelet_matrix.select_u64(0, 7), Some(5));
+///
+/// // statistics
+/// assert_eq!(wavelet_matrix.range_median_u64(0..3), Some(4));
+/// assert_eq!(wavelet_matrix.predecessor_u64(0..6, 3), Some(2));
+/// ```
 ///
 /// [`RsVec`]: RsVec
 #[derive(Clone, Debug)]
@@ -28,11 +52,12 @@ pub struct WaveletMatrix {
 
 impl WaveletMatrix {
     /// Create a new wavelet matrix from a sequence of `n` `k`-bit words.
+    /// The constructor runs in `O(kn * log n)` time complexity.
     ///
     /// # Parameters
-    /// - `bit_vec`: The sequence of `n` `k`-bit words to encode. The `i`-th word begins in the
-    ///   `bits_per_element * i`-th bit of the bit vector. Words are stored from least significant
-    ///    bit to most significant bit.
+    /// - `bit_vec`: A packed sequence of `n` `k`-bit words. The `i`-th word begins in the
+    ///   `bits_per_element * i`-th bit of the bit vector. Words are stored from least to most
+    ///    significant bit.
     /// - `bits_per_element`: The number of bits in each word. Cannot exceed 1 << 16.
     ///
     /// # Panics
@@ -106,6 +131,20 @@ impl WaveletMatrix {
     /// Get the `i`-th element of the encoded sequence in a `k`-bit word.
     /// The `k`-bit word is returned as a `BitVec`.
     /// The first element of the bit vector is the least significant bit.
+    ///
+    /// Returns `None` if the index is out of bounds.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.get_value(0), Some(BitVec::pack_sequence_u8(&[1], 3)));
+    /// assert_eq!(wavelet_matrix.get_value(1), Some(BitVec::pack_sequence_u8(&[4], 3)));
+    /// assert_eq!(wavelet_matrix.get_value(100), None);
+    /// ```
     #[must_use]
     pub fn get_value(&self, i: usize) -> Option<BitVec> {
         if self.data.is_empty() || i >= self.data[0].len() {
@@ -139,11 +178,19 @@ impl WaveletMatrix {
     /// Get the `i`-th element of the encoded sequence as a `u64`.
     /// The `u64` is constructed from the `k`-bit word stored in the wavelet matrix.
     ///
-    /// # Parameters
-    /// - `i`: The index of the element to retrieve.
+    /// Returns `None` if the index is out of bounds, or if the number of bits per element exceeds 64.
     ///
-    /// # Panics
-    /// Panics if the number of bits per element exceeds 64.
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.get_u64(0), Some(1));
+    /// assert_eq!(wavelet_matrix.get_u64(1), Some(4));
+    /// assert_eq!(wavelet_matrix.get_u64(100), None);
+    /// ```
     #[must_use]
     pub fn get_u64(&self, i: usize) -> Option<u64> {
         if self.bits_per_element > 64 || self.data.is_empty() || i >= self.data[0].len() {
@@ -180,6 +227,7 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking, nor does it check if the `symbol` is a valid
     /// `k`-bit word.
+    /// Use [`rank_range`] for a checked version.
     ///
     /// # Panics
     /// May panic if the `range` is out of bounds,
@@ -187,6 +235,7 @@ impl WaveletMatrix {
     /// May instead return 0.
     ///
     /// [`BitVec`]: BitVec
+    /// [`rank_range`]: WaveletMatrix::rank_range
     #[must_use]
     pub fn rank_range_unchecked(&self, mut range: Range<usize>, symbol: &BitVec) -> usize {
         for (level, data) in self.data.iter().enumerate() {
@@ -211,6 +260,17 @@ impl WaveletMatrix {
     /// but since it is exclusive, it may be equal to the length),
     /// or if the number of bits in `symbol` is not equal to `k`.
     ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.rank_range(0..3, &BitVec::pack_sequence_u8(&[4], 3)), Some(2));
+    /// assert_eq!(wavelet_matrix.rank_range(2..4, &BitVec::pack_sequence_u8(&[4], 3)), Some(1));
+    /// ```
+    ///
     /// [`BitVec`]: BitVec
     #[must_use]
     pub fn rank_range(&self, range: Range<usize>, symbol: &BitVec) -> Option<usize> {
@@ -231,12 +291,15 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking, nor does it check if the elements of the
     /// wavelet matrix can be represented in a u64 numeral.
+    /// Use [`rank_range_u64`] for a checked version.
     ///
     /// # Panics
     /// May panic if the `range` is out of bounds.
     /// May instead return 0.
     /// If the number of bits in wavelet matrix elements exceed `64`, the behavior is
     /// platform-dependent.
+    ///
+    /// [`rank_range_u64`]: WaveletMatrix::rank_range_u64
     #[must_use]
     pub fn rank_range_u64_unchecked(&self, mut range: Range<usize>, symbol: u64) -> usize {
         for (level, data) in self.data.iter().enumerate() {
@@ -260,6 +323,17 @@ impl WaveletMatrix {
     /// Returns `None` if the `range` is out of bounds (greater than the length of the encoded sequence,
     /// but since it is exclusive, it may be equal to the length),
     /// or if the number of bits in the wavelet matrix elements exceed `64`.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.rank_range_u64(0..3, 4), Some(2));
+    /// assert_eq!(wavelet_matrix.rank_range_u64(2..4, 4), Some(1));
+    /// ```
     #[must_use]
     pub fn rank_range_u64(&self, range: Range<usize>, symbol: u64) -> Option<usize> {
         if range.start >= self.len() || range.end > self.len() || self.bits_per_element > 64 {
@@ -280,6 +354,7 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking, nor does it check if the `symbol` is a valid
     /// `k`-bit word.
+    /// Use [`rank_offset`] for a checked version.
     ///
     /// # Panics
     /// May panic if `offset` is out of bounds,
@@ -289,6 +364,7 @@ impl WaveletMatrix {
     /// May instead return 0.
     ///
     /// [`BitVec`]: BitVec
+    /// [`rank_offset`]: WaveletMatrix::rank_offset
     #[must_use]
     pub fn rank_offset_unchecked(&self, offset: usize, i: usize, symbol: &BitVec) -> usize {
         self.rank_range_unchecked(offset..i, symbol)
@@ -310,6 +386,17 @@ impl WaveletMatrix {
     /// or if the number of bits in `symbol` is not equal to `k`.
     /// `i` may equal the length of the encoded sequence,
     /// which will return the number of occurrences of the symbol up to the end of the sequence.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.rank_offset(0, 3, &BitVec::pack_sequence_u8(&[4], 3)), Some(2));
+    /// assert_eq!(wavelet_matrix.rank_offset(2, 4, &BitVec::pack_sequence_u8(&[4], 3)), Some(1));
+    /// ```
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
@@ -335,6 +422,7 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking, nor does it check if the elements of the
     /// wavelet matrix can be represented in a u64 numeral.
+    /// Use [`rank_offset_u64`] for a checked version.
     ///
     /// # Panics
     /// May panic if `offset` is out of bounds,
@@ -342,6 +430,8 @@ impl WaveletMatrix {
     /// or if `offset` is greater than `i`,
     /// or if the number of bits in wavelet matrix elements exceed `64`.
     /// May instead return 0.
+    ///
+    /// [`rank_offset_u64`]: WaveletMatrix::rank_offset_u64
     #[must_use]
     pub fn rank_offset_u64_unchecked(&self, offset: usize, i: usize, symbol: u64) -> usize {
         self.rank_range_u64_unchecked(offset..i, symbol)
@@ -361,6 +451,17 @@ impl WaveletMatrix {
     /// or if the number of bits in the wavelet matrix elements exceed `64`.
     /// `i` may equal the length of the encoded sequence,
     /// which will return the number of occurrences of the symbol up to the end of the sequence.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.rank_offset_u64(0, 3, 4), Some(2));
+    /// assert_eq!(wavelet_matrix.rank_offset_u64(2, 4, 4), Some(1));
+    /// ```
     #[must_use]
     pub fn rank_offset_u64(&self, offset: usize, i: usize, symbol: u64) -> Option<usize> {
         if offset > i || offset >= self.len() || i > self.len() || self.bits_per_element > 64 {
@@ -378,6 +479,7 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking, nor does it check if the `symbol` is a valid
     /// `k`-bit word.
+    /// Use [`rank`] for a checked version.
     ///
     /// # Panics
     /// May panic if `i` is out of bounds, or if the number of bits in `symbol` is lower than `k`.
@@ -385,6 +487,7 @@ impl WaveletMatrix {
     /// If the number of bits in `symbol` exceeds `k`, the remaining bits are ignored.
     ///
     /// [`BitVec`]: BitVec
+    /// [`rank`]: WaveletMatrix::rank
     #[must_use]
     pub fn rank_unchecked(&self, i: usize, symbol: &BitVec) -> usize {
         self.rank_range_unchecked(0..i, symbol)
@@ -399,6 +502,17 @@ impl WaveletMatrix {
     /// Returns `None` if `i` is out of bounds (greater than the length of the encoded sequence, but
     /// since it is exclusive, it may be equal to the length),
     /// or if the number of bits in `symbol` is not equal to `k`.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.rank(3, &BitVec::pack_sequence_u8(&[4], 3)), Some(2));
+    /// assert_eq!(wavelet_matrix.rank(3, &BitVec::pack_sequence_u8(&[1], 3)), Some(1));
+    /// ```
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
@@ -417,11 +531,14 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking, nor does it check if the elements of the
     /// wavelet matrix can be represented in a u64 numeral.
+    /// Use [`rank_u64`] for a checked version.
     ///
     /// # Panics
     /// May panic if `i` is out of bounds,
     /// or if the number of bits in wavelet matrix elements exceed `64`.
     /// May instead return 0.
+    ///
+    /// [`rank_u64`]: WaveletMatrix::rank_u64
     #[must_use]
     pub fn rank_u64_unchecked(&self, i: usize, symbol: u64) -> usize {
         self.rank_range_u64_unchecked(0..i, symbol)
@@ -435,6 +552,17 @@ impl WaveletMatrix {
     /// Returns `None` if `i` is out of bounds (greater than the length of the encoded sequence, but
     /// since it is exclusive, it may be equal to the length),
     /// or if the number of bits in the wavelet matrix elements exceed `64`.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.rank_u64(3, 4), Some(2));
+    /// assert_eq!(wavelet_matrix.rank_u64(3, 1), Some(1));
+    /// ```
     #[must_use]
     pub fn rank_u64(&self, i: usize, symbol: u64) -> Option<usize> {
         if i > self.len() || self.bits_per_element > 64 {
@@ -452,6 +580,7 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking, nor does it check if the `symbol` is a valid
     /// `k`-bit word.
+    /// Use [`select_offset`] for a checked version.
     ///
     /// Returns the index of the `rank`-th occurrence of the `symbol` in the encoded sequence,
     /// or the length of the encoded sequence if the `rank`-th occurrence does not exist.
@@ -462,6 +591,7 @@ impl WaveletMatrix {
     /// May instead return the length of the encoded sequence.
     ///
     /// [`BitVec`]: BitVec
+    /// [`select_offset`]: WaveletMatrix::select_offset
     #[must_use]
     pub fn select_offset_unchecked(&self, offset: usize, rank: usize, symbol: &BitVec) -> usize {
         let mut range_start = offset;
@@ -496,6 +626,19 @@ impl WaveletMatrix {
     /// Returns `None` if `offset` is out of bounds, or if the number of bits in `symbol` is not equal to `k`,
     /// or if the `rank`-th occurrence of the `symbol` does not exist.
     ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.select_offset(0, 0, &BitVec::pack_sequence_u8(&[4], 3)), Some(1));
+    /// assert_eq!(wavelet_matrix.select_offset(0, 1, &BitVec::pack_sequence_u8(&[4], 3)), Some(2));
+    /// assert_eq!(wavelet_matrix.select_offset(2, 0, &BitVec::pack_sequence_u8(&[4], 3)), Some(2));
+    /// assert_eq!(wavelet_matrix.select_offset(2, 1, &BitVec::pack_sequence_u8(&[4], 3)), None);
+    /// ```
+    ///
     /// [`BitVec`]: BitVec
     #[must_use]
     pub fn select_offset(&self, offset: usize, rank: usize, symbol: &BitVec) -> Option<usize> {
@@ -518,6 +661,7 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking, nor does it check if the elements of the
     /// wavelet matrix can be represented in a u64 numeral.
+    /// Use [`select_offset_u64`] for a checked version.
     ///
     /// Returns the index of the `rank`-th occurrence of the `symbol` in the encoded sequence,
     /// or the length of the encoded sequence if the `rank`-th occurrence does not exist.
@@ -526,6 +670,8 @@ impl WaveletMatrix {
     /// May panic if the `offset` is out of bounds,
     /// or if the number of bits in wavelet matrix elements exceed `64`.
     /// May instead return the length of the encoded sequence.
+    ///
+    /// [`select_offset_u64`]: WaveletMatrix::select_offset_u64
     #[must_use]
     pub fn select_offset_u64_unchecked(&self, offset: usize, rank: usize, symbol: u64) -> usize {
         let mut range_start = offset;
@@ -558,6 +704,19 @@ impl WaveletMatrix {
     ///
     /// Returns `None` if `offset` is out of bounds, or if the number of bits in the wavelet matrix
     /// elements exceed `64`, or if the `rank`-th occurrence of the `symbol` does not exist.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.select_offset_u64(0, 0, 4), Some(1));
+    /// assert_eq!(wavelet_matrix.select_offset_u64(0, 1, 4), Some(2));
+    /// assert_eq!(wavelet_matrix.select_offset_u64(2, 0, 4), Some(2));
+    /// assert_eq!(wavelet_matrix.select_offset_u64(2, 1, 4), None);
+    /// ```
     #[must_use]
     pub fn select_offset_u64(&self, offset: usize, rank: usize, symbol: u64) -> Option<usize> {
         if offset >= self.len() || self.bits_per_element > 64 {
@@ -579,6 +738,7 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking, nor does it check if the `symbol` is a valid
     /// `k`-bit word.
+    /// Use [`select`] for a checked version.
     ///
     /// Returns the index of the `rank`-th occurrence of the `symbol` in the encoded sequence,
     /// or the length of the encoded sequence if the `rank`-th occurrence does not exist.
@@ -588,6 +748,7 @@ impl WaveletMatrix {
     /// May instead return the length of the encoded sequence.
     ///
     /// [`BitVec`]: BitVec
+    /// [`select`]: WaveletMatrix::select
     #[must_use]
     pub fn select_unchecked(&self, rank: usize, symbol: &BitVec) -> usize {
         self.select_offset_unchecked(0, rank, symbol)
@@ -600,6 +761,17 @@ impl WaveletMatrix {
     ///
     /// Returns `None` if the number of bits in `symbol` is not equal to `k`,
     /// or if the `rank`-th occurrence of the `symbol` does not exist.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.select(0, &BitVec::pack_sequence_u8(&[4], 3)), Some(1));
+    /// assert_eq!(wavelet_matrix.select(1, &BitVec::pack_sequence_u8(&[4], 3)), Some(2));
+    /// ```
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
@@ -622,6 +794,7 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking, nor does it check if the elements of the
     /// wavelet matrix can be represented in a u64 numeral.
+    /// Use [`select_u64`] for a checked version.
     ///
     /// Returns the index of the `rank`-th occurrence of the `symbol` in the encoded sequence,
     /// or the length of the encoded sequence if the `rank`-th occurrence does not exist.
@@ -629,6 +802,8 @@ impl WaveletMatrix {
     /// # Panics
     /// May panic if the number of bits in wavelet matrix elements exceed `64`.
     /// May instead return the length of the encoded sequence.
+    ///
+    /// [`select_u64`]: WaveletMatrix::select_u64
     #[must_use]
     pub fn select_u64_unchecked(&self, rank: usize, symbol: u64) -> usize {
         self.select_offset_u64_unchecked(0, rank, symbol)
@@ -640,6 +815,17 @@ impl WaveletMatrix {
     ///
     /// Returns `None` if the number of bits in the wavelet matrix elements exceed `64`,
     /// or if the `rank`-th occurrence of the `symbol` does not exist.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.select_u64(0, 4), Some(1));
+    /// assert_eq!(wavelet_matrix.select_u64(1, 4), Some(2));
+    /// ```
     #[must_use]
     pub fn select_u64(&self, rank: usize, symbol: u64) -> Option<usize> {
         if self.bits_per_element > 64 {
@@ -662,9 +848,12 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking.
     /// It returns a nonsensical result if the `k` is greater than the size of the range.
+    /// Use [`quantile`] for a checked version.
     ///
     /// # Panics
     /// May panic if the `range` is out of bounds. May instead return an empty bit vector.
+    ///
+    /// [`quantile`]: WaveletMatrix::quantile
     #[must_use]
     pub fn quantile_unchecked(&self, range: Range<usize>, k: usize) -> BitVec {
         let result = BitVec::from_zeros(self.bits_per_element as usize);
@@ -718,6 +907,18 @@ impl WaveletMatrix {
     /// where the least significant bit is the first element.
     ///
     /// Returns `None` if the `range` is out of bounds, or if `k` is greater than the size of the range.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.quantile(0..3, 0), Some(BitVec::pack_sequence_u8(&[1], 3)));
+    /// assert_eq!(wavelet_matrix.quantile(0..3, 1), Some(BitVec::pack_sequence_u8(&[4], 3)));
+    /// assert_eq!(wavelet_matrix.quantile(1..4, 0), Some(BitVec::pack_sequence_u8(&[1], 3)));
+    /// ```
     #[must_use]
     pub fn quantile(&self, range: Range<usize>, k: usize) -> Option<BitVec> {
         if range.start >= self.len() || range.end > self.len() || k >= range.end - range.start {
@@ -732,6 +933,7 @@ impl WaveletMatrix {
     /// where the least significant bit is the first element.
     ///
     /// This method does not perform bounds checking.
+    /// Use [`get_sorted`] for a checked version.
     ///
     /// # Panics
     /// May panic if the `i` is out of bounds, or returns an empty bit vector.
@@ -739,11 +941,24 @@ impl WaveletMatrix {
         self.quantile_unchecked(0..self.len(), i)
     }
 
-    /// Get the `i`-th smallest element in the entire wavelet matrix.
+    /// Get the `i`-th smallest element in the wavelet matrix.
     /// The `i`-th smallest element is returned as a `BitVec`,
     /// where the least significant bit is the first element.
+    /// This method call is equivalent to `self.quantile(0..self.len(), i)`.
     ///
     /// Returns `None` if the `i` is out of bounds.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.get_sorted(0), Some(BitVec::pack_sequence_u8(&[1], 3)));
+    /// assert_eq!(wavelet_matrix.get_sorted(1), Some(BitVec::pack_sequence_u8(&[1], 3)));
+    /// assert_eq!(wavelet_matrix.get_sorted(2), Some(BitVec::pack_sequence_u8(&[2], 3)));
+    /// ```
     pub fn get_sorted(&self, i: usize) -> Option<BitVec> {
         if i >= self.len() {
             None
@@ -760,10 +975,13 @@ impl WaveletMatrix {
     ///
     /// This method does not perform bounds checking.
     /// It returns a nonsensical result if the `k` is greater than the size of the range.
+    /// Use [`quantile_u64`] for a checked version.
     ///
     /// # Panics
     /// May panic if the `range` is out of bounds.
     /// May instead return 0.
+    ///
+    /// [`quantile_u64`]: WaveletMatrix::quantile_u64
     #[must_use]
     pub fn quantile_u64_unchecked(&self, range: Range<usize>, k: usize) -> u64 {
         self.partial_quantile_search_u64_unchecked(range, k, 0, 0)
@@ -814,6 +1032,18 @@ impl WaveletMatrix {
     ///
     /// Returns `None` if the `range` is out of bounds, or if the number of bits per element exceeds 64,
     /// or if `k` is greater than the size of the range.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.quantile_u64(0..3, 0), Some(1));
+    /// assert_eq!(wavelet_matrix.quantile_u64(0..3, 1), Some(4));
+    /// assert_eq!(wavelet_matrix.quantile_u64(1..4, 0), Some(1));
+    /// ```
     #[must_use]
     pub fn quantile_u64(&self, range: Range<usize>, k: usize) -> Option<u64> {
         if range.start >= self.len()
@@ -827,15 +1057,19 @@ impl WaveletMatrix {
         }
     }
 
-    /// Get the `i`-th smallest element in the entire wavelet matrix.
+    /// Get the `i`-th smallest element in the wavelet matrix.
     /// The `i`-th smallest element is returned as a u64 numeral.
     ///
     /// If the number of bits per element exceeds 64, the value is truncated.
     ///
     /// This method does not perform bounds checking.
+    /// Use [`get_sorted_u64`] for a checked version.
     ///
     /// # Panics
     /// May panic if the `i` is out of bounds, or returns an empty bit vector.
+    ///
+    /// [`get_sorted_u64`]: WaveletMatrix::get_sorted_u64
+    #[must_use]
     pub fn get_sorted_u64_unchecked(&self, i: usize) -> u64 {
         self.quantile_u64_unchecked(0..self.len(), i)
     }
@@ -844,6 +1078,19 @@ impl WaveletMatrix {
     /// The `i`-th smallest element is returned as a u64 numeral.
     ///
     /// Returns `None` if the `i` is out of bounds, or if the number of bits per element exceeds 64.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.get_sorted_u64(0), Some(1));
+    /// assert_eq!(wavelet_matrix.get_sorted_u64(1), Some(1));
+    /// assert_eq!(wavelet_matrix.get_sorted_u64(2), Some(2));
+    /// ```
+    #[must_use]
     pub fn get_sorted_u64(&self, i: usize) -> Option<u64> {
         if i >= self.len() || self.bits_per_element > 64 {
             None
@@ -857,10 +1104,13 @@ impl WaveletMatrix {
     /// The smallest element is returned as a `BitVec`,
     ///
     /// This method does not perform bounds checking.
+    /// Use [`range_min`] for a checked version.
     ///
     /// # Panics
     /// May panic if the `range` is out of bounds or if the range is empty.
     /// May instead return an empty bit vector.
+    ///
+    /// [`range_min`]: WaveletMatrix::range_min
     #[must_use]
     pub fn range_min_unchecked(&self, range: Range<usize>) -> BitVec {
         self.quantile_unchecked(range, 0)
@@ -871,6 +1121,18 @@ impl WaveletMatrix {
     /// The smallest element is returned as a `BitVec`,
     ///
     /// Returns `None` if the `range` is out of bounds or if the range is empty.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.range_min(0..3), Some(BitVec::pack_sequence_u8(&[1], 3)));
+    /// assert_eq!(wavelet_matrix.range_min(1..4), Some(BitVec::pack_sequence_u8(&[1], 3)));
+    /// assert_eq!(wavelet_matrix.range_min(1..3), Some(BitVec::pack_sequence_u8(&[4], 3)));
+    /// ```
     #[must_use]
     pub fn range_min(&self, range: Range<usize>) -> Option<BitVec> {
         self.quantile(range, 0)
@@ -882,10 +1144,13 @@ impl WaveletMatrix {
     /// If the number of bits per element exceeds 64, the value is truncated.
     ///
     /// This method does not perform bounds checking.
+    /// Use [`range_min_u64`] for a checked version.
     ///
     /// # Panics
     /// May panic if the `range` is out of bounds or if the range is empty.
     /// May instead return 0.
+    ///
+    /// [`range_min_u64`]: WaveletMatrix::range_min_u64
     #[must_use]
     pub fn range_min_u64_unchecked(&self, range: Range<usize>) -> u64 {
         self.quantile_u64_unchecked(range, 0)
@@ -897,6 +1162,18 @@ impl WaveletMatrix {
     ///
     /// Returns `None` if the `range` is out of bounds, if the range is empty, or if the number of bits
     /// per element exceeds 64.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.range_min_u64(0..3), Some(1));
+    /// assert_eq!(wavelet_matrix.range_min_u64(1..4), Some(1));
+    /// assert_eq!(wavelet_matrix.range_min_u64(1..3), Some(4));
+    /// ```
     #[must_use]
     pub fn range_min_u64(&self, range: Range<usize>) -> Option<u64> {
         self.quantile_u64(range, 0)
@@ -908,10 +1185,13 @@ impl WaveletMatrix {
     /// where the least significant bit is the first element.
     ///
     /// This method does not perform bounds checking.
+    /// Use [`range_max`] for a checked version.
     ///
     /// # Panics
     /// May panic if the `range` is out of bounds or if the range is empty.
     /// May instead return an empty bit vector.
+    ///
+    /// [`range_max`]: WaveletMatrix::range_max
     #[must_use]
     pub fn range_max_unchecked(&self, range: Range<usize>) -> BitVec {
         let k = range.end - range.start - 1;
@@ -924,6 +1204,17 @@ impl WaveletMatrix {
     /// where the least significant bit is the first element.
     ///
     /// Returns `None` if the `range` is out of bounds or if the range is empty.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.range_max(0..3), Some(BitVec::pack_sequence_u8(&[4], 3)));
+    /// assert_eq!(wavelet_matrix.range_max(3..6), Some(BitVec::pack_sequence_u8(&[7], 3)));
+    /// ```
     #[must_use]
     pub fn range_max(&self, range: Range<usize>) -> Option<BitVec> {
         if range.is_empty() {
@@ -940,10 +1231,13 @@ impl WaveletMatrix {
     /// If the number of bits per element exceeds 64, the value is truncated.
     ///
     /// This method does not perform bounds checking.
+    /// Use [`range_max_u64`] for a checked version.
     ///
     /// # Panics
     /// May panic if the `range` is out of bounds or if the range is empty.
     /// May instead return 0.
+    ///
+    /// [`range_max_u64`]: WaveletMatrix::range_max_u64
     #[must_use]
     pub fn range_max_u64_unchecked(&self, range: Range<usize>) -> u64 {
         let k = range.end - range.start - 1;
@@ -956,6 +1250,17 @@ impl WaveletMatrix {
     ///
     /// Returns `None` if the `range` is out of bounds, if the range is empty, or if the number of bits
     /// per element exceeds 64.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.range_max_u64(0..3), Some(4));
+    /// assert_eq!(wavelet_matrix.range_max_u64(3..6), Some(7));
+    /// ```
     #[must_use]
     pub fn range_max_u64(&self, range: Range<usize>) -> Option<u64> {
         if range.is_empty() {
@@ -974,10 +1279,13 @@ impl WaveletMatrix {
     /// If the range does not contain an odd number of elements, the position is rounded down.
     ///
     /// This method does not perform bounds checking.
+    /// Use [`range_median`] for a checked version.
     ///
     /// # Panics
     /// May panic if the `range` is out of bounds or if the range is empty.
     /// May instead return an empty bit vector.
+    ///
+    /// [`range_median`]: WaveletMatrix::range_median
     #[must_use]
     pub fn range_median_unchecked(&self, range: Range<usize>) -> BitVec {
         let k = (range.end - 1 - range.start) / 2;
@@ -992,6 +1300,18 @@ impl WaveletMatrix {
     /// If the range does not contain an odd number of elements, the position is rounded down.
     ///
     /// Returns `None` if the `range` is out of bounds or if the range is empty.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.range_median(0..3), Some(BitVec::pack_sequence_u8(&[4], 3)));
+    /// assert_eq!(wavelet_matrix.range_median(1..4), Some(BitVec::pack_sequence_u8(&[4], 3)));
+    /// assert_eq!(wavelet_matrix.range_median(0..6), Some(BitVec::pack_sequence_u8(&[2], 3)));
+    /// ```
     #[must_use]
     pub fn range_median(&self, range: Range<usize>) -> Option<BitVec> {
         if range.is_empty() {
@@ -1010,10 +1330,13 @@ impl WaveletMatrix {
     /// If the range does not contain an odd number of elements, the position is rounded down.
     ///
     /// This method does not perform bounds checking.
+    /// Use [`range_median_u64`] for a checked version.
     ///
     /// # Panics
     /// May panic if the `range` is out of bounds or if the range is empty.
     /// May instead return 0.
+    ///
+    /// [`range_median_u64`]: WaveletMatrix::range_median_u64
     #[must_use]
     pub fn range_median_u64_unchecked(&self, range: Range<usize>) -> u64 {
         let k = (range.end - 1 - range.start) / 2;
@@ -1028,6 +1351,18 @@ impl WaveletMatrix {
     ///
     /// Returns `None` if the `range` is out of bounds, if the range is empty, or if the number of bits
     /// per element exceeds 64.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.range_median_u64(0..3), Some(4));
+    /// assert_eq!(wavelet_matrix.range_median_u64(1..4), Some(4));
+    /// assert_eq!(wavelet_matrix.range_median_u64(0..6), Some(2));
+    /// ```
     #[must_use]
     pub fn range_median_u64(&self, range: Range<usize>) -> Option<u64> {
         if range.is_empty() || self.bits_per_element > 64 || range.end > self.len() {
@@ -1143,6 +1478,20 @@ impl WaveletMatrix {
     /// Returns `None` if the number of bits in the `symbol` is not equal to `k`,
     /// if the range is empty, if the wavelet matrix is empty, if the range is out of bounds,
     /// or if the `symbol` is smaller than all elements in the range.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.predecessor(0..3, &BitVec::pack_sequence_u8(&[7], 3)), Some(BitVec::pack_sequence_u8(&[4], 3)));
+    /// assert_eq!(wavelet_matrix.predecessor(0..3, &BitVec::pack_sequence_u8(&[4], 3)), Some(BitVec::pack_sequence_u8(&[4], 3)));
+    /// assert_eq!(wavelet_matrix.predecessor(0..6, &BitVec::pack_sequence_u8(&[7], 3)), Some(BitVec::pack_sequence_u8(&[7], 3)));
+    /// ```
+    ///
+    /// [`BitVec`]: BitVec
     #[must_use]
     pub fn predecessor(&self, range: Range<usize>, symbol: &BitVec) -> Option<BitVec> {
         if symbol.len() != self.bits_per_element as usize
@@ -1175,6 +1524,18 @@ impl WaveletMatrix {
     /// Returns `None` if the number of bits in the matrix is greater than 64,
     /// if the range is empty, if the wavelet matrix is empty, if the range is out of bounds,
     /// or if the `symbol` is smaller than all elements in the range.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.predecessor_u64(0..3, 7), Some(4));
+    /// assert_eq!(wavelet_matrix.predecessor_u64(0..3, 4), Some(4));
+    /// assert_eq!(wavelet_matrix.predecessor_u64(0..6, 7), Some(7));
+    /// ```
     #[must_use]
     pub fn predecessor_u64(&self, range: Range<usize>, symbol: u64) -> Option<u64> {
         if self.bits_per_element > 64
@@ -1304,6 +1665,20 @@ impl WaveletMatrix {
     /// Returns `None` if the number of bits in the `symbol` is not equal to `k`,
     /// if the range is empty, if the wavelet matrix is empty, if the range is out of bounds,
     /// or if the `symbol` is greater than all elements in the range.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.successor(0..3, &BitVec::pack_sequence_u8(&[2], 3)), Some(BitVec::pack_sequence_u8(&[4], 3)));
+    /// assert_eq!(wavelet_matrix.successor(0..3, &BitVec::pack_sequence_u8(&[5], 3)), None);
+    /// assert_eq!(wavelet_matrix.successor(0..6, &BitVec::pack_sequence_u8(&[2], 3)), Some(BitVec::pack_sequence_u8(&[2], 3)));
+    /// ```
+    ///
+    /// [`BitVec`]: BitVec
     #[must_use]
     pub fn successor(&self, range: Range<usize>, symbol: &BitVec) -> Option<BitVec> {
         if symbol.len() != self.bits_per_element as usize
@@ -1336,6 +1711,18 @@ impl WaveletMatrix {
     /// Returns `None` if the number of bits in the matrix is greater than 64,
     /// if the range is empty, if the wavelet matrix is empty, if the range is out of bounds,
     /// or if the `symbol` is greater than all elements in the range.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// assert_eq!(wavelet_matrix.successor_u64(0..3, 2), Some(4));
+    /// assert_eq!(wavelet_matrix.successor_u64(0..3, 5), None);
+    /// assert_eq!(wavelet_matrix.successor_u64(0..6, 2), Some(2));
+    /// ```
     #[must_use]
     pub fn successor_u64(&self, range: Range<usize>, symbol: u64) -> Option<u64> {
         if self.bits_per_element > 64
@@ -1364,6 +1751,17 @@ impl WaveletMatrix {
     /// Get an iterator over the elements of the encoded sequence.
     /// The iterator yields `u64` elements.
     /// If the number of bits per element exceeds 64, `None` is returned.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// let mut iter = wavelet_matrix.iter_u64().unwrap();
+    /// assert_eq!(iter.collect::<Vec<_>>(), vec![1, 4, 4, 1, 2, 7]);
+    /// ```
     #[must_use]
     pub fn iter_u64(&self) -> Option<WaveletNumRefIter> {
         if self.bits_per_element > 64 {
@@ -1387,6 +1785,8 @@ impl WaveletMatrix {
 
     /// Get an iterator over the sorted elements of the encoded sequence.
     /// The iterator yields `BitVec` elements.
+    ///
+    /// See also [`iter_sorted_u64`] for an iterator that yields `u64` elements.
     #[must_use]
     pub fn iter_sorted(&self) -> WaveletSortedRefIter {
         WaveletSortedRefIter::new(self)
@@ -1402,6 +1802,17 @@ impl WaveletMatrix {
     /// Get an iterator over the sorted elements of the encoded sequence.
     /// The iterator yields `u64` elements.
     /// If the number of bits per element exceeds 64, `None` is returned.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, WaveletMatrix};
+    ///
+    /// let bit_vec = BitVec::pack_sequence_u8(&[1, 4, 4, 1, 2, 7], 3);
+    /// let wavelet_matrix = WaveletMatrix::from_bit_vec(&bit_vec, 3);
+    ///
+    /// let mut iter = wavelet_matrix.iter_sorted_u64().unwrap();
+    /// assert_eq!(iter.collect::<Vec<_>>(), vec![1, 1, 2, 4, 4, 7]);
+    /// ```
     #[must_use]
     pub fn iter_sorted_u64(&self) -> Option<WaveletSortedNumRefIter> {
         if self.bits_per_element > 64 {
