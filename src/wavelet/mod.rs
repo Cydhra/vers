@@ -62,22 +62,20 @@ pub struct WaveletMatrix {
 }
 
 impl WaveletMatrix {
-    /// Create a new wavelet matrix from a sequence of `n` `k`-bit words.
-    /// The constructor runs in `O(kn * log n)` time complexity.
+    /// Generic constructor that constructs the wavelet matrix by repeatedly sorting the elements.
+    /// The runtime complexity is `O(kn * log n)`.
     ///
     /// # Parameters
-    /// - `bit_vec`: A packed sequence of `n` `k`-bit words. The `i`-th word begins in the
-    ///   `bits_per_element * i`-th bit of the bit vector. Words are stored from least to most
-    ///    significant bit.
     /// - `bits_per_element`: The number of bits in each word. Cannot exceed 1 << 16.
-    ///
-    /// # Panics
-    /// Panics if the number of bits in the bit vector is not a multiple of the number of bits per element.
-    #[must_use]
-    pub fn from_bit_vec(bit_vec: &BitVec, bits_per_element: u16) -> Self {
-        assert_eq!(bit_vec.len() % bits_per_element as usize, 0, "The number of bits in the bit vector must be a multiple of the number of bits per element.");
+    /// - `num_elements`: The number of elements in the sequence.
+    /// - `bit_lookup`: A closure that returns the `bit`-th bit of the `element`-th word.
+    #[inline(always)] // should get rid of closures in favor of static calls
+    fn permutation_sorting<LOOKUP: Fn(usize, usize) -> u64>(
+        bits_per_element: u16,
+        num_elements: usize,
+        bit_lookup: LOOKUP,
+    ) -> Self {
         let element_len = bits_per_element as usize;
-        let num_elements = bit_vec.len() / element_len;
 
         let mut data = vec![BitVec::from_zeros(num_elements); element_len];
 
@@ -87,15 +85,13 @@ impl WaveletMatrix {
         let mut permutation = (0..num_elements).collect::<Vec<_>>();
         let mut next_permutation = vec![0; num_elements];
 
-        for level in 0..element_len {
+        for (level, data) in data.iter_mut().enumerate() {
             let mut total_zeros = 0;
             for i in 0..num_elements {
-                if bit_vec.get_unchecked(permutation[i] * element_len + element_len - level - 1)
-                    == 0
-                {
+                if bit_lookup(permutation[i], element_len - level - 1) == 0 {
                     total_zeros += 1;
                 } else {
-                    data[level].set(i, 1).unwrap();
+                    data.set(i, 1).unwrap();
                 }
             }
 
@@ -105,7 +101,7 @@ impl WaveletMatrix {
                 let mut zero_boundary = 0;
                 let mut one_boundary = total_zeros;
                 for i in 0..num_elements {
-                    if data[level].get_unchecked(i) == 0 {
+                    if data.get_unchecked(i) == 0 {
                         next_permutation[zero_boundary] = permutation[i];
                         zero_boundary += 1;
                     } else {
@@ -122,6 +118,43 @@ impl WaveletMatrix {
             data: data.into_iter().map(BitVec::into).collect(),
             bits_per_element,
         }
+    }
+
+    /// Create a new wavelet matrix from a sequence of `n` `k`-bit words.
+    /// The constructor runs in `O(kn * log n)` time complexity.
+    ///
+    /// # Parameters
+    /// - `bit_vec`: A packed sequence of `n` `k`-bit words. The `i`-th word begins in the
+    ///   `bits_per_element * i`-th bit of the bit vector. Words are stored from least to most
+    ///    significant bit.
+    /// - `bits_per_element`: The number `k` of bits in each word. Cannot exceed 1 << 16.
+    ///
+    /// # Panics
+    /// Panics if the number of bits in the bit vector is not a multiple of the number of bits per element.
+    #[must_use]
+    pub fn from_bit_vec(bit_vec: &BitVec, bits_per_element: u16) -> Self {
+        assert_eq!(bit_vec.len() % bits_per_element as usize, 0, "The number of bits in the bit vector must be a multiple of the number of bits per element.");
+        let num_elements = bit_vec.len() / bits_per_element as usize;
+        Self::permutation_sorting(bits_per_element, num_elements, |element, bit| {
+            bit_vec.get_unchecked(element * bits_per_element as usize + bit)
+        })
+    }
+
+    /// Create a new wavelet matrix from a sequence of `n` `k`-bit words.
+    /// The constructor runs in `O(kn * log n)` time complexity.
+    ///
+    /// # Parameters
+    /// - `sequence`: A slice of `n` u64 values, each encoding a `k`-bit word.
+    /// - `bits_per_element`: The number `k` of bits in each word. Cannot exceed 64.
+    #[must_use]
+    pub fn from_slice(sequence: &[u64], bits_per_element: u16) -> Self {
+        assert!(
+            bits_per_element <= 64,
+            "The number of bits per element cannot exceed 64."
+        );
+        Self::permutation_sorting(bits_per_element, sequence.len(), |element, bit| {
+            (sequence[element] >> bit) & 1
+        })
     }
 
     /// Generic function to read a value from the wavelet matrix and consume it with a closure.
