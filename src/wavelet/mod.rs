@@ -19,7 +19,14 @@ use std::ops::Range;
 /// The implementation is designed to allow for extremely large alphabet sizes, without
 /// sacrificing performance for small alphabets.
 ///
-/// Encodes a sequence of `n` `k`-bit words into a wavelet matrix which supports constant-time
+/// There are two constructor algorithms available:
+/// - [`from_bit_vec`] and [`from_slice`] construct the wavelet matrix by repeatedly sorting the elements.
+///   These constructors have linear space overhead and run in `O(kn * log n)` time complexity.
+/// - [`from_bit_vec_pc`] and [`from_slice_pc`] construct the wavelet matrix by counting the
+///   prefixes of the elements. These constructors have a space complexity of `O(2^k)` and run
+///   in `O(kn)`, which makes this constructor preferable for large sequences over small alphabets.
+///
+/// They encode a sequence of `n` `k`-bit words into a wavelet matrix which supports constant-time
 /// rank and select queries on elements of its `k`-bit alphabet.
 /// All query functions are mirrored for both `BitVec` and `u64` query elements, so
 /// if `k <= 64`, no heap allocation is needed for the query element.
