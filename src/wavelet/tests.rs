@@ -11,11 +11,14 @@ fn test_wavelet_encoding_randomized() {
         let data: Vec<u8> = (0..rng.gen_range(500..1000))
             .map(|_| rng.gen_range(0..=u8::MAX))
             .collect();
+        let data_u64: Vec<u64> = data.iter().map(|&x| x as u64).collect();
         let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
+        let wavelet_from_slice = WaveletMatrix::from_slice(&data_u64, 8);
         assert_eq!(wavelet.len(), data.len());
 
         for i in 0..data.len() {
             assert_eq!(wavelet.get_u64_unchecked(i), data[i] as u64);
+            assert_eq!(wavelet_from_slice.get_u64_unchecked(i), data[i] as u64);
         }
     }
 }
