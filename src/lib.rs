@@ -59,11 +59,12 @@
 //! - `serde` (disabled by default): Enables serialization and deserialization support for all
 //!   data structures in this crate using the `serde` crate.
 
-pub use crate::elias_fano::EliasFanoVec;
 pub use bit_vec::fast_rs_vec::RsVec;
 pub use bit_vec::BitVec;
+pub use elias_fano::EliasFanoVec;
 pub use rmq::binary_rmq::BinaryRmq;
 pub use rmq::fast_rmq::FastRmq;
+pub use wavelet::WaveletMatrix;
 
 pub mod bit_vec;
 
@@ -72,5 +73,8 @@ pub mod elias_fano;
 
 #[forbid(unsafe_code)]
 pub mod rmq;
+
+#[forbid(unsafe_code)]
+mod wavelet;
 
 pub(crate) mod util;
