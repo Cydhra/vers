@@ -146,6 +146,9 @@ impl WaveletMatrix {
     /// # Parameters
     /// - `sequence`: A slice of `n` u64 values, each encoding a `k`-bit word.
     /// - `bits_per_element`: The number `k` of bits in each word. Cannot exceed 64.
+    ///
+    /// # Panics
+    /// Panics if the number of bits per element exceeds 64.
     #[must_use]
     pub fn from_slice(sequence: &[u64], bits_per_element: u16) -> Self {
         assert!(
