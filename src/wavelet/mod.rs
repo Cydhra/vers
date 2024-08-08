@@ -787,15 +787,15 @@ impl WaveletMatrix {
     /// [`BitVec`]: BitVec
     #[must_use]
     pub fn select(&self, rank: usize, symbol: &BitVec) -> Option<usize> {
-        if symbol.len() != self.bits_per_element as usize {
-            None
-        } else {
+        if symbol.len() == self.bits_per_element as usize {
             let idx = self.select_unchecked(rank, symbol);
             if idx < self.len() {
                 Some(idx)
             } else {
                 None
             }
+        } else {
+            None
         }
     }
 
@@ -948,6 +948,7 @@ impl WaveletMatrix {
     ///
     /// # Panics
     /// May panic if the `i` is out of bounds, or returns an empty bit vector.
+    #[must_use]
     pub fn get_sorted_unchecked(&self, i: usize) -> BitVec {
         self.quantile_unchecked(0..self.len(), i)
     }
@@ -970,6 +971,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.get_sorted(1), Some(BitVec::pack_sequence_u8(&[1], 3)));
     /// assert_eq!(wavelet_matrix.get_sorted(2), Some(BitVec::pack_sequence_u8(&[2], 3)));
     /// ```
+    #[must_use]
     pub fn get_sorted(&self, i: usize) -> Option<BitVec> {
         if i >= self.len() {
             None
@@ -1392,7 +1394,7 @@ impl WaveletMatrix {
     fn predecessor_generic_unchecked<
         T: Clone,
         Reader: Fn(usize, &T) -> u64,
-        Writer: Fn(u64, usize, &mut T) -> (),
+        Writer: Fn(u64, usize, &mut T),
         Quantile: Fn(&Self, Range<usize>, usize, usize, T) -> T,
     >(
         &self,
@@ -1519,7 +1521,7 @@ impl WaveletMatrix {
             BitVec::from_zeros(self.bits_per_element as usize),
             |level, symbol| symbol.get_unchecked((self.bits_per_element - 1) as usize - level),
             |bit, level, result| {
-                result.set_unchecked((self.bits_per_element - 1) as usize - level, bit)
+                result.set_unchecked((self.bits_per_element - 1) as usize - level, bit);
             },
             Self::partial_quantile_search_unchecked,
         )
@@ -1576,7 +1578,7 @@ impl WaveletMatrix {
     fn successor_generic_unchecked<
         T: Clone,
         Reader: Fn(usize, &T) -> u64,
-        Writer: Fn(u64, usize, &mut T) -> (),
+        Writer: Fn(u64, usize, &mut T),
         Quantile: Fn(&Self, Range<usize>, usize, usize, T) -> T,
     >(
         &self,
@@ -1706,7 +1708,7 @@ impl WaveletMatrix {
             BitVec::from_zeros(self.bits_per_element as usize),
             |level, symbol| symbol.get_unchecked((self.bits_per_element - 1) as usize - level),
             |bit, level, result| {
-                result.set_unchecked((self.bits_per_element - 1) as usize - level, bit)
+                result.set_unchecked((self.bits_per_element - 1) as usize - level, bit);
             },
             Self::partial_quantile_search_unchecked,
         )

@@ -166,7 +166,7 @@ macro_rules! gen_vector_iter_impl {
 /// It expects that the iterator type has a constructor named `new` that takes only a
 /// reference to / value of the data structure and returns an iterator.
 ///
-/// This macro is used by all vector types including EliasFanoVec
+/// This macro is used by all vector types including `EliasFanoVec`
 ///
 /// The macro generates the following items:
 /// - An `impl` block for `VecType` that implements `IntoIterator<Item = u64>` for `VecType`.
@@ -229,8 +229,8 @@ macro_rules! impl_into_iterator_impls {
 ///
 /// The macro expects the vector type to implement a function called `len()`.
 ///
-/// This macro is not used for the EliasFanoVec, because that exploits internal structure for faster
-/// iteration, while this macro just calls get() repeatedly
+/// This macro is not used for the `EliasFanoVec`, because that exploits internal structure for faster
+/// iteration, while this macro just calls `get()` repeatedly
 ///
 /// The macro generates the following items:
 /// - A struct named `VecTypeIter` that implements `Iterator<Item = u64>` for `VecType`.
