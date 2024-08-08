@@ -15,6 +15,7 @@ since the intrinsics speed up both `rank` and `select` operations by a factor of
 - A succinct bit vector supporting fast rank and select queries.
 - An Elias-Fano encoding of monotone sequences supporting constant-time predecessor/successor queries.
 - Two Range Minimum Query vector structures for constant-time range minimum queries.
+- A Wavelet Matrix supporting `O(k)` rank, select, statistical, predecessor, and successor queries.
 
 ## Why Vers?
 - **Performance**: Vers is among the fastest publicly available implementations for its data structures.
