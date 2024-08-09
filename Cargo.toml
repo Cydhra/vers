@@ -9,6 +9,7 @@ repository = "https://github.com/Cydhra/vers"
 license = "MIT OR Apache-2.0"
 keywords = ["succinct", "elias-fano", "bitvector", "rank", "wavelet-matrix"]
 categories = ["data-structures", "algorithms"]
+documentation = "https://docs.rs/vers-vecs"
 exclude = [
     "images/*",
     ".github/*",
