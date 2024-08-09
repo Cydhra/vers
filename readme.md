@@ -18,21 +18,13 @@ since the intrinsics speed up both `rank` and `select` operations by a factor of
 - A Wavelet Matrix supporting `O(k)` rank, select, statistical, predecessor, and successor queries.
 
 ## Why Vers?
-- **Performance**: Vers is among the fastest publicly available implementations for its data structures.
-There are faster operations in some cases, but you never have to sacrifice substantial performance for Vers' convenience.
-- **Memory Efficiency**: Vers has an extremely low memory overhead compared to other implementations, especially compared
-to the high-performing `sucds` crate.
-- **API**: Vers aims to provide a simple and convenient API that does not require the user to understand the underlying data structures.
-The API is well-integrated within the Rust ecosystem.
-- **Feature Rich**: Vers aims to provide more functionality than other libraries.
-It provides more convenience functions and supports more operations than libraries that compare in performance.
-The standard bit vector offers a wide range of functions for bit manipulation, 
-the Rank/Select bit vector supports special-purpose iterators exploiting its rank/select structure,
-and the Elias-Fano encoding supports constant-time predecessor/successor queries.
-- **Documentation**: Vers is extremely well-documented and provides examples for all data structures.
-- **No Dependencies**: Vers has no dependencies by default.
-- **Safety**: Without the `simd` feature, Vers uses no unsafe code that handles raw pointers.
-The only unsafe call is the compiler intrinsic for the arithmetic instruction `pdep`.
+- Vers is among the fastest publicly available bit vector implementations for rank and select operations.
+- Vers has a substantially lower memory overhead than its competitors.
+- Without crate features, all data structures are implemented in pure Rust and have no dependencies outside the standard library.
+- Every functionality is extensively documented.
+- Vers aims to provide more functionality for its data structures than competitors 
+  (e.g., Elias-Fano sequences and the Wavelet Matrix support predecessor and successor queries, 
+  the Wavelet Matrix supports statistical queries, all data structures implement various iterators, etc.).
 
 ## Crate Features
 - `simd`: Enables the use of SIMD instructions for rank and select operations.
@@ -51,6 +43,12 @@ I performed the benchmarks on a Ryzen 9 7950X with 32GB of RAM.
 Some of the results are shown below.
 All benchmarks were run with the `target-cpu=native` flag enabled, and the `simd` feature enabled for Vers.
 More results can be found in the benchmark repository.
+
+Benchmarks for the Wavelet Matrix are still missing because I want to improve the benchmarking code before I do them.
+Because Wavelet Matrices have very little room for engineering, there aren't any surprising results to be expected, though.
+The performance solely depends on the bit vector implementation, so the results will be similar to the bit vector benchmarks.
+The only exception is the [qwt](https://crates.io/crates/qwt) crate, which uses quad vectors instead,
+and is substantially faster than any other crate due to the reduced number of cache misses.
 
 ### Bit-Vector
 #### Rank & Select
