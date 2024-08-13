@@ -5,8 +5,13 @@ mod bp;
 
 /// A singular node in a binary min-max tree that is part of the BpTree data structure.
 struct MinMaxNode {
-    start_excess: usize,
+    /// excess from 0..=r in the node [l, r]
+    total_excess: usize,
+
+    /// minimum (total) excess in the node [l, r]
     min_excess: usize,
+
+    /// maximum (total) excess in the node [l, r]
     max_excess: usize,
 }
 
@@ -16,9 +21,8 @@ struct MinMaxTree {
 }
 
 impl MinMaxTree {
-
-    fn start_excess(&self, index: usize) -> usize {
-        self.nodes[index].start_excess
+    fn total_excess(&self, index: usize) -> usize {
+        self.nodes[index].total_excess
     }
 
     fn min_excess(&self, index: usize) -> usize {
@@ -30,7 +34,10 @@ impl MinMaxTree {
     }
 
     fn parent(&self, index: NonZeroUsize) -> usize {
-        debug_assert!(index.get() < self.nodes.len(), "request parent for non-existent node");
+        debug_assert!(
+            index.get() < self.nodes.len(),
+            "request parent for non-existent node"
+        );
         (index.get() - 1) / 2
     }
 
@@ -75,6 +82,3 @@ impl MinMaxTree {
         }
     }
 }
-
-
-
