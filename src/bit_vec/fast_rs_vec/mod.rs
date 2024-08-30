@@ -3,6 +3,7 @@
 
 use std::mem::size_of;
 
+use anybytes::PackedSlice;
 #[cfg(all(
     feature = "simd",
     target_arch = "x86_64",
@@ -13,6 +14,7 @@ use std::mem::size_of;
 ))]
 pub use bitset::*;
 pub use iter::*;
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 use crate::util::impl_vector_iterator;
 use crate::BitVec;
@@ -41,8 +43,9 @@ const SELECT_BLOCK_SIZE: usize = 1 << 13;
 /// beginning from the last super-block boundary. This means the first block in a super-block
 /// always stores the number zero, which serves as a sentinel value to avoid special-casing the
 /// first block in a super-block (which would be a performance hit due branch prediction failures).
-#[derive(Clone, Copy, Debug)]
+#[derive(FromZeroes, FromBytes, AsBytes, Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(C)]
 struct BlockDescriptor {
     zeros: u16,
 }
@@ -50,8 +53,9 @@ struct BlockDescriptor {
 /// Meta-data for a super-block. The `zeros` field stores the number of zeros up to this super-block.
 /// This allows the `BlockDescriptor` to store the number of zeros in a much smaller
 /// space. The `zeros` field is the number of zeros up to the super-block.
-#[derive(Clone, Copy, Debug)]
+#[derive(FromZeroes, FromBytes, AsBytes, Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(C)]
 struct SuperBlockDescriptor {
     zeros: usize,
 }
@@ -59,8 +63,9 @@ struct SuperBlockDescriptor {
 /// Meta-data for the select query. Each entry i in the select vector contains the indices to find
 /// the i * `SELECT_BLOCK_SIZE`'th 0- and 1-bit in the bitvector. Those indices may be very far apart.
 /// The indices do not point into the bit-vector, but into the super-block vector.
-#[derive(Clone, Debug)]
+#[derive(FromZeroes, FromBytes, AsBytes, Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(C)]
 struct SelectSuperBlockDescriptor {
     index_0: usize,
     index_1: usize,
@@ -85,13 +90,13 @@ struct SelectSuperBlockDescriptor {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RsVec {
-    data: Vec<u64>,
     len: usize,
-    blocks: Vec<BlockDescriptor>,
-    super_blocks: Vec<SuperBlockDescriptor>,
-    select_blocks: Vec<SelectSuperBlockDescriptor>,
     pub(crate) rank0: usize,
     pub(crate) rank1: usize,
+    data: PackedSlice<u64>,
+    blocks: PackedSlice<BlockDescriptor>,
+    super_blocks: PackedSlice<SuperBlockDescriptor>,
+    select_blocks: PackedSlice<SelectSuperBlockDescriptor>,
 }
 
 impl RsVec {
@@ -212,11 +217,11 @@ impl RsVec {
         }
 
         RsVec {
-            data: vec.data,
+            data: vec.data.into(),
             len: vec.len,
-            blocks,
-            super_blocks,
-            select_blocks,
+            blocks: blocks.into(),
+            super_blocks: super_blocks.into(),
+            select_blocks: select_blocks.into(),
             // the last block may contain padding zeros, which should not be counted
             rank0: total_zeros + current_zeros - ((WORD_SIZE - (vec.len % WORD_SIZE)) % WORD_SIZE),
             rank1: vec.len
