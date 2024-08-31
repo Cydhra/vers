@@ -48,6 +48,14 @@ fn bench_select_iter(b: &mut Criterion) {
             })
         });
 
+        #[cfg(all(
+            feature = "simd",
+            target_arch = "x86_64",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "avx512f",
+            target_feature = "avx512bw",
+        ))]
         group.bench_with_input(BenchmarkId::new("bitset iterator", l), &l, |b, _| {
             b.iter_custom(|iters| {
                 let mut time = Duration::new(0, 0);
