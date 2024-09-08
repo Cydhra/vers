@@ -63,6 +63,7 @@ use std::ops::Range;
 ///
 /// [`RsVec`]: RsVec
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WaveletMatrix {
     data: Box<[RsVec]>,
     bits_per_element: u16,
