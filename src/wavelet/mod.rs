@@ -2011,16 +2011,16 @@ impl WaveletMatrix {
             Some(WaveletSortedNumIter::new(self))
         }
     }
-    
+
     /// Get the number of bits per element in the alphabet of the encoded sequence.
     #[must_use]
     #[inline(always)]
     pub fn bits_per_element(&self) -> usize {
         self.data.len()
     }
-    
+
     /// Get the number of bits per element in the alphabet of the encoded sequence.
-    #[deprecated(since="0.1.6", note="please use `bits_per_element` instead")]
+    #[deprecated(since = "1.5.1", note = "please use `bits_per_element` instead")]
     pub fn bit_len(&self) -> u16 {
         self.bits_per_element() as u16
     }
