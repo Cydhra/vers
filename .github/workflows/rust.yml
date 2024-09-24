@@ -16,14 +16,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: cargo build --verbose --features simd serde
+      run: cargo build --verbose --features "simd serde"
     - name: Run tests
-      run: cargo test --verbose --features simd serde
+      run: cargo test --verbose --features "simd serde"
   test_zerocopy:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: cargo build --verbose --features simd zerocopy
+      run: cargo build --verbose --features "simd zerocopy"
     - name: Run tests
-      run: cargo test --verbose --features simd zerocopy
+      run: cargo test --verbose --features "simd zerocopy"
