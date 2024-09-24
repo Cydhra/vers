@@ -11,13 +11,19 @@ env:
   RUSTFLAGS: -C target-cpu=native
 
 jobs:
-  build:
-
+  test_serde:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: cargo build --verbose --all-features
+      run: cargo build --verbose --features simd serde
     - name: Run tests
-      run: cargo test --verbose --all-features
+      run: cargo test --verbose --features simd serde
+  test_zerocopy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: cargo build --verbose --features simd zerocopy
+    - name: Run tests
+      run: cargo test --verbose --features simd zerocopy

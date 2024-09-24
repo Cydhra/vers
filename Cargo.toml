@@ -16,9 +16,9 @@ exclude = [
 ]
 
 [dependencies]
-anybytes = "0.6.0"
-zerocopy = "0.7.35"
+anybytes = { version = "0.6.0", optional = true }
 serde = { version = "1.0", optional = true, features = ["derive"] }
+zerocopy = { version = "0.7.35", optional = true }
 
 [dev-dependencies]
 # benchmarking
@@ -26,8 +26,10 @@ criterion = { version = "0.5.1", features = ["html_reports"] }
 rand = { version = "0.8", features = ["alloc"] }
 
 [features]
-simd = []
 docsrs = [] # special feature for docs.rs to enable doc_auto_cfg on nightly
+simd = []
+serde = ["dep:serde"]
+zerocopy = ["dep:anybytes", "dep:zerocopy"]
 
 [[bench]]
 name = "rank"
