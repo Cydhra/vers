@@ -6,9 +6,6 @@ use std::mem::size_of;
 #[cfg(feature = "zerocopy")]
 use anybytes::PackedSlice;
 
-#[cfg(feature = "zerocopy")]
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
-
 #[cfg(all(
     feature = "simd",
     target_arch = "x86_64",
