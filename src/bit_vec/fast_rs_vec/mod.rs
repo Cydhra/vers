@@ -3,6 +3,9 @@
 
 use std::mem::size_of;
 
+#[cfg(feature = "zerocopy")]
+use anybytes::PackedSlice;
+
 #[cfg(all(
     feature = "simd",
     target_arch = "x86_64",
@@ -42,6 +45,7 @@ const SELECT_BLOCK_SIZE: usize = 1 << 13;
 /// always stores the number zero, which serves as a sentinel value to avoid special-casing the
 /// first block in a super-block (which would be a performance hit due branch prediction failures).
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "zerocopy", repr(C), derive(zerocopy::FromZeroes, zerocopy::FromBytes, zerocopy::AsBytes))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct BlockDescriptor {
     zeros: u16,
@@ -51,6 +55,7 @@ struct BlockDescriptor {
 /// This allows the `BlockDescriptor` to store the number of zeros in a much smaller
 /// space. The `zeros` field is the number of zeros up to the super-block.
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "zerocopy", repr(C), derive(zerocopy::FromZeroes, zerocopy::FromBytes, zerocopy::AsBytes))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct SuperBlockDescriptor {
     zeros: usize,
@@ -60,6 +65,7 @@ struct SuperBlockDescriptor {
 /// the i * `SELECT_BLOCK_SIZE`'th 0- and 1-bit in the bitvector. Those indices may be very far apart.
 /// The indices do not point into the bit-vector, but into the super-block vector.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "zerocopy", repr(C), derive(zerocopy::FromZeroes, zerocopy::FromBytes, zerocopy::AsBytes))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct SelectSuperBlockDescriptor {
     index_0: usize,
@@ -85,13 +91,25 @@ struct SelectSuperBlockDescriptor {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RsVec {
-    data: Vec<u64>,
     len: usize,
-    blocks: Vec<BlockDescriptor>,
-    super_blocks: Vec<SuperBlockDescriptor>,
-    select_blocks: Vec<SelectSuperBlockDescriptor>,
     pub(crate) rank0: usize,
     pub(crate) rank1: usize,
+    #[cfg(not(feature = "zerocopy"))]
+    data: Vec<u64>,
+    #[cfg(not(feature = "zerocopy"))]
+    blocks: Vec<BlockDescriptor>,
+    #[cfg(not(feature = "zerocopy"))]
+    super_blocks: Vec<SuperBlockDescriptor>,
+    #[cfg(not(feature = "zerocopy"))]
+    select_blocks: Vec<SelectSuperBlockDescriptor>,
+    #[cfg(feature = "zerocopy")]
+    data: PackedSlice<u64>,
+    #[cfg(feature = "zerocopy")]
+    blocks: PackedSlice<BlockDescriptor>,
+    #[cfg(feature = "zerocopy")]
+    super_blocks: PackedSlice<SuperBlockDescriptor>,
+    #[cfg(feature = "zerocopy")]
+    select_blocks: PackedSlice<SelectSuperBlockDescriptor>,
 }
 
 impl RsVec {
@@ -212,11 +230,11 @@ impl RsVec {
         }
 
         RsVec {
-            data: vec.data,
+            data: vec.data.into(),
             len: vec.len,
-            blocks,
-            super_blocks,
-            select_blocks,
+            blocks: blocks.into(),
+            super_blocks: super_blocks.into(),
+            select_blocks: select_blocks.into(),
             // the last block may contain padding zeros, which should not be counted
             rank0: total_zeros + current_zeros - ((WORD_SIZE - (vec.len % WORD_SIZE)) % WORD_SIZE),
             rank1: vec.len
