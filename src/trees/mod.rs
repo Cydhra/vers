@@ -61,20 +61,31 @@ impl MinMaxTree {
         };
 
         let mut current_level_size = num_leaves.next_power_of_two() / 2;
-        let mut current_level_start = num_internal_nodes - 1 - current_level_size;
+        let mut current_level_start = num_internal_nodes - current_level_size;
         while current_level_start > 0 {
             for i in 0..current_level_size {
-                let left_child = &nodes[(current_level_start + i) * 2 + 1];
-                let right_child = &nodes[(current_level_start + i) * 2 + 2];
-                nodes[current_level_start + i] = MinMaxNode {
-                    total_excess: left_child.total_excess,
-                    min_excess: left_child.min_excess.min(
-                        left_child.total_excess + right_child.min_excess - right_child.total_excess,
-                    ),
-                    max_excess: left_child.max_excess.max(
-                        left_child.total_excess + right_child.max_excess - right_child.total_excess,
-                    ),
-                };
+                let left_child_index = (current_level_start + i) * 2 + 1;
+                let right_child_index = (current_level_start + i) * 2 + 2;
+
+                if left_child_index < nodes.len() {
+                    if right_child_index < nodes.len() {
+                        let left_child = &nodes[left_child_index];
+                        let right_child = &nodes[right_child_index];
+                        nodes[current_level_start + i] = MinMaxNode {
+                            total_excess: left_child.total_excess,
+                            min_excess: left_child.min_excess.min(
+                                left_child.total_excess + right_child.min_excess
+                                    - right_child.total_excess,
+                            ),
+                            max_excess: left_child.max_excess.max(
+                                left_child.total_excess + right_child.max_excess
+                                    - right_child.total_excess,
+                            ),
+                        };
+                    } else {
+                        nodes[current_level_start + i] = nodes[left_child_index].clone();
+                    }
+                }
             }
             current_level_size /= 2;
             current_level_start -= current_level_size;
