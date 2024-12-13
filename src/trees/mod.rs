@@ -1,6 +1,5 @@
 use crate::BitVec;
 use std::num::NonZeroUsize;
-use std::ops::Index;
 
 mod bp;
 
@@ -43,7 +42,11 @@ impl MinMaxTree {
                 min_excess = total_excess;
                 max_excess = total_excess;
             }
-            total_excess += if bit_vec[i] { 1 } else { -1 };
+            if bit_vec.is_bit_set_unchecked(i) {
+                total_excess += 1;
+            } else {
+                total_excess -= 1;
+            };
             min_excess = min_excess.min(total_excess);
             max_excess = max_excess.max(total_excess);
         }
