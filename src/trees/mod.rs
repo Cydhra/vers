@@ -24,7 +24,7 @@ struct MinMaxTree {
 impl MinMaxTree {
     fn excess_tree(bit_vec: &BitVec, block_size: usize) -> Self {
         let num_leaves = (bit_vec.len() + block_size - 1) / block_size;
-        let mut num_internal_nodes = (1 << (num_leaves as f64).log2().ceil() as usize) - 1;
+        let num_internal_nodes = (1 << (num_leaves as f64).log2().ceil() as usize) - 1;
 
         let mut nodes = vec![MinMaxNode::default(); num_leaves + num_internal_nodes];
         let mut total_excess = 0;
@@ -59,7 +59,7 @@ impl MinMaxTree {
 
         let mut current_level_size = num_leaves.next_power_of_two() / 2;
         let mut current_level_start = num_internal_nodes - current_level_size;
-        while current_level_start > 0 {
+        loop {
             for i in 0..current_level_size {
                 let left_child_index = (current_level_start + i) * 2 + 1;
                 let right_child_index = (current_level_start + i) * 2 + 2;
@@ -82,6 +82,12 @@ impl MinMaxTree {
                     }
                 }
             }
+
+            // if this was the root level, break the loop
+            if current_level_size == 1 {
+                break;
+            }
+
             current_level_size /= 2;
             current_level_start -= current_level_size;
         }
@@ -194,6 +200,8 @@ mod tests {
         assert_eq!(tree.nodes[1].max_excess, 6);
 
         // right child of the root
-        // assert_eq!(tree.nodes[2].total_excess, -4);
+        assert_eq!(tree.nodes[2].total_excess, -4);
+        assert_eq!(tree.nodes[2].min_excess, -4);
+        assert_eq!(tree.nodes[2].max_excess, 1);
     }
 }
