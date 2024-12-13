@@ -39,9 +39,6 @@ impl MinMaxTree {
                     min_excess,
                     max_excess,
                 };
-                min_excess = total_excess;
-                max_excess = total_excess;
-
                 total_excess = 0;
                 min_excess = 0;
                 max_excess = 0;
