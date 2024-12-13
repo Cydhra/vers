@@ -4,7 +4,7 @@ use std::num::NonZeroUsize;
 mod bp;
 
 /// A singular node in a binary min-max tree that is part of the BpTree data structure.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 struct MinMaxNode {
     /// excess from l..=r in the node [l, r]
     total_excess: isize,
@@ -17,12 +17,17 @@ struct MinMaxNode {
 }
 
 /// A binary min-max tree that is part of the BpTree data structure.
+#[derive(Clone, Debug, Default)]
 struct MinMaxTree {
     nodes: Vec<MinMaxNode>,
 }
 
 impl MinMaxTree {
     fn excess_tree(bit_vec: &BitVec, block_size: usize) -> Self {
+        if bit_vec.is_empty() {
+            return Self::default();
+        }
+
         let num_leaves = (bit_vec.len() + block_size - 1) / block_size;
         let num_internal_nodes = (1 << (num_leaves as f64).log2().ceil() as usize) - 1;
 
@@ -203,5 +208,13 @@ mod tests {
         assert_eq!(tree.nodes[2].total_excess, -4);
         assert_eq!(tree.nodes[2].min_excess, -4);
         assert_eq!(tree.nodes[2].max_excess, 1);
+    }
+
+    #[test]
+    fn test_empty_excess_tree() {
+        let bv = BitVec::new();
+        let tree = MinMaxTree::excess_tree(&bv, 8);
+
+        assert_eq!(tree.nodes.len(), 0);
     }
 }
