@@ -6,14 +6,14 @@ mod bp;
 /// A singular node in a binary min-max tree that is part of the BpTree data structure.
 #[derive(Debug, Clone, Default)]
 struct MinMaxNode {
-    /// excess from 0..=r in the node [l, r]
-    total_excess: usize,
+    /// excess from l..=r in the node [l, r]
+    total_excess: isize,
 
-    /// minimum (total) excess in the node [l, r]
-    min_excess: usize,
+    /// minimum (relative) excess in the node [l, r]
+    min_excess: isize,
 
-    /// maximum (total) excess in the node [l, r]
-    max_excess: usize,
+    /// maximum (relative) excess in the node [l, r]
+    max_excess: isize,
 }
 
 /// A binary min-max tree that is part of the BpTree data structure.
@@ -41,11 +41,15 @@ impl MinMaxTree {
                 };
                 min_excess = total_excess;
                 max_excess = total_excess;
+
+                total_excess = 0;
+                min_excess = 0;
+                max_excess = 0;
             }
-            if bit_vec.is_bit_set_unchecked(i) {
-                total_excess += 1;
+            total_excess += if bit_vec.is_bit_set_unchecked(i) {
+                1
             } else {
-                total_excess -= 1;
+                -1
             };
             min_excess = min_excess.min(total_excess);
             max_excess = max_excess.max(total_excess);
@@ -79,15 +83,15 @@ impl MinMaxTree {
         Self { nodes }
     }
 
-    fn total_excess(&self, index: usize) -> usize {
+    fn total_excess(&self, index: usize) -> isize {
         self.nodes[index].total_excess
     }
 
-    fn min_excess(&self, index: usize) -> usize {
+    fn min_excess(&self, index: usize) -> isize {
         self.nodes[index].min_excess
     }
 
-    fn max_excess(&self, index: usize) -> usize {
+    fn max_excess(&self, index: usize) -> isize {
         self.nodes[index].max_excess
     }
 
