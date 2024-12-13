@@ -72,15 +72,13 @@ impl MinMaxTree {
                         let left_child = &nodes[left_child_index];
                         let right_child = &nodes[right_child_index];
                         nodes[current_level_start + i] = MinMaxNode {
-                            total_excess: left_child.total_excess,
-                            min_excess: left_child.min_excess.min(
-                                left_child.total_excess + right_child.min_excess
-                                    - right_child.total_excess,
-                            ),
-                            max_excess: left_child.max_excess.max(
-                                left_child.total_excess + right_child.max_excess
-                                    - right_child.total_excess,
-                            ),
+                            total_excess: left_child.total_excess + right_child.total_excess,
+                            min_excess: left_child
+                                .min_excess
+                                .min(left_child.total_excess + right_child.min_excess),
+                            max_excess: left_child
+                                .max_excess
+                                .max(left_child.total_excess + right_child.max_excess),
                         };
                     } else {
                         nodes[current_level_start + i] = nodes[left_child_index].clone();
@@ -153,5 +151,52 @@ impl MinMaxTree {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::BitVec;
+
+    #[test]
+    fn test_simple_excess_tree() {
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 0, 0, 1, 1, 1,
+            0, 1, 0, 1, 1, 1, 0, 0,
+            1, 0, 0, 1, 0, 0, 0, 0,
+        ]);
+
+        let tree = MinMaxTree::excess_tree(&bv, 8);
+
+        // three internal nodes, three leaves
+        assert_eq!(tree.nodes.len(), 6);
+
+        // leaf nodes
+        assert_eq!(tree.nodes[3].total_excess, 4);
+        assert_eq!(tree.nodes[3].min_excess, 0);
+        assert_eq!(tree.nodes[3].max_excess, 4);
+
+        assert_eq!(tree.nodes[4].total_excess, 0);
+        assert_eq!(tree.nodes[4].min_excess, -1);
+        assert_eq!(tree.nodes[4].max_excess, 2);
+
+        assert_eq!(tree.nodes[5].total_excess, -4);
+        assert_eq!(tree.nodes[5].min_excess, -4);
+        assert_eq!(tree.nodes[5].max_excess, 1);
+
+        // root node
+        assert_eq!(tree.nodes[0].total_excess, 0); // the tree should be balanced
+        assert_eq!(tree.nodes[0].min_excess, 0);
+        assert_eq!(tree.nodes[0].max_excess, 6);
+
+        // left child of the root
+        assert_eq!(tree.nodes[1].total_excess, 4);
+        assert_eq!(tree.nodes[1].min_excess, 0);
+        assert_eq!(tree.nodes[1].max_excess, 6);
+
+        // right child of the root
+        // assert_eq!(tree.nodes[2].total_excess, -4);
     }
 }
