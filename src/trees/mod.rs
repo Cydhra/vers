@@ -219,11 +219,8 @@ impl MinMaxTree {
             if let Some(parent) = parent {
                 self.do_fwd_upwards_search(parent, relative_excess)
             } else {
-                if self.min_excess(0) <= relative_excess && relative_excess <= self.max_excess(0) {
-                    self.do_fwd_downwards_search(0, relative_excess)
-                } else {
-                    None
-                }
+                // if parent is the root, there is no further node to the right of us, no result
+                None
             }
         } else {
             let right_sibling = self.right_sibling(node);
@@ -236,11 +233,15 @@ impl MinMaxTree {
                     self.do_fwd_downwards_search(right_sibling.get(), relative_excess)
                 } else {
                     // go up from the right sibling, adjusting the relative excess to the end of the right sibling
-                    // todo technically we can go to the parent directly, but this is more readable
-                    self.do_fwd_upwards_search(
-                        right_sibling,
-                        relative_excess - self.total_excess(right_sibling.get()),
-                    )
+                    let parent = NonZeroUsize::new(self.parent(node).unwrap());
+                    if let Some(parent) = parent {
+                        self.do_fwd_upwards_search(
+                            parent,
+                            relative_excess - self.total_excess(right_sibling.get()),
+                        )
+                    } else {
+                        None
+                    }
                 }
             } else {
                 // no right sibling, the tree ends here
@@ -251,6 +252,7 @@ impl MinMaxTree {
 
     /// Search down the tree for the block that contains the relative excess. We assume that the
     /// relative excess is within the range of the block that this method is called on.
+    /// We assume the excess is relative to the beginning of the block.
     fn do_fwd_downwards_search(&self, node: usize, relative_excess: isize) -> Option<NonZeroUsize> {
         debug_assert!(node < self.nodes.len());
 
@@ -273,7 +275,10 @@ impl MinMaxTree {
                     if self.min_excess(right_child.get()) <= relative_excess
                         && relative_excess <= self.max_excess(right_child.get())
                     {
-                        self.do_fwd_downwards_search(right_child.get(), relative_excess)
+                        self.do_fwd_downwards_search(
+                            right_child.get(),
+                            relative_excess - self.total_excess(left_child.get()),
+                        )
                     } else {
                         unreachable!();
                     }
@@ -496,5 +501,22 @@ mod tests {
         let block = tree.fwd_search(NonZeroUsize::new(8).unwrap(), -2);
         assert!(block.is_some());
         assert_eq!(block.unwrap().get(), 10);
+    }
+
+    #[test]
+    fn test_fwd_search_relative_offsets() {
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 0, 1, 0, 1, 1, // excess 2
+            1, 0, 1, 0, // min excess 0, max excess 1
+            0, 0, 0, 0,
+        ]);
+
+        let tree = MinMaxTree::excess_tree(&bv, 4);
+
+        // if the relative excess is calculated wrong, it will find block 5, since -1 + 2 = 1,
+        // which is the max excess in block 5. Correct calculation of relative excess is -1 - 2 = -3
+        let block = tree.fwd_search(NonZeroUsize::new(3).unwrap(), -1);
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().get(), 6);
     }
 }
