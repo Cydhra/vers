@@ -5,13 +5,13 @@ use std::num::NonZeroUsize;
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
 struct MinMaxNode {
     /// excess from l..=r in the node [l, r]
-    total_excess: isize,
+    total_excess: i64,
 
     /// minimum (relative) excess in the node [l, r]
-    min_excess: isize,
+    min_excess: i64,
 
     /// maximum (relative) excess in the node [l, r]
-    max_excess: isize,
+    max_excess: i64,
 }
 
 /// A binary min-max tree that is part of the BpTree data structure.
@@ -98,15 +98,15 @@ impl MinMaxTree {
         Self { nodes }
     }
 
-    pub(crate) fn total_excess(&self, index: usize) -> isize {
+    pub(crate) fn total_excess(&self, index: usize) -> i64 {
         self.nodes[index].total_excess
     }
 
-    pub(crate) fn min_excess(&self, index: usize) -> isize {
+    pub(crate) fn min_excess(&self, index: usize) -> i64 {
         self.nodes[index].min_excess
     }
 
-    pub(crate) fn max_excess(&self, index: usize) -> isize {
+    pub(crate) fn max_excess(&self, index: usize) -> i64 {
         self.nodes[index].max_excess
     }
 
@@ -193,7 +193,7 @@ impl MinMaxTree {
     pub(crate) fn fwd_search(
         &self,
         begin: NonZeroUsize,
-        relative_excess: isize,
+        relative_excess: i64,
     ) -> Option<NonZeroUsize> {
         if begin.get() >= self.nodes.len() {
             return None;
@@ -215,7 +215,7 @@ impl MinMaxTree {
     pub(crate) fn bwd_search(
         &self,
         begin: NonZeroUsize,
-        relative_excess: isize,
+        relative_excess: i64,
     ) -> Option<NonZeroUsize> {
         if begin.get() >= self.nodes.len() {
             return None;
@@ -229,7 +229,7 @@ impl MinMaxTree {
     fn do_fwd_upwards_search(
         &self,
         node: NonZeroUsize,
-        relative_excess: isize,
+        relative_excess: i64,
     ) -> Option<NonZeroUsize> {
         debug_assert!(node.get() < self.nodes.len());
 
@@ -273,7 +273,7 @@ impl MinMaxTree {
     /// Search down the tree for the block that contains the relative excess. We assume that the
     /// relative excess is within the range of the block that this method is called on.
     /// We assume the excess is relative to the beginning of the block.
-    fn do_fwd_downwards_search(&self, node: usize, relative_excess: isize) -> Option<NonZeroUsize> {
+    fn do_fwd_downwards_search(&self, node: usize, relative_excess: i64) -> Option<NonZeroUsize> {
         debug_assert!(node < self.nodes.len());
 
         // if we arrived at a leaf, we are done. Since we assume that the relative excess is within
@@ -317,7 +317,7 @@ impl MinMaxTree {
     fn do_bwd_upwards_search(
         &self,
         node: NonZeroUsize,
-        relative_excess: isize,
+        relative_excess: i64,
     ) -> Option<NonZeroUsize> {
         debug_assert!(node.get() < self.nodes.len());
 
@@ -363,7 +363,7 @@ impl MinMaxTree {
     /// Search down the tree for the block that contains the relative excess. We assume that the
     /// relative excess is within the range of the block that this method is called on.
     /// We assume the excess is relative to the end of the block.
-    fn do_bwd_downwards_search(&self, node: usize, relative_excess: isize) -> Option<NonZeroUsize> {
+    fn do_bwd_downwards_search(&self, node: usize, relative_excess: i64) -> Option<NonZeroUsize> {
         debug_assert!(node < self.nodes.len());
 
         // if we arrived at a leaf, we are done. Since we assume that the relative excess is within
