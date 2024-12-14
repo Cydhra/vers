@@ -18,12 +18,12 @@ struct MinMaxNode {
 
 /// A binary min-max tree that is part of the BpTree data structure.
 #[derive(Clone, Debug, Default)]
-struct MinMaxTree {
+pub(crate) struct MinMaxTree {
     nodes: Vec<MinMaxNode>,
 }
 
 impl MinMaxTree {
-    fn excess_tree(bit_vec: &BitVec, block_size: usize) -> Self {
+    pub(crate) fn excess_tree(bit_vec: &BitVec, block_size: usize) -> Self {
         if bit_vec.is_empty() {
             return Self::default();
         }
@@ -100,19 +100,19 @@ impl MinMaxTree {
         Self { nodes }
     }
 
-    fn total_excess(&self, index: usize) -> isize {
+    pub(crate) fn total_excess(&self, index: usize) -> isize {
         self.nodes[index].total_excess
     }
 
-    fn min_excess(&self, index: usize) -> isize {
+    pub(crate) fn min_excess(&self, index: usize) -> isize {
         self.nodes[index].min_excess
     }
 
-    fn max_excess(&self, index: usize) -> isize {
+    pub(crate) fn max_excess(&self, index: usize) -> isize {
         self.nodes[index].max_excess
     }
 
-    fn parent(&self, index: NonZeroUsize) -> Option<usize> {
+    pub(crate) fn parent(&self, index: NonZeroUsize) -> Option<usize> {
         if index.get() < self.nodes.len() {
             Some((index.get() - 1) / 2)
         } else {
@@ -121,7 +121,7 @@ impl MinMaxTree {
     }
 
     /// Get the index of the left child of the node at `index` if it exists
-    fn left_child(&self, index: usize) -> Option<NonZeroUsize> {
+    pub(crate) fn left_child(&self, index: usize) -> Option<NonZeroUsize> {
         if index * 2 + 1 < self.nodes.len() {
             NonZeroUsize::new(index * 2 + 1)
         } else {
@@ -130,7 +130,7 @@ impl MinMaxTree {
     }
 
     /// Get the index of the right child of the node at `index` if it exists
-    fn right_child(&self, index: usize) -> Option<NonZeroUsize> {
+    pub(crate) fn right_child(&self, index: usize) -> Option<NonZeroUsize> {
         if index * 2 + 2 < self.nodes.len() {
             NonZeroUsize::new(index * 2 + 2)
         } else {
@@ -139,7 +139,7 @@ impl MinMaxTree {
     }
 
     /// Get the index of the right sibling of the node at `index` if it exists
-    fn right_sibling(&self, index: NonZeroUsize) -> Option<NonZeroUsize> {
+    pub(crate) fn right_sibling(&self, index: NonZeroUsize) -> Option<NonZeroUsize> {
         if index.get() % 2 == 1 {
             if index.get() + 1 >= self.nodes.len() {
                 None
@@ -152,7 +152,7 @@ impl MinMaxTree {
     }
 
     /// Get the index of the left sibling of the node at `index` if it exists
-    fn left_sibling(&self, index: NonZeroUsize) -> Option<NonZeroUsize> {
+    pub(crate) fn left_sibling(&self, index: NonZeroUsize) -> Option<NonZeroUsize> {
         if index.get() % 2 == 0 {
             // index is at least 2
             NonZeroUsize::new(index.get() - 1)
@@ -162,11 +162,127 @@ impl MinMaxTree {
     }
 
     /// Get the index of the root node if it exists
-    fn root(&self) -> Option<usize> {
+    pub(crate) fn root(&self) -> Option<usize> {
         if self.nodes.is_empty() {
             None
         } else {
             Some(0)
+        }
+    }
+
+    /// Check if the node at `index` is a left child, or would be if it existed
+    pub(crate) fn is_left_child(&self, index: NonZeroUsize) -> bool {
+        index.get() % 2 == 1
+    }
+
+    /// Check if the given node index is a leaf. A leaf for the purpose of this method is defined
+    /// as a node in the last level of the tree. There may be other nodes without children in the
+    /// tree, but they are not considered leaves.
+    pub(crate) fn is_leaf(&self, index: usize) -> bool {
+        index >= (self.nodes.len() / 2).next_power_of_two() - 1
+    }
+
+    /// Forward search for the leaf node that contains the next position with the given excess.
+    /// The search only searches for the block, not the exact position.
+    /// It further assumes that the beginning block does not contain the position, so the search
+    /// will never return the starting block.
+    ///
+    /// # Parameters
+    /// - `begin`: The index of the leaf block to start the search from.
+    /// - `relative_excess`: The excess to search for relative to the excess at the end of the block.
+    ///    That is, if a query at index `i` seeks excess `x`, and between `i` and the end of the
+    ///    block `j` there is excess `y`, then the relative excess is `x - y`.
+    pub(crate) fn fwd_search(
+        &self,
+        begin: NonZeroUsize,
+        relative_excess: isize,
+    ) -> Option<NonZeroUsize> {
+        if begin.get() >= self.nodes.len() {
+            return None;
+        }
+
+        self.do_fwd_upwards_search(begin, relative_excess)
+    }
+
+    /// Search up the tree for the block that contains the relative excess. We assume that the
+    /// relative excess is not within the range of the block that this method is called on.
+    fn do_fwd_upwards_search(
+        &self,
+        node: NonZeroUsize,
+        relative_excess: isize,
+    ) -> Option<NonZeroUsize> {
+        debug_assert!(node.get() < self.nodes.len());
+
+        // if this is a right node, we need to go up
+        if !self.is_left_child(node) {
+            let parent = NonZeroUsize::new(self.parent(node).unwrap());
+            if let Some(parent) = parent {
+                self.do_fwd_upwards_search(parent, relative_excess)
+            } else {
+                if self.min_excess(0) <= relative_excess && relative_excess <= self.max_excess(0) {
+                    self.do_fwd_downwards_search(0, relative_excess)
+                } else {
+                    None
+                }
+            }
+        } else {
+            let right_sibling = self.right_sibling(node);
+            // if we have a right sibling, check whether it contains the excess
+            if let Some(right_sibling) = right_sibling {
+                // if it does, we can go down (relative excess is already relative to end of current block)
+                if self.min_excess(right_sibling.get()) <= relative_excess
+                    && relative_excess <= self.max_excess(right_sibling.get())
+                {
+                    self.do_fwd_downwards_search(right_sibling.get(), relative_excess)
+                } else {
+                    // go up from the right sibling, adjusting the relative excess to the end of the right sibling
+                    // todo technically we can go to the parent directly, but this is more readable
+                    self.do_fwd_upwards_search(
+                        right_sibling,
+                        relative_excess - self.total_excess(right_sibling.get()),
+                    )
+                }
+            } else {
+                // no right sibling, the tree ends here
+                None
+            }
+        }
+    }
+
+    /// Search down the tree for the block that contains the relative excess. We assume that the
+    /// relative excess is within the range of the block that this method is called on.
+    fn do_fwd_downwards_search(&self, node: usize, relative_excess: isize) -> Option<NonZeroUsize> {
+        debug_assert!(node < self.nodes.len());
+
+        // if we arrived at a leaf, we are done. Since we assume that the relative excess is within
+        // the range of the block given to the method call, we can return the node.
+        if self.is_leaf(node) {
+            return NonZeroUsize::new(node);
+        }
+
+        let left_child = self.left_child(node);
+        if let Some(left_child) = left_child {
+            if self.min_excess(left_child.get()) <= relative_excess
+                && relative_excess <= self.max_excess(left_child.get())
+            {
+                self.do_fwd_downwards_search(left_child.get(), relative_excess)
+            } else {
+                let right_child = self.right_child(node);
+                if let Some(right_child) = right_child {
+                    let relative_excess = relative_excess - self.total_excess(left_child.get());
+                    if self.min_excess(right_child.get()) <= relative_excess
+                        && relative_excess <= self.max_excess(right_child.get())
+                    {
+                        self.do_fwd_downwards_search(right_child.get(), relative_excess)
+                    } else {
+                        unreachable!();
+                    }
+                } else {
+                    unreachable!();
+                }
+            }
+        } else {
+            unreachable!();
         }
     }
 }
@@ -315,5 +431,44 @@ mod tests {
         assert_eq!(tree.left_sibling(NonZeroUsize::new(1).unwrap()), None);
         assert_eq!(tree.right_sibling(NonZeroUsize::new(1).unwrap()), None);
         assert_eq!(tree.parent(NonZeroUsize::new(1).unwrap()), None);
+    }
+
+    #[test]
+    fn test_simple_fwd_search() {
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+        ]);
+
+        let tree = MinMaxTree::excess_tree(&bv, 8);
+
+        assert_eq!(tree.nodes.len(), 6);
+        assert_eq!(tree.total_excess(0), 0); // tree should be balanced
+
+        // fwd search from the first block (index 3)
+        for i in 0..8 {
+            let block = tree.fwd_search(NonZeroUsize::new(3).unwrap(), -8 + i);
+            assert!(block.is_some(), "block for query {} not found", i);
+            assert_eq!(
+                block.unwrap().get(),
+                5,
+                "query {} did not return block 5 but {}",
+                i,
+                block.unwrap()
+            );
+        }
+
+        // fwd search from the second block (index 4), searching the closing parenthesis of the
+        // enclosing parentheses pair of the first position in the block (i.e. relative excess -1
+        // from the end of the block)
+        let block = tree.fwd_search(NonZeroUsize::new(4).unwrap(), -1);
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().get(), 5);
+
+        // fwd search a position that is not in the tree, i.e. -9 from the first block
+        let block = tree.fwd_search(NonZeroUsize::new(3).unwrap(), -9);
+        assert!(block.is_none());
     }
 }
