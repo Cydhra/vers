@@ -1,5 +1,5 @@
+use crate::trees::mmt::MinMaxTree;
 use crate::RsVec;
-use crate::trees::MinMaxTree;
 
 /// A succinct binary tree data structure.
 pub struct BpTree {
