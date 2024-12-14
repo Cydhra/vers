@@ -196,16 +196,16 @@ impl MinMaxTree {
     /// - `relative_excess`: The excess to search for relative to the excess at the end of the block.
     ///    That is, if a query at index `i` seeks excess `x`, and between `i` and the end of the
     ///    block `j` there is excess `y`, then the relative excess is `x - y`.
-    pub(crate) fn fwd_search(
-        &self,
-        begin: NonZeroUsize,
-        relative_excess: i64,
-    ) -> Option<NonZeroUsize> {
-        if begin.get() >= self.nodes.len() {
+    pub(crate) fn fwd_search(&self, begin: usize, relative_excess: i64) -> Option<(usize, i64)> {
+        if begin >= self.nodes.len() {
             return None;
         }
 
-        self.do_fwd_upwards_search(begin + self.first_leaf(), relative_excess)
+        self.do_fwd_upwards_search(
+            NonZeroUsize::new(begin + self.first_leaf()).unwrap(),
+            relative_excess,
+        )
+        .and_then(|(node, relative_excess)| Some((node.get() - self.first_leaf(), relative_excess)))
     }
 
     /// Backward search for the leaf node that contains the closest position with the given excess.
@@ -218,15 +218,15 @@ impl MinMaxTree {
     /// - `relative_excess`: The excess to search for relative to the excess at the end of the block.
     ///    That is, if a query at index `i` seeks excess `x`, and between `i` and the start of the
     ///    block `j` there is excess `y`, then the relative excess is `x - y`.
-    pub(crate) fn bwd_search(
-        &self,
-        begin: NonZeroUsize,
-        relative_excess: i64,
-    ) -> Option<NonZeroUsize> {
-        if begin.get() >= self.nodes.len() {
+    pub(crate) fn bwd_search(&self, begin: usize, relative_excess: i64) -> Option<(usize, i64)> {
+        if begin >= self.nodes.len() {
             return None;
         }
-        self.do_bwd_upwards_search(begin + self.first_leaf(), relative_excess)
+        self.do_bwd_upwards_search(
+            NonZeroUsize::new(begin + self.first_leaf()).unwrap(),
+            relative_excess,
+        )
+        .and_then(|(node, relative_excess)| Some((node.get() - self.first_leaf(), relative_excess)))
     }
 
     /// Search up the tree for the block that contains the relative excess. We assume that the
@@ -236,7 +236,7 @@ impl MinMaxTree {
         &self,
         node: NonZeroUsize,
         relative_excess: i64,
-    ) -> Option<NonZeroUsize> {
+    ) -> Option<(NonZeroUsize, i64)> {
         debug_assert!(node.get() < self.nodes.len());
 
         // if this is a right node, we need to go up
@@ -279,13 +279,17 @@ impl MinMaxTree {
     /// Search down the tree for the block that contains the relative excess. We assume that the
     /// relative excess is within the range of the block that this method is called on.
     /// We assume the excess is relative to the beginning of the block.
-    fn do_fwd_downwards_search(&self, node: usize, relative_excess: i64) -> Option<NonZeroUsize> {
+    fn do_fwd_downwards_search(
+        &self,
+        node: usize,
+        relative_excess: i64,
+    ) -> Option<(NonZeroUsize, i64)> {
         debug_assert!(node < self.nodes.len());
 
         // if we arrived at a leaf, we are done. Since we assume that the relative excess is within
         // the range of the block given to the method call, we can return the node.
         if self.is_leaf(node) {
-            return NonZeroUsize::new(node);
+            return NonZeroUsize::new(node).and_then(|node| Some((node, relative_excess)));
         }
 
         let left_child = self.left_child(node);
@@ -324,7 +328,7 @@ impl MinMaxTree {
         &self,
         node: NonZeroUsize,
         relative_excess: i64,
-    ) -> Option<NonZeroUsize> {
+    ) -> Option<(NonZeroUsize, i64)> {
         debug_assert!(node.get() < self.nodes.len());
 
         // if this is a left node, we need to go up
@@ -369,13 +373,17 @@ impl MinMaxTree {
     /// Search down the tree for the block that contains the relative excess. We assume that the
     /// relative excess is within the range of the block that this method is called on.
     /// We assume the excess is relative to the end of the block.
-    fn do_bwd_downwards_search(&self, node: usize, relative_excess: i64) -> Option<NonZeroUsize> {
+    fn do_bwd_downwards_search(
+        &self,
+        node: usize,
+        relative_excess: i64,
+    ) -> Option<(NonZeroUsize, i64)> {
         debug_assert!(node < self.nodes.len());
 
         // if we arrived at a leaf, we are done. Since we assume that the relative excess is within
         // the range of the block given to the method call, we can return the node.
         if self.is_leaf(node) {
-            return NonZeroUsize::new(node);
+            return NonZeroUsize::new(node).and_then(|node| Some((node, relative_excess)));
         }
 
         let right_child = self.right_child(node);
@@ -571,26 +579,26 @@ mod tests {
 
         // fwd search from the first block (index 3)
         for i in 0..8 {
-            let block = tree.fwd_search(NonZeroUsize::new(3).unwrap(), -i - 1);
+            let block = tree.fwd_search(0, -i - 1);
             assert!(block.is_some(), "block for query {} not found", i);
             assert_eq!(
-                block.unwrap().get(),
-                5,
-                "query {} did not return block 5 but {}",
+                block.unwrap().0,
+                2,
+                "query {} did not return block 2 but {}",
                 i,
-                block.unwrap()
+                block.unwrap().0
             );
         }
 
         // fwd search from the second block (index 4), searching the closing parenthesis of the
         // enclosing parentheses pair of the first position in the block (i.e. relative excess -1
         // from the end of the block)
-        let block = tree.fwd_search(NonZeroUsize::new(4).unwrap(), -1);
+        let block = tree.fwd_search(1, -1);
         assert!(block.is_some());
-        assert_eq!(block.unwrap().get(), 5);
+        assert_eq!(block.unwrap().0, 2);
 
         // fwd search a position that is not in the tree, e.g. -9 from the first block
-        let block = tree.fwd_search(NonZeroUsize::new(3).unwrap(), -9);
+        let block = tree.fwd_search(0, -9);
         assert!(block.is_none());
     }
 
@@ -611,13 +619,13 @@ mod tests {
         assert_eq!(tree.total_excess(0), 0); // tree should be balanced
 
         // fwd search something where the result is not the last node
-        let block = tree.fwd_search(NonZeroUsize::new(9).unwrap(), 1);
+        let block = tree.fwd_search(2, 1);
         assert!(block.is_some());
-        assert_eq!(block.unwrap().get(), 10);
+        assert_eq!(block.unwrap().0, 3);
 
-        let block = tree.fwd_search(NonZeroUsize::new(8).unwrap(), -2);
+        let block = tree.fwd_search(1, -2);
         assert!(block.is_some());
-        assert_eq!(block.unwrap().get(), 10);
+        assert_eq!(block.unwrap().0, 3);
     }
 
     #[test]
@@ -634,9 +642,9 @@ mod tests {
 
         // if the relative excess is calculated wrong, it will find block 5, since -1 + 2 = 1,
         // which is the max excess in block 5. Correct calculation of relative excess is -1 - 2 = -3
-        let block = tree.fwd_search(NonZeroUsize::new(3).unwrap(), -1);
+        let block = tree.fwd_search(0, -1);
         assert!(block.is_some());
-        assert_eq!(block.unwrap().get(), 6);
+        assert_eq!(block.unwrap().0, 3);
     }
 
     #[test]
@@ -655,26 +663,26 @@ mod tests {
 
         // bwd search from the last block (index 5)
         for i in 0..8 {
-            let block = tree.bwd_search(NonZeroUsize::new(5).unwrap(), -i - 1);
+            let block = tree.bwd_search(2, -i - 1);
             assert!(block.is_some(), "block for query {} not found", i);
             assert_eq!(
-                block.unwrap().get(),
-                3,
-                "query {} did not return block 3 but {}",
+                block.unwrap().0,
+                0,
+                "query {} did not return block 0 but {}",
                 i,
-                block.unwrap()
+                block.unwrap().0
             );
         }
 
-        // bwd search from the second block (index 4), searching the opening parenthesis of the
+        // bwd search from the second block, searching the opening parenthesis of the
         // enclosing parentheses pair of the last position in the block (i.e. relative excess -1
         // from the start of the block)
-        let block = tree.bwd_search(NonZeroUsize::new(4).unwrap(), -1);
+        let block = tree.bwd_search(1, -1);
         assert!(block.is_some());
-        assert_eq!(block.unwrap().get(), 3);
+        assert_eq!(block.unwrap().0, 0);
 
         // bwd search a position that is not in the tree, e.g. -9 from the last block
-        let block = tree.fwd_search(NonZeroUsize::new(5).unwrap(), -9);
+        let block = tree.fwd_search(2, -9);
         assert!(block.is_none());
     }
 
@@ -695,13 +703,13 @@ mod tests {
         assert_eq!(tree.total_excess(0), 0); // tree should be balanced
 
         // bwd search something where the result is not the first node
-        let block = tree.bwd_search(NonZeroUsize::new(10).unwrap(), -1);
+        let block = tree.bwd_search(3, -1);
         assert!(block.is_some());
-        assert_eq!(block.unwrap().get(), 9);
+        assert_eq!(block.unwrap().0, 2);
 
-        let block = tree.bwd_search(NonZeroUsize::new(10).unwrap(), -3);
+        let block = tree.bwd_search(3, -3);
         assert!(block.is_some());
-        assert_eq!(block.unwrap().get(), 8);
+        assert_eq!(block.unwrap().0, 1);
     }
 
     #[test]
@@ -716,8 +724,8 @@ mod tests {
 
         let tree = MinMaxTree::excess_tree(&bv, 4);
 
-        let block = tree.bwd_search(NonZeroUsize::new(6).unwrap(), -4);
+        let block = tree.bwd_search(3, -4);
         assert!(block.is_some());
-        assert_eq!(block.unwrap().get(), 3);
+        assert_eq!(block.unwrap().0, 0);
     }
 }
