@@ -505,8 +505,10 @@ mod tests {
 
     #[test]
     fn test_fwd_search_relative_offsets() {
+        #[rustfmt::skip]
         let bv = BitVec::from_bits(&[
-            1, 1, 1, 0, 1, 0, 1, 1, // excess 2
+            1, 1, 1, 0,
+            1, 0, 1, 1, // excess 2
             1, 0, 1, 0, // min excess 0, max excess 1
             0, 0, 0, 0,
         ]);
