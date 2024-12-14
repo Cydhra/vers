@@ -18,12 +18,12 @@ struct MinMaxNode {
 
 /// A binary min-max tree that is part of the BpTree data structure.
 #[derive(Clone, Debug, Default)]
-pub struct MinMaxTree {
+struct MinMaxTree {
     nodes: Vec<MinMaxNode>,
 }
 
 impl MinMaxTree {
-    pub fn excess_tree(bit_vec: &BitVec, block_size: usize) -> Self {
+    fn excess_tree(bit_vec: &BitVec, block_size: usize) -> Self {
         if bit_vec.is_empty() {
             return Self::default();
         }
@@ -100,19 +100,19 @@ impl MinMaxTree {
         Self { nodes }
     }
 
-    pub fn total_excess(&self, index: usize) -> isize {
+    fn total_excess(&self, index: usize) -> isize {
         self.nodes[index].total_excess
     }
 
-    pub fn min_excess(&self, index: usize) -> isize {
+    fn min_excess(&self, index: usize) -> isize {
         self.nodes[index].min_excess
     }
 
-    pub fn max_excess(&self, index: usize) -> isize {
+    fn max_excess(&self, index: usize) -> isize {
         self.nodes[index].max_excess
     }
 
-    pub fn parent(&self, index: NonZeroUsize) -> Option<usize> {
+    fn parent(&self, index: NonZeroUsize) -> Option<usize> {
         if index.get() < self.nodes.len() {
             Some((index.get() - 1) / 2)
         } else {
@@ -121,7 +121,7 @@ impl MinMaxTree {
     }
 
     /// Get the index of the left child of the node at `index` if it exists
-    pub fn left_child(&self, index: usize) -> Option<NonZeroUsize> {
+    fn left_child(&self, index: usize) -> Option<NonZeroUsize> {
         if index * 2 + 1 < self.nodes.len() {
             NonZeroUsize::new(index * 2 + 1)
         } else {
@@ -130,7 +130,7 @@ impl MinMaxTree {
     }
 
     /// Get the index of the right child of the node at `index` if it exists
-    pub fn right_child(&self, index: usize) -> Option<NonZeroUsize> {
+    fn right_child(&self, index: usize) -> Option<NonZeroUsize> {
         if index * 2 + 2 < self.nodes.len() {
             NonZeroUsize::new(index * 2 + 2)
         } else {
@@ -139,7 +139,7 @@ impl MinMaxTree {
     }
 
     /// Get the index of the right sibling of the node at `index` if it exists
-    pub fn right_sibling(&self, index: NonZeroUsize) -> Option<NonZeroUsize> {
+    fn right_sibling(&self, index: NonZeroUsize) -> Option<NonZeroUsize> {
         if index.get() % 2 == 1 {
             if index.get() + 1 >= self.nodes.len() {
                 None
@@ -152,7 +152,7 @@ impl MinMaxTree {
     }
 
     /// Get the index of the left sibling of the node at `index` if it exists
-    pub fn left_sibling(&self, index: NonZeroUsize) -> Option<NonZeroUsize> {
+    fn left_sibling(&self, index: NonZeroUsize) -> Option<NonZeroUsize> {
         if index.get() % 2 == 0 {
             // index is at least 2
             NonZeroUsize::new(index.get() - 1)
@@ -162,7 +162,7 @@ impl MinMaxTree {
     }
 
     /// Get the index of the root node if it exists
-    pub fn root(&self) -> Option<usize> {
+    fn root(&self) -> Option<usize> {
         if self.nodes.is_empty() {
             None
         } else {
