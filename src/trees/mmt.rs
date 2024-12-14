@@ -173,11 +173,17 @@ impl MinMaxTree {
         index.get() % 2 == 1
     }
 
+    /// Get the index of the first leaf node in the tree
+    fn first_leaf(&self) -> usize {
+        debug_assert!(self.nodes.len() > 0);
+        (self.nodes.len() / 2).next_power_of_two() - 1
+    }
+
     /// Check if the given node index is a leaf. A leaf for the purpose of this method is defined
     /// as a node in the last level of the tree. There may be other nodes without children in the
     /// tree, but they are not considered leaves.
     pub(crate) fn is_leaf(&self, index: usize) -> bool {
-        index >= (self.nodes.len() / 2).next_power_of_two() - 1
+        index >= self.first_leaf()
     }
 
     /// Forward search for the leaf node that contains the next position with the given excess.
@@ -186,7 +192,7 @@ impl MinMaxTree {
     /// will never return the starting block.
     ///
     /// # Parameters
-    /// - `begin`: The index of the leaf block to start the search from.
+    /// - `begin`: The index of the leaf block to start the search from (the first leaf is indexed with 0).
     /// - `relative_excess`: The excess to search for relative to the excess at the end of the block.
     ///    That is, if a query at index `i` seeks excess `x`, and between `i` and the end of the
     ///    block `j` there is excess `y`, then the relative excess is `x - y`.
@@ -199,7 +205,7 @@ impl MinMaxTree {
             return None;
         }
 
-        self.do_fwd_upwards_search(begin, relative_excess)
+        self.do_fwd_upwards_search(begin + self.first_leaf(), relative_excess)
     }
 
     /// Backward search for the leaf node that contains the closest position with the given excess.
@@ -208,7 +214,7 @@ impl MinMaxTree {
     /// will never return the starting block.
     ///
     /// # Parameters
-    /// - `begin`: The index of the leaf block to start the search from.
+    /// - `begin`: The index of the leaf block to start the search from (the first leaf is indexed with 0).
     /// - `relative_excess`: The excess to search for relative to the excess at the end of the block.
     ///    That is, if a query at index `i` seeks excess `x`, and between `i` and the start of the
     ///    block `j` there is excess `y`, then the relative excess is `x - y`.
@@ -220,7 +226,7 @@ impl MinMaxTree {
         if begin.get() >= self.nodes.len() {
             return None;
         }
-        self.do_bwd_upwards_search(begin, relative_excess)
+        self.do_bwd_upwards_search(begin + self.first_leaf(), relative_excess)
     }
 
     /// Search up the tree for the block that contains the relative excess. We assume that the
