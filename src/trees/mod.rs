@@ -449,7 +449,7 @@ mod tests {
 
         // fwd search from the first block (index 3)
         for i in 0..8 {
-            let block = tree.fwd_search(NonZeroUsize::new(3).unwrap(), -8 + i);
+            let block = tree.fwd_search(NonZeroUsize::new(3).unwrap(), -i - 1);
             assert!(block.is_some(), "block for query {} not found", i);
             assert_eq!(
                 block.unwrap().get(),
