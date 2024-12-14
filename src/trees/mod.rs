@@ -471,4 +471,30 @@ mod tests {
         let block = tree.fwd_search(NonZeroUsize::new(3).unwrap(), -9);
         assert!(block.is_none());
     }
+
+    #[test]
+    fn test_fwd_search_with_multiple_blocks() {
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 0, 0, 0,
+            1, 1, 1, 1, 1, 0, 0, 0,
+            0, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+        ]);
+
+        let tree = MinMaxTree::excess_tree(&bv, 8);
+
+        assert_eq!(tree.nodes.len(), 12);
+        assert_eq!(tree.total_excess(0), 0); // tree should be balanced
+
+        // fwd search something where the result is not the last node
+        let block = tree.fwd_search(NonZeroUsize::new(9).unwrap(), 1);
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().get(), 10);
+
+        let block = tree.fwd_search(NonZeroUsize::new(8).unwrap(), -2);
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().get(), 10);
+    }
 }
