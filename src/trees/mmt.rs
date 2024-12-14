@@ -202,8 +202,30 @@ impl MinMaxTree {
         self.do_fwd_upwards_search(begin, relative_excess)
     }
 
+    /// Backward search for the leaf node that contains the closest position with the given excess.
+    /// The search only searches for the block, not the exact position.
+    /// It further assumes that the beginning block does not contain the position, so the search
+    /// will never return the starting block.
+    ///
+    /// # Parameters
+    /// - `begin`: The index of the leaf block to start the search from.
+    /// - `relative_excess`: The excess to search for relative to the excess at the end of the block.
+    ///    That is, if a query at index `i` seeks excess `x`, and between `i` and the start of the
+    ///    block `j` there is excess `y`, then the relative excess is `x - y`.
+    pub(crate) fn bwd_search(
+        &self,
+        begin: NonZeroUsize,
+        relative_excess: isize,
+    ) -> Option<NonZeroUsize> {
+        if begin.get() >= self.nodes.len() {
+            return None;
+        }
+        self.do_bwd_upwards_search(begin, relative_excess)
+    }
+
     /// Search up the tree for the block that contains the relative excess. We assume that the
     /// relative excess is not within the range of the block that this method is called on.
+    /// We assume the excess is relative to the end of the block.
     fn do_fwd_upwards_search(
         &self,
         node: NonZeroUsize,
@@ -277,6 +299,97 @@ impl MinMaxTree {
                             right_child.get(),
                             relative_excess - self.total_excess(left_child.get()),
                         )
+                    } else {
+                        unreachable!();
+                    }
+                } else {
+                    unreachable!();
+                }
+            }
+        } else {
+            unreachable!();
+        }
+    }
+
+    /// Search up the tree for the block that contains the relative excess. We assume that the
+    /// relative excess is not within the range of the block that this method is called on.
+    /// We assume the excess is relative to the beginning of the block.
+    fn do_bwd_upwards_search(
+        &self,
+        node: NonZeroUsize,
+        relative_excess: isize,
+    ) -> Option<NonZeroUsize> {
+        debug_assert!(node.get() < self.nodes.len());
+
+        // if this is a left node, we need to go up
+        if self.is_left_child(node) {
+            let parent = NonZeroUsize::new(self.parent(node).unwrap());
+            if let Some(parent) = parent {
+                self.do_bwd_upwards_search(parent, relative_excess)
+            } else {
+                // if parent is the root, there is no further node to the left of us, no result
+                None
+            }
+        } else {
+            let left_sibling = self.left_sibling(node);
+            // if we have a left sibling, check whether it contains the excess
+            if let Some(left_sibling) = left_sibling {
+                // if it does, we can go down (relative excess is already relative to start of current block)
+                if self.min_excess(left_sibling.get())
+                    <= relative_excess + self.total_excess(left_sibling.get())
+                    && relative_excess + self.total_excess(left_sibling.get())
+                        <= self.max_excess(left_sibling.get())
+                {
+                    self.do_bwd_downwards_search(left_sibling.get(), relative_excess)
+                } else {
+                    // go up from the left sibling, adjusting the relative excess to the start of the left sibling
+                    let parent = NonZeroUsize::new(self.parent(node).unwrap());
+                    if let Some(parent) = parent {
+                        self.do_bwd_upwards_search(
+                            parent,
+                            relative_excess + self.total_excess(left_sibling.get()),
+                        )
+                    } else {
+                        None
+                    }
+                }
+            } else {
+                // no right sibling, the tree ends here
+                None
+            }
+        }
+    }
+
+    /// Search down the tree for the block that contains the relative excess. We assume that the
+    /// relative excess is within the range of the block that this method is called on.
+    /// We assume the excess is relative to the end of the block.
+    fn do_bwd_downwards_search(&self, node: usize, relative_excess: isize) -> Option<NonZeroUsize> {
+        debug_assert!(node < self.nodes.len());
+
+        // if we arrived at a leaf, we are done. Since we assume that the relative excess is within
+        // the range of the block given to the method call, we can return the node.
+        if self.is_leaf(node) {
+            return NonZeroUsize::new(node);
+        }
+
+        let right_child = self.right_child(node);
+        if let Some(right_child) = right_child {
+            if self.min_excess(right_child.get())
+                <= relative_excess + self.total_excess(right_child.get())
+                && relative_excess + self.total_excess(right_child.get())
+                    <= self.max_excess(right_child.get())
+            {
+                self.do_bwd_downwards_search(right_child.get(), relative_excess)
+            } else {
+                let left_child = self.left_child(node);
+                if let Some(left_child) = left_child {
+                    let relative_excess = relative_excess + self.total_excess(right_child.get());
+                    if self.min_excess(left_child.get())
+                        <= relative_excess + self.total_excess(left_child.get())
+                        && relative_excess + self.total_excess(left_child.get())
+                            <= self.max_excess(left_child.get())
+                    {
+                        self.do_bwd_downwards_search(left_child.get(), relative_excess)
                     } else {
                         unreachable!();
                     }
@@ -470,7 +583,7 @@ mod tests {
         assert!(block.is_some());
         assert_eq!(block.unwrap().get(), 5);
 
-        // fwd search a position that is not in the tree, i.e. -9 from the first block
+        // fwd search a position that is not in the tree, e.g. -9 from the first block
         let block = tree.fwd_search(NonZeroUsize::new(3).unwrap(), -9);
         assert!(block.is_none());
     }
@@ -518,5 +631,87 @@ mod tests {
         let block = tree.fwd_search(NonZeroUsize::new(3).unwrap(), -1);
         assert!(block.is_some());
         assert_eq!(block.unwrap().get(), 6);
+    }
+
+    #[test]
+    fn test_simple_bwd_search() {
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+        ]);
+
+        let tree = MinMaxTree::excess_tree(&bv, 8);
+
+        assert_eq!(tree.nodes.len(), 6);
+        assert_eq!(tree.total_excess(0), 0); // tree should be balanced
+
+        // bwd search from the last block (index 5)
+        for i in 0..8 {
+            let block = tree.bwd_search(NonZeroUsize::new(5).unwrap(), -i - 1);
+            assert!(block.is_some(), "block for query {} not found", i);
+            assert_eq!(
+                block.unwrap().get(),
+                3,
+                "query {} did not return block 3 but {}",
+                i,
+                block.unwrap()
+            );
+        }
+
+        // bwd search from the second block (index 4), searching the opening parenthesis of the
+        // enclosing parentheses pair of the last position in the block (i.e. relative excess -1
+        // from the start of the block)
+        let block = tree.bwd_search(NonZeroUsize::new(4).unwrap(), -1);
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().get(), 3);
+
+        // bwd search a position that is not in the tree, e.g. -9 from the last block
+        let block = tree.fwd_search(NonZeroUsize::new(5).unwrap(), -9);
+        assert!(block.is_none());
+    }
+
+    #[test]
+    fn test_bwd_search_with_multiple_blocks() {
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 0, 0, 0,
+            1, 1, 1, 1, 1, 0, 0, 0,
+            0, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+        ]);
+
+        let tree = MinMaxTree::excess_tree(&bv, 8);
+
+        assert_eq!(tree.nodes.len(), 12);
+        assert_eq!(tree.total_excess(0), 0); // tree should be balanced
+
+        // bwd search something where the result is not the first node
+        let block = tree.bwd_search(NonZeroUsize::new(10).unwrap(), -1);
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().get(), 9);
+
+        let block = tree.bwd_search(NonZeroUsize::new(10).unwrap(), -3);
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().get(), 8);
+    }
+
+    #[test]
+    fn test_bwd_search_relative_offsets() {
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 0,
+            1, 0, 1, 1, // excess 2
+            1, 0, 1, 0, // min excess 0, max excess 1
+            0, 0, 0, 0,
+        ]);
+
+        let tree = MinMaxTree::excess_tree(&bv, 4);
+
+        let block = tree.bwd_search(NonZeroUsize::new(6).unwrap(), -4);
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().get(), 3);
     }
 }
