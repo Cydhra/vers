@@ -301,4 +301,19 @@ mod tests {
         // check parent of non-existent node
         assert_eq!(tree.parent(NonZeroUsize::new(13).unwrap()), None);
     }
+
+    #[test]
+    fn test_empty_tree_navigation() {
+        let bv = BitVec::new();
+        let tree = MinMaxTree::excess_tree(&bv, 8);
+
+        assert_eq!(tree.nodes.len(), 0);
+
+        assert_eq!(tree.root(), None);
+        assert_eq!(tree.left_child(0), None);
+        assert_eq!(tree.right_child(0), None);
+        assert_eq!(tree.left_sibling(NonZeroUsize::new(1).unwrap()), None);
+        assert_eq!(tree.right_sibling(NonZeroUsize::new(1).unwrap()), None);
+        assert_eq!(tree.parent(NonZeroUsize::new(1).unwrap()), None);
+    }
 }
