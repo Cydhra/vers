@@ -10,7 +10,7 @@ pub struct BpTree<const BLOCK_SIZE: usize = 512> {
 
 impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// Construct a new `BpTree` from a given bit vector.
-    fn from_bit_vector(bv: BitVec) -> Self {
+    pub fn from_bit_vector(bv: BitVec) -> Self {
         let min_max_tree = MinMaxTree::excess_tree(&bv, BLOCK_SIZE);
         let vec = bv.into();
         Self { vec, min_max_tree }
@@ -24,7 +24,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// # Arguments
     /// - `index`: The starting index.
     /// - `relative_excess`: The desired relative excess value.
-    fn fwd_search(&self, index: usize, relative_excess: i64) -> Option<usize> {
+    pub fn fwd_search(&self, index: usize, relative_excess: i64) -> Option<usize> {
         if index >= self.vec.len() {
             return None;
         }
@@ -73,7 +73,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// # Arguments
     /// - `index`: The starting index.
     /// - `relative_excess`: The desired relative excess value.
-    fn bwd_search(&self, index: usize, relative_excess: i64) -> Option<usize> {
+    pub fn bwd_search(&self, index: usize, relative_excess: i64) -> Option<usize> {
         if index >= self.vec.len() {
             return None;
         }
