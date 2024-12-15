@@ -118,6 +118,10 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// If the bit at `index` is not an opening parenthesis, the result is meaningless.
     /// If there is no matching closing parenthesis, `None` is returned.
     pub fn close(&self, index: usize) -> Option<usize> {
+        if index >= self.vec.len() {
+            return None;
+        }
+
         self.fwd_search(index, -1)
     }
 
@@ -125,7 +129,29 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// If the bit at `index` is not a closing parenthesis, the result is meaningless.
     /// If there is no matching opening parenthesis, `None` is returned.
     pub fn open(&self, index: usize) -> Option<usize> {
+        if index >= self.vec.len() {
+            return None;
+        }
+
         self.bwd_search(index, -1)
+    }
+
+    /// Find the position of the opening parenthesis that encloses the position `index`.
+    /// This works regardless of whether the bit at `index` is an opening or closing parenthesis.
+    /// If there is no enclosing parenthesis, `None` is returned.
+    pub fn enclose(&self, index: usize) -> Option<usize> {
+        if index >= self.vec.len() {
+            return None;
+        }
+
+        self.bwd_search(
+            index,
+            if self.vec.get_unchecked(index) == 1 {
+                -1
+            } else {
+                -2
+            },
+        )
     }
 }
 
@@ -315,6 +341,8 @@ mod tests {
         for i in 0..24 {
             assert_eq!(tree.close(i), Some(47 - i));
         }
+
+        assert_eq!(tree.close(100), None);
     }
 
     #[test]
@@ -329,5 +357,31 @@ mod tests {
         for i in 24..48 {
             assert_eq!(tree.open(i), Some(47 - i));
         }
+
+        assert_eq!(tree.open(100), None);
+    }
+
+    #[test]
+    fn enclose() {
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]);
+
+        let tree = BpTree::<8>::from_bit_vector(bv);
+
+        for i in 1..24 {
+            assert_eq!(tree.enclose(i), Some(i - 1));
+        }
+
+        assert_eq!(tree.enclose(0), None);
+
+        for i in 24..46 {
+            assert_eq!(tree.enclose(i), Some(46 - i));
+        }
+
+        assert_eq!(tree.enclose(47), None);
+
+        assert_eq!(tree.enclose(100), None);
     }
 }
