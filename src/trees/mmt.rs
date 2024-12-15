@@ -176,7 +176,7 @@ impl MinMaxTree {
     /// Get the index of the first leaf node in the tree
     fn first_leaf(&self) -> usize {
         debug_assert!(self.nodes.len() > 0);
-        (self.nodes.len() / 2).next_power_of_two() - 1
+        ((self.nodes.len() + 1) / 2).next_power_of_two() - 1
     }
 
     /// Check if the given node index is a leaf. A leaf for the purpose of this method is defined
@@ -727,5 +727,26 @@ mod tests {
         let block = tree.bwd_search(3, -4);
         assert!(block.is_some());
         assert_eq!(block.unwrap().0, 0);
+    }
+
+    #[test]
+    fn test_incomplete_block() {
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 1, 1, 1, 0,
+            0, 0, 0, 0, 0, 0
+        ]);
+
+        let tree = MinMaxTree::excess_tree(&bv, 8);
+
+        assert_eq!(tree.nodes.len(), 3);
+
+        let block = tree.fwd_search(0, -1);
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().0, 1);
+
+        let block = tree.fwd_search(0, -2);
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().0, 1);
     }
 }
