@@ -1,4 +1,4 @@
-mod bp;
+pub mod bp;
 
 /// Min-Max tree implementation as described by Cordova and Navarro in
 /// [Simple and efficient fully-functional succinct trees](https://doi.org/10.1016/j.tcs.2016.04.031).

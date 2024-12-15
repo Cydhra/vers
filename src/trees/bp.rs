@@ -74,6 +74,7 @@ mod tests {
         assert_eq!(bp_tree.fwd_search(3, -1), Some(4));
         assert_eq!(bp_tree.fwd_search(2, -1), Some(5));
         assert_eq!(bp_tree.fwd_search(12, -1), Some(13));
+        assert_eq!(bp_tree.fwd_search(20, -1), Some(21));
 
         // search across blocks
         assert_eq!(bp_tree.fwd_search(0, -1), Some(23));
