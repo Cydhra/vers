@@ -197,7 +197,7 @@ impl MinMaxTree {
     ///    That is, if a query at index `i` seeks excess `x`, and between `i` and the end of the
     ///    block `j` there is excess `y`, then the relative excess is `x - y`.
     pub(crate) fn fwd_search(&self, begin: usize, relative_excess: i64) -> Option<(usize, i64)> {
-        if begin >= self.nodes.len() {
+        if begin + self.first_leaf() >= self.nodes.len() {
             return None;
         }
 
@@ -219,7 +219,7 @@ impl MinMaxTree {
     ///    That is, if a query at index `i` seeks excess `x`, and between `i` and the start of the
     ///    block `j` there is excess `y`, then the relative excess is `x - y`.
     pub(crate) fn bwd_search(&self, begin: usize, relative_excess: i64) -> Option<(usize, i64)> {
-        if begin >= self.nodes.len() {
+        if begin + self.first_leaf() >= self.nodes.len() {
             return None;
         }
         self.do_bwd_upwards_search(
