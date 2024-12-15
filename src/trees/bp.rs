@@ -85,4 +85,26 @@ mod tests {
         assert_eq!(bp_tree.fwd_search(3, -2), Some(5));
         assert_eq!(bp_tree.fwd_search(1, -2), Some(23));
     }
+
+    #[test]
+    fn test_forward_search_single_block() {
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 0, 0, 1, 1,
+            0, 1, 0, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 0, 0,
+        ]);
+
+        let bp_tree = BpTree::<512>::from_bit_vector(bv);
+
+        assert_eq!(bp_tree.fwd_search(3, -1), Some(4));
+        assert_eq!(bp_tree.fwd_search(2, -1), Some(5));
+        assert_eq!(bp_tree.fwd_search(12, -1), Some(13));
+        assert_eq!(bp_tree.fwd_search(20, -1), Some(21));
+        assert_eq!(bp_tree.fwd_search(0, -1), Some(23));
+        assert_eq!(bp_tree.fwd_search(1, -1), Some(22));
+        assert_eq!(bp_tree.fwd_search(3, 0), Some(7));
+        assert_eq!(bp_tree.fwd_search(3, -2), Some(5));
+        assert_eq!(bp_tree.fwd_search(1, -2), Some(23));
+    }
 }
