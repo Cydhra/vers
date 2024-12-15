@@ -177,7 +177,10 @@ impl MinMaxTree {
     /// Get the index of the first leaf node in the tree
     fn first_leaf(&self) -> usize {
         debug_assert!(self.nodes.len() > 0);
-        ((self.nodes.len() + 1) / 2).next_power_of_two() - 1
+        match self.nodes.len() {
+            2 => 1,
+            _ => ((self.nodes.len() + 1) / 2).next_power_of_two() - 1,
+        }
     }
 
     /// Check if the given node index is a leaf. A leaf for the purpose of this method is defined
@@ -758,5 +761,19 @@ mod tests {
         let tree = MinMaxTree::excess_tree(&bv, 8);
 
         assert_eq!(tree.nodes.len(), 2);
+    }
+
+    #[test]
+    fn test_leaf_calculation() {
+        // test small tree
+        let bv = BitVec::from_bits(&vec![0; 1000]);
+        let tree = MinMaxTree::excess_tree(&bv, 1200);
+        assert_eq!(tree.first_leaf(), 1);
+
+        // test very large tree
+        let bv = BitVec::from_bits(&vec![0; 1000]);
+        let tree = MinMaxTree::excess_tree(&bv, 4);
+
+        assert_eq!(tree.first_leaf(), 255)
     }
 }
