@@ -74,6 +74,8 @@ pub mod elias_fano;
 
 #[forbid(unsafe_code)]
 pub mod rmq;
+
+#[forbid(unsafe_code)]
 pub mod trees;
 
 #[forbid(unsafe_code)]

@@ -1,3 +1,5 @@
+//! A succinct tree data structure backed by the balanced parentheses representation.
+
 use crate::trees::mmt::MinMaxTree;
 use crate::{BitVec, RsVec};
 use std::cmp::min;
