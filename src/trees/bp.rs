@@ -113,6 +113,20 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
             unreachable!("If the block isn't None, the loop should always return Some(i)")
         })
     }
+
+    /// Find the position of the matching closing parenthesis for the opening parenthesis at `index`.
+    /// If the bit at `index` is not an opening parenthesis, the result is meaningless.
+    /// If there is no matching closing parenthesis, `None` is returned.
+    pub fn close(&self, index: usize) -> Option<usize> {
+        self.fwd_search(index, -1)
+    }
+
+    /// Find the position of the matching opening parenthesis for the closing parenthesis at `index`.
+    /// If the bit at `index` is not a closing parenthesis, the result is meaningless.
+    /// If there is no matching opening parenthesis, `None` is returned.
+    pub fn open(&self, index: usize) -> Option<usize> {
+        self.bwd_search(index, -1)
+    }
 }
 
 #[cfg(test)]
@@ -287,5 +301,33 @@ mod tests {
 
         assert_eq!(tree.bwd_search(23, -2), None);
         assert_eq!(tree.bwd_search(22, -3), None);
+    }
+
+    #[test]
+    fn test_close() {
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]);
+
+        let tree = BpTree::<8>::from_bit_vector(bv);
+
+        for i in 0..24 {
+            assert_eq!(tree.close(i), Some(47 - i));
+        }
+    }
+
+    #[test]
+    fn test_open() {
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]);
+
+        let tree = BpTree::<8>::from_bit_vector(bv);
+
+        for i in 24..48 {
+            assert_eq!(tree.open(i), Some(47 - i));
+        }
     }
 }
