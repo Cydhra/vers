@@ -1,8 +1,12 @@
 //! A succinct tree data structure backed by the balanced parentheses representation.
 
 use crate::trees::mmt::MinMaxTree;
+use crate::trees::Tree;
 use crate::{BitVec, RsVec};
 use std::cmp::min;
+
+const OPEN_PAREN: u64 = 1;
+const CLOSE_PAREN: u64 = 0;
 
 /// A succinct binary tree data structure.
 pub struct BpTree<const BLOCK_SIZE: usize = 512> {
@@ -154,6 +158,117 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
                 -2
             },
         )
+    }
+
+    /// Get the excess of open parentheses up to and including the position `index`.
+    /// The excess is the number of open parentheses minus the number of closing parentheses.
+    /// If `index` is out of bounds, the total excess of the parentheses expression is returned.
+    pub fn excess(&self, index: usize) -> i64 {
+        debug_assert!(index < self.vec.len(), "Index out of bounds");
+        self.vec.rank1(index + 1) as i64 - self.vec.rank0(index + 1) as i64
+    }
+}
+
+impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
+    type NodeHandle = usize;
+
+    fn root(&self) -> Self::NodeHandle {
+        0
+    }
+
+    fn parent(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
+        self.enclose(node)
+    }
+
+    fn first_child(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+
+        if let Some(bit) = self.vec.get(node + 1) {
+            if bit == OPEN_PAREN {
+                return Some(node + 1);
+            }
+        }
+
+        None
+    }
+
+    fn left_sibling(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+        self.close(node).and_then(|i| {
+            self.vec
+                .get(i + 1)
+                .and_then(|bit| if bit == OPEN_PAREN { Some(i + 1) } else { None })
+        })
+    }
+
+    fn right_sibling(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+        self.vec.get(node - 1).and_then(|bit| {
+            if bit == CLOSE_PAREN {
+                self.open(node - 1)
+            } else {
+                None
+            }
+        })
+    }
+
+    fn last_child(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+        self.vec.get(node + 1).and_then(|bit| {
+            if bit == OPEN_PAREN {
+                self.open(self.close(node) - 1)
+            } else {
+                None
+            }
+        })
+    }
+
+    fn node_index(&self, node: Self::NodeHandle) -> usize {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+        self.vec.rank1(node)
+    }
+
+    fn node_handle(&self, index: usize) -> Self::NodeHandle {
+        self.vec.select1(index)
+    }
+
+    fn is_leaf(&self, node: Self::NodeHandle) -> bool {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+        self.vec.get(node + 1) == Some(CLOSE_PAREN)
+    }
+
+    fn depth(&self, node: Self::NodeHandle) -> u64 {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+        self.excess(node) as u64
+    }
+
+    fn size(&self) -> usize {
+        self.vec.rank1(self.vec.len())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.vec.is_empty()
     }
 }
 
@@ -364,7 +479,7 @@ mod tests {
     }
 
     #[test]
-    fn enclose() {
+    fn test_enclose() {
         let bv = BitVec::from_bits(&[
             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
