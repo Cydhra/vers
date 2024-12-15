@@ -1,4 +1,5 @@
 use crate::BitVec;
+use std::cmp::max;
 use std::num::NonZeroUsize;
 
 /// A singular node in a binary min-max tree that is part of the BpTree data structure.
@@ -27,7 +28,11 @@ impl MinMaxTree {
         }
 
         let num_leaves = (bit_vec.len() + block_size - 1) / block_size;
-        let num_internal_nodes = (1 << (num_leaves as f64).log2().ceil() as usize) - 1;
+        let num_internal_nodes = max(1, (1 << (num_leaves as f64).log2().ceil() as usize) - 1);
+        println!(
+            "num_leaves: {}, num_internal_nodes: {}",
+            num_leaves, num_internal_nodes
+        );
 
         let mut nodes = vec![MinMaxNode::default(); num_leaves + num_internal_nodes];
         let mut total_excess = 0;
@@ -60,7 +65,7 @@ impl MinMaxTree {
             max_excess,
         };
 
-        let mut current_level_size = num_leaves.next_power_of_two() / 2;
+        let mut current_level_size = max(1, num_leaves.next_power_of_two() / 2);
         let mut current_level_start = num_internal_nodes - current_level_size;
         loop {
             for i in 0..current_level_size {
@@ -748,5 +753,14 @@ mod tests {
         let block = tree.fwd_search(0, -2);
         assert!(block.is_some());
         assert_eq!(block.unwrap().0, 1);
+    }
+
+    #[test]
+    fn test_single_block() {
+        let bv = BitVec::from_bits(&[1, 1, 1, 1, 0, 0, 0, 0]);
+
+        let tree = MinMaxTree::excess_tree(&bv, 8);
+
+        assert_eq!(tree.nodes.len(), 2);
     }
 }
