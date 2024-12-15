@@ -69,7 +69,7 @@ mod tests {
     use crate::BitVec;
 
     #[test]
-    fn test_forward_search() {
+    fn test_fwd_search() {
         #[rustfmt::skip]
         let bv = BitVec::from_bits(&[
             1, 1, 1, 1, 0, 0, 1, 1,
@@ -96,7 +96,7 @@ mod tests {
     }
 
     #[test]
-    fn test_forward_search_single_block() {
+    fn test_fwd_single_block() {
         #[rustfmt::skip]
         let bv = BitVec::from_bits(&[
             1, 1, 1, 1, 0, 0, 1, 1,
@@ -118,7 +118,7 @@ mod tests {
     }
 
     #[test]
-    fn test_illegal_queries() {
+    fn test_fwd_illegal_queries() {
         #[rustfmt::skip]
         let bv = BitVec::from_bits(&[
             1, 1, 1, 1, 0, 0, 1, 1,
@@ -141,5 +141,24 @@ mod tests {
 
         assert_eq!(tree.fwd_search(0, -2), None);
         assert_eq!(tree.fwd_search(22, 1), None);
+    }
+
+    #[test]
+    fn test_fwd_unbalanced_expression() {
+        // test whether forward search works with unbalanced parenthesis expressions
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 0, 0, 1, 1,
+            0, 1, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1,
+        ]);
+
+        let tree = BpTree::<8>::from_bit_vector(bv);
+
+        assert_eq!(tree.fwd_search(0, -1), Some(13));
+        assert_eq!(tree.fwd_search(1, -1), Some(12));
+        assert_eq!(tree.fwd_search(7, -1), Some(8));
+        assert_eq!(tree.fwd_search(16, 1), None);
+        assert_eq!(tree.fwd_search(5, 2), Some(7));
     }
 }
