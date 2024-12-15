@@ -309,10 +309,7 @@ impl MinMaxTree {
                     if self.min_excess(right_child.get()) <= relative_excess
                         && relative_excess <= self.max_excess(right_child.get())
                     {
-                        self.do_fwd_downwards_search(
-                            right_child.get(),
-                            relative_excess - self.total_excess(left_child.get()),
-                        )
+                        self.do_fwd_downwards_search(right_child.get(), relative_excess)
                     } else {
                         unreachable!();
                     }
@@ -775,5 +772,33 @@ mod tests {
         let tree = MinMaxTree::excess_tree(&bv, 4);
 
         assert_eq!(tree.first_leaf(), 255)
+    }
+
+    #[test]
+    fn test_relative_excess() {
+        // test a tree with 3 layers and different downwards traversals
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+        ]);
+
+        let tree = MinMaxTree::excess_tree(&bv, 8);
+
+        let block = tree.fwd_search(0, -6);
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().0, 5);
+
+        // test if the relative excess is still correct (relative to the start of the fifth leaf)
+        assert_eq!(block.unwrap().1, -6);
+
+        let block = tree.bwd_search(5, -6);
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().0, 0);
+        assert_eq!(block.unwrap().1, -6);
     }
 }
