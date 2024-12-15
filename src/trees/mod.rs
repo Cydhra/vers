@@ -17,32 +17,42 @@ pub trait Tree {
     fn root(&self) -> Self::NodeHandle;
 
     /// Returns the parent of a node, if it exists.
+    /// If `node` is not a valid node handle, the result is meaningless.
     fn parent(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle>;
 
     /// Returns the left child of a node, if it exists.
+    /// If `node` is not a valid node handle, the result is meaningless.
     fn first_child(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle>;
 
     /// Returns the left sibling of a node, if it exists.
+    /// If `node` is not a valid node handle, the result is meaningless.
     fn left_sibling(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle>;
 
     /// Returns the right sibling of a node, if it exists.
+    /// If `node` is not a valid node handle, the result is meaningless.
     fn right_sibling(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle>;
 
     /// Returns the rightmost child of a node, if it exists.
+    /// If `node` is not a valid node handle, the result is meaningless.
     fn last_child(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle>;
 
     /// Convert a node handle into a contiguous index, allowing associated data to be stored in a vector.
+    /// If `node` is not a valid node handle, the result is meaningless.
     fn node_index(&self, node: Self::NodeHandle) -> usize;
 
     /// Convert a contiguous index that enumerates all nodes into a node handle.
     /// This operation is the inverse of `node_index`.
+    /// The index must be in the range `0..self.size()`.
+    ///
+    /// If the index is out of bounds, the behavior is unspecified.
     fn node_handle(&self, index: usize) -> Self::NodeHandle;
 
     /// Returns true, if the node is a leaf.
+    /// If `node` is not a valid node handle, the result is meaningless.
     fn is_leaf(&self, node: Self::NodeHandle) -> bool;
 
     /// Returns the depth of the node in the tree.
-    fn depth(&self, node: Self::NodeHandle) -> usize;
+    fn depth(&self, node: Self::NodeHandle) -> u64;
 
     /// Returns the number of nodes in the tree.
     fn size(&self) -> usize;
