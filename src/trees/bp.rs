@@ -107,4 +107,30 @@ mod tests {
         assert_eq!(bp_tree.fwd_search(3, -2), Some(5));
         assert_eq!(bp_tree.fwd_search(1, -2), Some(23));
     }
+
+    #[test]
+    fn test_illegal_queries() {
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 0, 0, 1, 1,
+            0, 1, 0, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 0, 0,
+        ]);
+
+        let tree = BpTree::<8>::from_bit_vector(bv.clone());
+
+        assert_eq!(tree.fwd_search(24, 0), None);
+        assert_eq!(tree.fwd_search(25, 0), None);
+
+        assert_eq!(tree.fwd_search(0, -2), None);
+        assert_eq!(tree.fwd_search(22, 1), None);
+
+        let tree = BpTree::<64>::from_bit_vector(bv);
+
+        assert_eq!(tree.fwd_search(24, 0), None);
+        assert_eq!(tree.fwd_search(25, 0), None);
+
+        assert_eq!(tree.fwd_search(0, -2), None);
+        assert_eq!(tree.fwd_search(22, 1), None);
+    }
 }
