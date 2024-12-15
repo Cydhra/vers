@@ -34,6 +34,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
 
         let mut current_relative_excess = 0;
 
+        // check the current block
         for i in index + 1..block_boundary {
             let bit = self.vec.get_unchecked(i);
             current_relative_excess += if bit == 1 { 1 } else { -1 };
@@ -43,15 +44,66 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
             }
         }
 
+        // find the block that contains the desired relative excess
         let block = self
             .min_max_tree
             .fwd_search(block_index, relative_excess - current_relative_excess);
 
+        // check the result block for the exact position
         block.and_then(|(block, relative_excess)| {
             current_relative_excess = 0;
             for i in block * BLOCK_SIZE..(block + 1) * BLOCK_SIZE {
                 let bit = self.vec.get_unchecked(i);
                 current_relative_excess += if bit == 1 { 1 } else { -1 };
+
+                if current_relative_excess == relative_excess {
+                    return Some(i);
+                }
+            }
+
+            unreachable!("If the block isn't None, the loop should always return Some(i)")
+        })
+    }
+
+    /// Search for a position where the excess relative to the starting `index` is `relative_excess`.
+    /// Returns `None` if no such position exists.
+    /// The initial position is never considered in the search.
+    /// Searches backward in the bit vector.
+    ///
+    /// # Arguments
+    /// - `index`: The starting index.
+    /// - `relative_excess`: The desired relative excess value.
+    fn bwd_search(&self, index: usize, relative_excess: i64) -> Option<usize> {
+        if index >= self.vec.len() {
+            return None;
+        }
+
+        let block_index = index / BLOCK_SIZE;
+        let block_boundary = min(block_index * BLOCK_SIZE, self.vec.len());
+
+        let mut current_relative_excess = 0;
+
+        // check the current block
+        for i in (block_boundary..index).rev() {
+            let bit = self.vec.get_unchecked(i);
+            current_relative_excess += if bit == 1 { -1 } else { 1 };
+
+            if current_relative_excess == relative_excess {
+                return Some(i);
+            }
+        }
+
+        // find the block that contains the desired relative excess
+        let block = self
+            .min_max_tree
+            .bwd_search(block_index, relative_excess - current_relative_excess);
+
+        // check the result block for the exact position
+        block.and_then(|(block, relative_excess)| {
+            current_relative_excess = 0;
+            for i in (block * BLOCK_SIZE..(block + 1) * BLOCK_SIZE).rev() {
+                let bit = self.vec.get_unchecked(i);
+                current_relative_excess += if bit == 1 { -1 } else { 1 };
 
                 if current_relative_excess == relative_excess {
                     return Some(i);
@@ -160,5 +212,80 @@ mod tests {
         assert_eq!(tree.fwd_search(7, -1), Some(8));
         assert_eq!(tree.fwd_search(16, 1), None);
         assert_eq!(tree.fwd_search(5, 2), Some(7));
+    }
+
+    #[test]
+    fn test_bwd_search() {
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 0, 0, 1, 1,
+            0, 1, 0, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 0, 0,
+        ]);
+
+        let bp_tree = BpTree::<8>::from_bit_vector(bv);
+
+        // search within block
+        assert_eq!(bp_tree.bwd_search(4, -1), Some(3));
+        assert_eq!(bp_tree.bwd_search(5, -1), Some(2));
+        assert_eq!(bp_tree.bwd_search(13, -1), Some(12));
+        assert_eq!(bp_tree.bwd_search(21, -1), Some(20));
+
+        // search across blocks
+        assert_eq!(bp_tree.bwd_search(23, -1), Some(0));
+        assert_eq!(bp_tree.bwd_search(22, -1), Some(1));
+
+        // search with weird relative excess
+        assert_eq!(bp_tree.bwd_search(7, 0), Some(5));
+        assert_eq!(bp_tree.bwd_search(5, -2), Some(1));
+        assert_eq!(bp_tree.bwd_search(23, 0), Some(1));
+    }
+
+    #[test]
+    fn test_bwd_single_block() {
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 0, 0, 1, 1,
+            0, 1, 0, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 0, 0,
+        ]);
+
+        let bp_tree = BpTree::<512>::from_bit_vector(bv);
+
+        assert_eq!(bp_tree.bwd_search(4, -1), Some(3));
+        assert_eq!(bp_tree.bwd_search(5, -1), Some(2));
+        assert_eq!(bp_tree.bwd_search(13, -1), Some(12));
+        assert_eq!(bp_tree.bwd_search(21, -1), Some(20));
+        assert_eq!(bp_tree.bwd_search(23, -1), Some(0));
+        assert_eq!(bp_tree.bwd_search(22, -1), Some(1));
+        assert_eq!(bp_tree.bwd_search(7, 0), Some(5));
+        assert_eq!(bp_tree.bwd_search(5, -2), Some(1));
+        assert_eq!(bp_tree.bwd_search(23, 0), Some(1));
+    }
+
+    #[test]
+    fn test_bwd_illegal_queries() {
+        #[rustfmt::skip]
+        let bv = BitVec::from_bits(&[
+            1, 1, 1, 1, 0, 0, 1, 1,
+            0, 1, 0, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 0, 0,
+        ]);
+
+        let tree = BpTree::<8>::from_bit_vector(bv.clone());
+
+        assert_eq!(tree.bwd_search(0, 0), None);
+        assert_eq!(tree.bwd_search(1, 0), None);
+
+        assert_eq!(tree.bwd_search(23, -2), None);
+        assert_eq!(tree.bwd_search(22, -3), None);
+
+        let tree = BpTree::<64>::from_bit_vector(bv);
+
+        assert_eq!(tree.bwd_search(0, 0), None);
+        assert_eq!(tree.bwd_search(1, 0), None);
+
+        assert_eq!(tree.bwd_search(23, -2), None);
+        assert_eq!(tree.bwd_search(22, -3), None);
     }
 }
