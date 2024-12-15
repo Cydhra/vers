@@ -1,3 +1,16 @@
+//! Min-Max tree implementation as described by Cordova and Navarro in
+//! [Simple and efficient fully-functional succinct trees](https://doi.org/10.1016/j.tcs.2016.04.031).
+//!
+//! It supports the operations `fwd_search` and `bwd_search` to search positions in
+//! parenthesis-expressions that have a specified excess of opening or closing parentheses.
+//! It completes the operations in O(log n) time, where n is the number of blocks in the tree,
+//! so if it is used with O(log n) block size, it achieves the O(log log n) time complexity of
+//! the paper.
+//!
+//! The Min-Max tree is a complete binary tree that stores the minimum and maximum relative
+//! excess values of parenthesis expressions in its nodes. Since the tree is complete, it can be
+//! stored linearly.
+
 use crate::BitVec;
 use std::cmp::max;
 use std::num::NonZeroUsize;
