@@ -253,3 +253,34 @@ fn test_parent() {
         }
     }
 }
+
+#[test]
+fn test_children() {
+    let bv = BitVec::from_bits(&[1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0]);
+
+    let tree = BpTree::<8>::from_bit_vector(bv.clone());
+
+    assert_eq!(tree.excess(17), 0, "tree is not balanced");
+    assert_eq!(tree.first_child(0), Some(1));
+    assert_eq!(tree.previous_sibling(1), None);
+    assert_eq!(tree.next_sibling(1), Some(7));
+    assert_eq!(tree.previous_sibling(7), Some(1));
+    assert_eq!(tree.next_sibling(7), Some(9));
+    assert_eq!(tree.previous_sibling(9), Some(7));
+    assert_eq!(tree.next_sibling(9), Some(11));
+    assert_eq!(tree.previous_sibling(11), Some(9));
+    assert_eq!(tree.next_sibling(11), None);
+    assert_eq!(tree.last_child(0), Some(11));
+
+    assert_eq!(tree.first_child(11), Some(12));
+    assert_eq!(tree.next_sibling(12), Some(14));
+    assert_eq!(tree.previous_sibling(14), Some(12));
+    assert_eq!(tree.next_sibling(14), None);
+    assert_eq!(tree.last_child(11), Some(14));
+
+    assert_eq!(tree.first_child(12), None);
+    assert_eq!(tree.last_child(12), None);
+
+    assert_eq!(tree.first_child(14), None);
+    assert_eq!(tree.last_child(14), None);
+}
