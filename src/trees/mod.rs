@@ -26,11 +26,11 @@ pub trait Tree {
 
     /// Returns the left sibling of a node, if it exists.
     /// If `node` is not a valid node handle, the result is meaningless.
-    fn left_sibling(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle>;
+    fn next_sibling(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle>;
 
     /// Returns the right sibling of a node, if it exists.
     /// If `node` is not a valid node handle, the result is meaningless.
-    fn right_sibling(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle>;
+    fn previous_sibling(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle>;
 
     /// Returns the rightmost child of a node, if it exists.
     /// If `node` is not a valid node handle, the result is meaningless.

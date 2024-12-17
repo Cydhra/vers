@@ -200,7 +200,7 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
         None
     }
 
-    fn left_sibling(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
+    fn next_sibling(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
         debug_assert!(
             self.vec.get(node) == Some(OPEN_PAREN),
             "Node handle is invalid"
@@ -212,7 +212,7 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
         })
     }
 
-    fn right_sibling(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
+    fn previous_sibling(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
         debug_assert!(
             self.vec.get(node) == Some(OPEN_PAREN),
             "Node handle is invalid"
