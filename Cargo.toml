@@ -1,6 +1,6 @@
 [package]
 name = "vers-vecs"
-version = "1.5.0"
+version = "1.5.1"
 edition = "2021"
 authors = ["Johannes \"Cydhra\" Hengstler"]
 description = "A collection of succinct data structures supported by fast implementations of rank and select queries."
