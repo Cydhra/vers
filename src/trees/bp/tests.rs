@@ -258,7 +258,7 @@ fn test_parent() {
 fn test_children() {
     let bv = BitVec::from_bits(&[1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0]);
 
-    let tree = BpTree::<8>::from_bit_vector(bv.clone());
+    let tree = BpTree::<8>::from_bit_vector(bv);
 
     assert_eq!(tree.excess(17), 0, "tree is not balanced");
     assert_eq!(tree.first_child(0), Some(1));
@@ -283,4 +283,16 @@ fn test_children() {
 
     assert_eq!(tree.first_child(14), None);
     assert_eq!(tree.last_child(14), None);
+}
+
+#[test]
+fn test_contiguous_index() {
+    let bv = BitVec::from_bits(&[1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0]);
+    let tree = BpTree::<4>::from_bit_vector(bv.clone());
+    let rs: RsVec = bv.into();
+
+    for (rank, index_in_bv) in rs.iter1().enumerate() {
+        assert_eq!(tree.node_index(index_in_bv), rank);
+        assert_eq!(tree.node_handle(rank), index_in_bv);
+    }
 }
