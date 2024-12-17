@@ -225,3 +225,31 @@ fn test_enclose() {
 
     assert_eq!(tree.enclose(100), None);
 }
+
+#[test]
+fn test_parent() {
+    let bv = BitVec::from_bits(&[
+        1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0,
+    ]);
+
+    let tree = BpTree::<8>::from_bit_vector(bv.clone());
+
+    assert_eq!(tree.excess(27), 0, "tree is not balanced");
+
+    let mut stack = Vec::new();
+    let mut head = None;
+    for (idx, bit) in bv.iter().enumerate() {
+        if bit == 1 {
+            assert_eq!(
+                tree.parent(idx),
+                head,
+                "parent of node {} is incorrect",
+                idx
+            );
+            stack.push(head);
+            head = Some(idx);
+        } else {
+            head = stack.pop().expect("stack underflow despite balanced tree");
+        }
+    }
+}

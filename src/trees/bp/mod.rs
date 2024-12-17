@@ -177,6 +177,11 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
     }
 
     fn parent(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+
         self.enclose(node)
     }
 
