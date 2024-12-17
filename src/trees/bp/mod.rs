@@ -269,7 +269,7 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
             self.vec.get(node) == Some(OPEN_PAREN),
             "Node handle is invalid"
         );
-        self.excess(node) as u64
+        (self.excess(node) as u64).saturating_sub(1)
     }
 
     fn size(&self) -> usize {

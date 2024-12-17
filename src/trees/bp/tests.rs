@@ -296,3 +296,22 @@ fn test_contiguous_index() {
         assert_eq!(tree.node_handle(rank), index_in_bv);
     }
 }
+
+#[test]
+fn test_depth() {
+    let bv = BitVec::from_bits(&[
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]);
+
+    let mut depth = 0;
+
+    let tree = BpTree::<8>::from_bit_vector(bv.clone());
+    for i in 0..24 {
+        if bv.get(i) == Some(1) {
+            assert_eq!(tree.depth(i), depth);
+            depth += 1;
+        } else {
+            depth -= 1;
+        }
+    }
+}

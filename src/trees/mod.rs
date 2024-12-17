@@ -52,6 +52,8 @@ pub trait Tree {
     fn is_leaf(&self, node: Self::NodeHandle) -> bool;
 
     /// Returns the depth of the node in the tree.
+    /// The root node has depth 0.
+    /// If `node` is not a valid node handle, the result is meaningless.
     fn depth(&self, node: Self::NodeHandle) -> u64;
 
     /// Returns the number of nodes in the tree.
