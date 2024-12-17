@@ -228,7 +228,11 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
         );
         self.vec.get(node + 1).and_then(|bit| {
             if bit == OPEN_PAREN {
-                self.open(self.close(node) - 1)
+                if let Some(i) = self.close(node) {
+                    self.open(i - 1)
+                } else {
+                    None
+                }
             } else {
                 None
             }
