@@ -341,3 +341,15 @@ fn test_is_leaf() {
         }
     }
 }
+
+#[test]
+fn test_root() {
+    let bv = BitVec::from_bits(&[
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]);
+    let tree = BpTree::<8>::from_bit_vector(bv);
+    assert_eq!(tree.root(), Some(0));
+
+    let tree = BpTree::<16>::from_bit_vector(BitVec::new());
+    assert_eq!(tree.root(), None);
+}
