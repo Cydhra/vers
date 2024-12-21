@@ -13,8 +13,8 @@ pub trait Tree {
     /// A type that represents a node during tree navigation.
     type NodeHandle;
 
-    /// Returns the root node of the tree.
-    fn root(&self) -> Self::NodeHandle;
+    /// Returns the root node of the tree, if the tree isn't empty.
+    fn root(&self) -> Option<Self::NodeHandle>;
 
     /// Returns the parent of a node, if it exists.
     /// If `node` is not a valid node handle, the result is meaningless.

@@ -172,8 +172,12 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
 impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
     type NodeHandle = usize;
 
-    fn root(&self) -> Self::NodeHandle {
-        0
+    fn root(&self) -> Option<Self::NodeHandle> {
+        if !self.vec.is_empty() {
+            Some(0)
+        } else {
+            None
+        }
     }
 
     fn parent(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
