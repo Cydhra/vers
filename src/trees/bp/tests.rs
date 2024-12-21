@@ -315,3 +315,29 @@ fn test_depth() {
         }
     }
 }
+
+#[test]
+fn test_is_leaf() {
+    let bits = vec![
+        1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0,
+    ];
+    let bv = BitVec::from_bits(&bits);
+    let leaves = bits[..]
+        .windows(2)
+        .map(|window| {
+            if window[0] == 1 && window[1] == 0 {
+                true
+            } else {
+                false
+            }
+        })
+        .collect::<Vec<_>>();
+    let tree = BpTree::<8>::from_bit_vector(bv.clone());
+
+    for (idx, is_leaf) in leaves.iter().enumerate() {
+        // if the bit is 1, check if that node is a leaf. If it's 0, it's not a valid node handle.
+        if bits[idx] == 1 {
+            assert_eq!(tree.is_leaf(idx), *is_leaf);
+        }
+    }
+}
