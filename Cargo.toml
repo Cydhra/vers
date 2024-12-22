@@ -63,6 +63,10 @@ harness = false
 name = "rmq"
 harness = false
 
+[[bench]]
+name = "bp"
+harness = false
+
 [profile.bench]
 lto = true
 
