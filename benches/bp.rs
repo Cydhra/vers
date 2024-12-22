@@ -1,13 +1,14 @@
+use std::cmp::Reverse;
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 use rand::{thread_rng, Rng};
-use std::collections::HashSet;
+use std::collections::{BinaryHeap, HashSet};
 use vers_vecs::trees::bp::builder::BpDfsBuilder;
 use vers_vecs::trees::bp::BpTree;
 use vers_vecs::trees::{DfsTreeBuilder, Tree};
 
 mod common;
 
-// TODO this function has quadratic runtime, which is way too much for larger trees
+// TODO this function has nlogn runtime, which is a bit too much for the largest trees
 fn generate_tree<R: Rng>(rng: &mut R, nodes: u64) -> BpTree {
     // generate prüfer sequence
     let mut sequence = vec![0; (nodes - 2) as usize];
@@ -28,22 +29,35 @@ fn generate_tree<R: Rng>(rng: &mut R, nodes: u64) -> BpTree {
 
     let mut children = vec![0u64; sum];
     let mut assigned_children = vec![0; nodes as usize];
-    sequence.iter().for_each(|i| {
-        let j = degrees.iter().enumerate().find(|(idx, x)| *idx != *i as usize && **x == 1).unwrap().0 as u64;
-        children[prefix_sum[*i as usize] + assigned_children[*i as usize]] = j;
-        children[prefix_sum[j as usize] + assigned_children[j as usize]] = *i;
-        degrees[*i as usize] -= 1;
+
+    // keep a priority queue of nodes with degree one to reduce runtime from O(n^2) to O(n log n)
+    let mut degree_one_set = BinaryHeap::new();
+    degrees.iter().enumerate().filter(|(_, &v)| v == 1).for_each(|(idx, _)| degree_one_set.push(Reverse(idx as u64)));
+
+    sequence.iter().for_each(|&i| {
+        let j = degree_one_set.pop().unwrap().0;
+        children[prefix_sum[i as usize] + assigned_children[i as usize]] = j;
+        children[prefix_sum[j as usize] + assigned_children[j as usize]] = i;
+        degrees[i as usize] -= 1;
+        if degrees[i as usize] == 1 {
+            degree_one_set.push(Reverse(i))
+        }
+
         degrees[j as usize] -= 1;
-        assigned_children[*i as usize] += 1;
+        if degrees[j as usize] == 1 {
+            degree_one_set.push(Reverse(j))
+        }
+
+        assigned_children[i as usize] += 1;
         assigned_children[j as usize] += 1;
     });
 
     assert_eq!(degrees.iter().sum::<usize>(), 2);
-    let u = degrees.iter().enumerate().find(|(_, x)| **x == 1).unwrap().0;
-    let v = degrees.iter().enumerate().rev().find(|(_, x)| **x == 1).unwrap().0;
+    let u = degree_one_set.pop().unwrap().0;
+    let v = degree_one_set.pop().unwrap().0;
 
-    children[prefix_sum[u] + assigned_children[u]] = v as u64;
-    children[prefix_sum[v] + assigned_children[v]] = u as u64;
+    children[prefix_sum[u as usize] + assigned_children[u as usize]] = v;
+    children[prefix_sum[v as usize] + assigned_children[v as usize]] = u;
 
     // build tree
     let mut bpb = BpDfsBuilder::with_capacity(nodes);
