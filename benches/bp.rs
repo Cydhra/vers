@@ -1,5 +1,5 @@
 use std::cmp::Reverse;
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use rand::{thread_rng, Rng};
 use std::collections::{BinaryHeap, HashSet};
 use vers_vecs::trees::bp::builder::BpDfsBuilder;
@@ -82,20 +82,39 @@ fn generate_tree<R: Rng>(rng: &mut R, nodes: u64) -> BpTree {
     bpb.build().unwrap()
 }
 
-fn bench_parent(b: &mut Criterion) {
+fn bench_navigation(b: &mut Criterion) {
     let mut rng = thread_rng();
+    let mut b = b.benchmark_group("bp");
 
     for l in common::SIZES {
         let bp = generate_tree(&mut rng, l as u64);
         let node_handles = (0..l).map(|i| bp.node_handle(i)).collect::<Vec<_>>();
 
-        b.bench_function("parent", |b| {
+        b.bench_with_input(BenchmarkId::new("parent", l), &l, |b, _| {
             b.iter_batched(|| node_handles[rng.gen_range(0..node_handles.len())], |h| {
                 black_box(bp.parent(h))
+            }, BatchSize::SmallInput)
+        });
+
+        b.bench_with_input(BenchmarkId::new("last_child", l), &l, |b, _| {
+            b.iter_batched(|| node_handles[rng.gen_range(0..node_handles.len())], |h| {
+                black_box(bp.last_child(h))
+            }, BatchSize::SmallInput)
+        });
+
+        b.bench_with_input(BenchmarkId::new("next_sibling", l), &l,|b, _| {
+            b.iter_batched(|| node_handles[rng.gen_range(0..node_handles.len())], |h| {
+                black_box(bp.next_sibling(h))
+            }, BatchSize::SmallInput)
+        });
+
+        b.bench_with_input(BenchmarkId::new("prev_sibling", l), &l,|b, _| {
+            b.iter_batched(|| node_handles[rng.gen_range(0..node_handles.len())], |h| {
+                black_box(bp.previous_sibling(h))
             }, BatchSize::SmallInput)
         });
     }
 }
 
-criterion_group!(benches, bench_parent);
+criterion_group!(benches, bench_navigation);
 criterion_main!(benches);
