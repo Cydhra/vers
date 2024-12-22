@@ -89,3 +89,27 @@ pub trait LevelTree: Tree {
     /// Returns the rightmost node at the given level, if it exists.
     fn level_rightmost(&self, level: u64) -> Option<Self::NodeHandle>;
 }
+
+/// This trait provides the functionality to build a tree by visiting its nodes in depth first
+/// search order. The caller should call [`enter_node`] for each node visited in pre-order depth-first
+/// traversal, and [`leave_node`] once the node's subtree was visited (i.e. post-order).
+///
+/// Once the full tree has been visited, the caller must call [`build`] to create an instance of the
+/// implementing tree type.
+pub trait DfsTreeBuilder {
+
+    /// The tree type constructed with this interface
+    type Tree;
+
+    /// Called to create a new node in the tree builder
+    fn enter_node(&mut self);
+
+    /// Called after the subtree of a node in the tree has already been visited.
+    fn leave_node(&mut self);
+
+    /// Finalize the tree instance. Returns `Err(excess)` if the constructed tree is invalid
+    /// (i.e. there are nodes for which [`leave_node`] has not been called,
+    /// or there are more calls to `leave_node` than to [`enter_node`];
+    /// the number of extraneous calls to `enter_node` is returned in the error).
+    fn build(self) -> Result<Self::Tree, i64>;
+}
