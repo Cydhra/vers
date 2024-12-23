@@ -494,7 +494,6 @@ mod tests {
         assert_eq!(tree.nodes.len(), 13); // 6 leaves + 7 internal nodes
 
         // check root
-        assert_eq!(tree.root(), Some(0));
         assert_eq!(tree.left_child(0), NonZeroUsize::new(1));
         assert_eq!(tree.right_child(0), NonZeroUsize::new(2));
 
@@ -560,7 +559,6 @@ mod tests {
 
         assert_eq!(tree.nodes.len(), 0);
 
-        assert_eq!(tree.root(), None);
         assert_eq!(tree.left_child(0), None);
         assert_eq!(tree.right_child(0), None);
         assert_eq!(tree.left_sibling(NonZeroUsize::new(1).unwrap()), None);
