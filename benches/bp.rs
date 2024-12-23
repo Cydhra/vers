@@ -1,7 +1,8 @@
 use std::cmp::Reverse;
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
-use rand::{thread_rng, Rng};
+use rand::{Rng, SeedableRng};
 use std::collections::{BinaryHeap, HashSet};
+use rand::rngs::StdRng;
 use vers_vecs::trees::bp::builder::BpDfsBuilder;
 use vers_vecs::trees::bp::BpTree;
 use vers_vecs::trees::{DfsTreeBuilder, Tree};
@@ -83,32 +84,38 @@ fn generate_tree<R: Rng>(rng: &mut R, nodes: u64) -> BpTree {
 }
 
 fn bench_navigation(b: &mut Criterion) {
-    let mut rng = thread_rng();
-    let mut b = b.benchmark_group("bp");
+    let mut group = b.benchmark_group("bp");
+    group.plot_config(common::plot_config());
 
     for l in common::SIZES {
+        // fix the rng seed because the measurements depend on the input structure.
+        // to make multiple runs of the benchmark comparable, we fix the seed.
+        // this is only a valid approach to check for performance improvements, it may not give
+        // an accurate summary of the library's runtime
+        let mut rng = StdRng::from_seed([0; 32]);
+
         let bp = generate_tree(&mut rng, l as u64);
         let node_handles = (0..l).map(|i| bp.node_handle(i)).collect::<Vec<_>>();
 
-        b.bench_with_input(BenchmarkId::new("parent", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("parent", l), &l, |b, _| {
             b.iter_batched(|| node_handles[rng.gen_range(0..node_handles.len())], |h| {
                 black_box(bp.parent(h))
             }, BatchSize::SmallInput)
         });
 
-        b.bench_with_input(BenchmarkId::new("last_child", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("last_child", l), &l, |b, _| {
             b.iter_batched(|| node_handles[rng.gen_range(0..node_handles.len())], |h| {
                 black_box(bp.last_child(h))
             }, BatchSize::SmallInput)
         });
 
-        b.bench_with_input(BenchmarkId::new("next_sibling", l), &l,|b, _| {
+        group.bench_with_input(BenchmarkId::new("next_sibling", l), &l, |b, _| {
             b.iter_batched(|| node_handles[rng.gen_range(0..node_handles.len())], |h| {
                 black_box(bp.next_sibling(h))
             }, BatchSize::SmallInput)
         });
 
-        b.bench_with_input(BenchmarkId::new("prev_sibling", l), &l,|b, _| {
+        group.bench_with_input(BenchmarkId::new("prev_sibling", l), &l, |b, _| {
             b.iter_batched(|| node_handles[rng.gen_range(0..node_handles.len())], |h| {
                 black_box(bp.previous_sibling(h))
             }, BatchSize::SmallInput)
