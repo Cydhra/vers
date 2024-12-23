@@ -96,6 +96,20 @@ fn test_fwd_unbalanced_expression() {
 }
 
 #[test]
+fn test_fwd_block_boundary() {
+    let bv = BitVec::from_bits(&[1, 1, 0, 1, 0, 0,]);
+    let tree = BpTree::<4>::from_bit_vector(bv);
+
+    // test if a query returns the correct result if the result is the first bit in a block
+    // and not in the initial block
+    assert_eq!(tree.fwd_search(3, -1), Some(4));
+
+    // test if the query returns the correct result if the result is the last bit in a block
+    // and not in the initial block
+    assert_eq!(tree.fwd_search(3, -2), Some(5));
+}
+
+#[test]
 fn test_bwd_search() {
     #[rustfmt::skip]
     let bv = BitVec::from_bits(&[
@@ -168,6 +182,16 @@ fn test_bwd_illegal_queries() {
 
     assert_eq!(tree.bwd_search(23, -2), None);
     assert_eq!(tree.bwd_search(22, -3), None);
+}
+
+#[test]
+fn test_bwd_block_boundary() {
+    // test if a query returns the correct result if the result is the first bit after
+    // a block boundary (the left-most one even for backward search)
+    let bv = BitVec::from_bits(&[1, 1, 0, 1, 0, 0,]);
+    let tree = BpTree::<4>::from_bit_vector(bv);
+
+    assert_eq!(tree.bwd_search(5, 0), Some(3));
 }
 
 #[test]
