@@ -110,6 +110,16 @@ fn test_fwd_block_boundary() {
 }
 
 #[test]
+fn test_fwd_negative_block() {
+    let bv = BitVec::from_bits(&[1, 1, 1, 1, 0, 0, 0, 0,]);
+    let tree = BpTree::<2>::from_bit_vector(bv);
+
+    // regression: test if a query correctly returns none (instead of crashing) if the following
+    // block has a negative maximum excess (as a previous bug clamped it to 0).
+    assert_eq!(tree.fwd_search(3, 0), None);
+}
+
+#[test]
 fn test_bwd_search() {
     #[rustfmt::skip]
     let bv = BitVec::from_bits(&[

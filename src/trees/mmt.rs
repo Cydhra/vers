@@ -45,8 +45,8 @@ impl MinMaxTree {
 
         let mut nodes = vec![MinMaxNode::default(); num_leaves + num_internal_nodes];
         let mut total_excess = 0;
-        let mut min_excess = 0;
-        let mut max_excess = 0;
+        let mut min_excess = i64::MAX;
+        let mut max_excess = i64::MIN;
 
         // bottom up construction
         for i in 0..bit_vec.len() {
@@ -57,8 +57,8 @@ impl MinMaxTree {
                     max_excess,
                 };
                 total_excess = 0;
-                min_excess = 0;
-                max_excess = 0;
+                min_excess = i64::MAX;
+                max_excess = i64::MIN;
             }
             total_excess += if bit_vec.is_bit_set_unchecked(i) {
                 1
