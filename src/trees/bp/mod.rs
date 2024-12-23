@@ -36,7 +36,9 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// - `index`: The starting index.
     /// - `relative_excess`: The desired relative excess value.
     pub fn fwd_search(&self, index: usize, relative_excess: i64) -> Option<usize> {
-        if index >= self.vec.len() {
+        // check for greater than or equal length minus one, because the last element
+        // won't ever have a result from fwd_search
+        if index >= (self.vec.len() - 1) {
             return None;
         }
 

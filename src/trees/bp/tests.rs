@@ -120,6 +120,22 @@ fn test_fwd_negative_block() {
 }
 
 #[test]
+fn test_fwd_last_element() {
+    // a query beginning from the last element cannot return a valid result, but
+    // the binary mM tree right of it may be uninitialized, and so not ending the query early
+    // may yield invalid results or break assertions
+    #[rustfmt::skip]
+    let bv = BitVec::from_bits(&[
+        1, 1, 0, 1,  0, 1, 0, 1,
+        0, 1, 0, 1,  0, 1, 0, 1,
+        0, 1, 0, 1,  0, 1, 0, 1,
+    ]);
+
+    let tree = BpTree::<4>::from_bit_vector(bv);
+    assert!(tree.fwd_search(23, 0).is_none());
+}
+
+#[test]
 fn test_bwd_search() {
     #[rustfmt::skip]
     let bv = BitVec::from_bits(&[
