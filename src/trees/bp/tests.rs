@@ -1,5 +1,7 @@
 use super::*;
 use crate::BitVec;
+use rand::{RngCore, SeedableRng};
+use rand::rngs::StdRng;
 
 #[test]
 fn test_fwd_search() {
@@ -133,6 +135,57 @@ fn test_fwd_last_element() {
 
     let tree = BpTree::<4>::from_bit_vector(bv);
     assert!(tree.fwd_search(23, 0).is_none());
+}
+
+#[test]
+fn test_fwd_fuzzy() {
+    // we're fuzzing forward search a bit
+    const L: usize = 1000;
+    const L_BITS: usize = L * size_of::<u64>() * 8;
+
+    // we generate a vector using a seeded random generator and check that every query works as expected
+    let mut rng = StdRng::from_seed([0; 32]);
+    let mut bit_vec = BitVec::with_capacity(L_BITS);
+
+    for _ in 0..L {
+        bit_vec.append_word(rng.next_u64());
+    }
+
+    // pre-calculate all absolute excess values
+    let mut excess_values = vec![0i16; L_BITS];
+    let mut excess = 0;
+    for (idx, bit) in bit_vec.iter().enumerate() {
+        if bit == 1 {
+            excess += 1;
+            excess_values[idx] = excess;
+        } else {
+            excess -= 1;
+            excess_values[idx] = excess;
+        }
+    }
+
+    let bp = BpTree::<128>::from_bit_vector(bit_vec);
+
+    // test any query from valid nodes with the given relative excess values
+    for relative_excess in [-3, -2, -1, 0, 1, 2, 3] {
+        for node_handle in bp.vec.iter1() {
+            let absolute_excess = bp.excess(node_handle) + relative_excess;
+            let expected = excess_values[node_handle + 1..]
+                .iter()
+                .position(|&excess| excess as i64 == absolute_excess)
+                .map(|i| i + node_handle + 1);
+            let actual = bp.fwd_search(node_handle, relative_excess);
+            assert_eq!(
+                expected,
+                actual,
+                "fwd search return wrong position for relative excess {} searching from index ({}): expected ({:?}) but got ({:?}).",
+                relative_excess,
+                node_handle,
+                expected,
+                actual,
+            )
+        }
+    }
 }
 
 #[test]
