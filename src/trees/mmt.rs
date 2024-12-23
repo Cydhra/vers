@@ -350,10 +350,10 @@ impl MinMaxTree {
             // if we have a left sibling, check whether it contains the excess
             if let Some(left_sibling) = left_sibling {
                 // if it does, we can go down (relative excess is already relative to start of current block)
-                if self.min_excess(left_sibling.get())
+                if (relative_excess + self.total_excess(left_sibling.get()) == 0) || (self.min_excess(left_sibling.get())
                     <= relative_excess + self.total_excess(left_sibling.get())
                     && relative_excess + self.total_excess(left_sibling.get())
-                        <= self.max_excess(left_sibling.get())
+                        <= self.max_excess(left_sibling.get()))
                 {
                     self.do_bwd_downwards_search(left_sibling.get(), relative_excess)
                 } else {
@@ -393,20 +393,20 @@ impl MinMaxTree {
 
         let right_child = self.right_child(node);
         if let Some(right_child) = right_child {
-            if self.min_excess(right_child.get())
+            if (relative_excess + self.total_excess(right_child.get()) == 0) || (self.min_excess(right_child.get())
                 <= relative_excess + self.total_excess(right_child.get())
                 && relative_excess + self.total_excess(right_child.get())
-                    <= self.max_excess(right_child.get())
+                    <= self.max_excess(right_child.get()))
             {
                 self.do_bwd_downwards_search(right_child.get(), relative_excess)
             } else {
                 let left_child = self.left_child(node);
                 if let Some(left_child) = left_child {
                     let relative_excess = relative_excess + self.total_excess(right_child.get());
-                    if self.min_excess(left_child.get())
+                    if (relative_excess + self.total_excess(left_child.get()) == 0) || (self.min_excess(left_child.get())
                         <= relative_excess + self.total_excess(left_child.get())
                         && relative_excess + self.total_excess(left_child.get())
-                            <= self.max_excess(left_child.get())
+                            <= self.max_excess(left_child.get()))
                     {
                         self.do_bwd_downwards_search(left_child.get(), relative_excess)
                     } else {

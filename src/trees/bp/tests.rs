@@ -195,13 +195,27 @@ fn test_bwd_illegal_queries() {
 }
 
 #[test]
-fn test_bwd_block_boundary() {
+fn test_bwd_left_block_boundary() {
     // test if a query returns the correct result if the result is the first bit after
     // a block boundary (the left-most one even for backward search)
     let bv = BitVec::from_bits(&[1, 1, 0, 1, 0, 0,]);
     let tree = BpTree::<4>::from_bit_vector(bv);
 
     assert_eq!(tree.bwd_search(5, 0), Some(3));
+}
+
+#[test]
+fn test_bwd_right_block_boundary() {
+    #[rustfmt::skip]
+    let bv = BitVec::from_bits(&[
+        1, 1, 1, 1, 1, 1, 1, 1,
+        0, 0, 0, 0,
+    ]);
+
+    let bp_tree = BpTree::<4>::from_bit_vector(bv);
+
+    // test the correct result is returned if result is exactly at a right block boundary
+    assert_eq!(bp_tree.bwd_search(11, -1), Some(4));
 }
 
 #[test]
