@@ -288,6 +288,20 @@ fn test_bwd_right_block_boundary() {
 }
 
 #[test]
+fn test_bwd_block_traversal() {
+    let bv = BitVec::from_bits(&[
+        1, 1, 1, 1, 0,
+    ]);
+    let tree = BpTree::<4>::from_bit_vector(bv);
+
+    // if we request excess 0 backwards at a block boundary
+    // we test if that actually traverses the vector instead of reporting
+    // back the input index (which happens if the mM tree is queried without modification
+    // of relative excess, which happens at block boundaries)
+    assert_eq!(tree.bwd_search(4, 0), None);
+}
+
+#[test]
 fn test_bwd_fuzzy() {
     // we're fuzzing forward search a bit
     const L: usize = 1000;

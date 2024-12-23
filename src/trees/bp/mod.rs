@@ -91,7 +91,9 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
             return None;
         }
 
-        let block_index = index / BLOCK_SIZE;
+        // calculate the block we start searching in. It starts at index - 1, so we don't accidentally
+        // search the mM tree and immediately find `index` as the position
+        let block_index = (index - 1) / BLOCK_SIZE;
         let block_boundary = min(block_index * BLOCK_SIZE, self.vec.len());
 
         let mut current_relative_excess = 0;
