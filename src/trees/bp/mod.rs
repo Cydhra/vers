@@ -43,7 +43,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         }
 
         let block_index = index / BLOCK_SIZE;
-        self.fwd_search_block(index, relative_excess).map_or_else(
+        self.fwd_search_block(index, block_index, relative_excess).map_or_else(
             |mut current_relative_excess| {
                 // find the block that contains the desired relative excess
                 let block = self
@@ -76,8 +76,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// with the excess at the end of the current block if no index with the desired relative excess
     /// is found.
     #[inline(always)]
-    fn fwd_search_block(&self, start_index: usize, relative_excess: i64) -> Result<usize, i64> {
-        let block_index = start_index / BLOCK_SIZE;
+    fn fwd_search_block(&self, start_index: usize, block_index: usize, relative_excess: i64) -> Result<usize, i64> {
         let block_boundary = min((block_index + 1) * BLOCK_SIZE, self.vec.len());
 
         let mut current_relative_excess = 0;
