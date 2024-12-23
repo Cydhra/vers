@@ -8,7 +8,10 @@ use std::cmp::min;
 const OPEN_PAREN: u64 = 1;
 const CLOSE_PAREN: u64 = 0;
 
-pub mod builder;
+mod builder;
+
+// re-export the builders toplevel
+pub use builder::BpDfsBuilder;
 
 /// A succinct binary tree data structure.
 pub struct BpTree<const BLOCK_SIZE: usize = 512> {
