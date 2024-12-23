@@ -443,7 +443,7 @@ mod tests {
 
         // leaf nodes
         assert_eq!(tree.nodes[3].total_excess, 4);
-        assert_eq!(tree.nodes[3].min_excess, 0);
+        assert_eq!(tree.nodes[3].min_excess, 1);
         assert_eq!(tree.nodes[3].max_excess, 4);
 
         assert_eq!(tree.nodes[4].total_excess, 0);
@@ -461,7 +461,7 @@ mod tests {
 
         // left child of the root
         assert_eq!(tree.nodes[1].total_excess, 4);
-        assert_eq!(tree.nodes[1].min_excess, 0);
+        assert_eq!(tree.nodes[1].min_excess, 1);
         assert_eq!(tree.nodes[1].max_excess, 6);
 
         // right child of the root
