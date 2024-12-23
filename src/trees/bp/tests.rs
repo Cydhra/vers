@@ -178,7 +178,7 @@ fn test_fwd_fuzzy() {
             assert_eq!(
                 expected,
                 actual,
-                "fwd search return wrong position for relative excess {} searching from index ({}): expected ({:?}) but got ({:?}).",
+                "fwd search returned wrong position for relative excess {} searching from index ({}): expected ({:?}) but got ({:?}).",
                 relative_excess,
                 node_handle,
                 expected,
@@ -285,6 +285,58 @@ fn test_bwd_right_block_boundary() {
 
     // test the correct result is returned if result is exactly at a right block boundary
     assert_eq!(bp_tree.bwd_search(11, -1), Some(4));
+}
+
+#[test]
+fn test_bwd_fuzzy() {
+    // we're fuzzing forward search a bit
+    const L: usize = 1000;
+    const L_BITS: usize = L * size_of::<u64>() * 8;
+
+    // we generate a vector using a seeded random generator and check that every query works as expected
+    let mut rng = StdRng::from_seed([0; 32]);
+    let mut bit_vec = BitVec::with_capacity(L_BITS);
+
+    for _ in 0..L {
+        bit_vec.append_word(rng.next_u64());
+    }
+
+    // pre-calculate all absolute excess values
+    let mut excess_values = vec![0i16; L_BITS + 1];
+    let mut excess = 0;
+    for (idx, bit) in bit_vec.iter().enumerate() {
+        if bit == 1 {
+            excess += 1;
+            excess_values[idx + 1] = excess;
+        } else {
+            excess -= 1;
+            excess_values[idx + 1] = excess;
+        }
+    }
+
+
+    let bp = BpTree::<128>::from_bit_vector(bit_vec);
+
+    // test any query from valid nodes with the given relative excess values
+    for relative_excess in [-3, -2, -1, 0, 1, 2, 3] {
+        for node_handle in bp.vec.iter0() {
+            let absolute_excess = if node_handle == 0 { 0 } else { bp.excess(node_handle - 1) + relative_excess };
+            let expected = excess_values[..node_handle]
+                .iter()
+                .rposition(|&excess| excess as i64 == absolute_excess);
+
+            let actual = bp.bwd_search(node_handle, relative_excess);
+            assert_eq!(
+                expected,
+                actual,
+                "bwd search returned wrong position for relative excess {} searching from index ({}): expected ({:?}) but got ({:?}).",
+                relative_excess,
+                node_handle,
+                expected,
+                actual,
+            )
+        }
+    }
 }
 
 #[test]
