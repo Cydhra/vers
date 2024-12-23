@@ -173,15 +173,6 @@ impl MinMaxTree {
         }
     }
 
-    /// Get the index of the root node if it exists
-    pub(crate) fn root(&self) -> Option<usize> {
-        if self.nodes.is_empty() {
-            None
-        } else {
-            Some(0)
-        }
-    }
-
     /// Check if the node at `index` is a left child, or would be if it existed
     pub(crate) fn is_left_child(&self, index: NonZeroUsize) -> bool {
         index.get() % 2 == 1
