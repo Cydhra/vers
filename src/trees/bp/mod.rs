@@ -168,7 +168,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         let block_boundary = min(block_index * BLOCK_SIZE, self.vec.len());
 
         // the boundary at which we can start with table lookups
-        let lookup_boundary = max((start_index / LOOKUP_BLOCK_SIZE as usize) * LOOKUP_BLOCK_SIZE as usize, block_boundary);
+        let lookup_boundary = max(((start_index - 1) / LOOKUP_BLOCK_SIZE as usize) * LOOKUP_BLOCK_SIZE as usize, block_boundary);
         for i in (lookup_boundary..start_index).rev() {
             let bit = self.vec.get_unchecked(i);
             *relative_excess -= if bit == 1 { -1 } else { 1 };
