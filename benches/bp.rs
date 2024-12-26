@@ -3,7 +3,7 @@ use criterion::{black_box, criterion_group, criterion_main, BatchSize, Benchmark
 use rand::{Rng, SeedableRng};
 use std::collections::{BinaryHeap, HashSet};
 use rand::rngs::StdRng;
-use vers_vecs::trees::bp::builder::BpDfsBuilder;
+use vers_vecs::trees::bp::BpDfsBuilder;
 use vers_vecs::trees::bp::BpTree;
 use vers_vecs::trees::{DfsTreeBuilder, Tree};
 
