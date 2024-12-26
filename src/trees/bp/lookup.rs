@@ -24,7 +24,7 @@ type SignedLookupBlockType = i8;
 /// Data type we use in the lookup table to store excess values for lookup. Needs to be one size larger
 /// than `LookupBlockType`
 #[cfg(feature = "u16_lookup")]
-type EncodedTableType = u32;
+type EncodedTableType = u16;
 #[cfg(not(feature = "u16_lookup"))]
 type EncodedTableType = u16;
 
@@ -41,8 +41,8 @@ const LOOKUP_MAX_VALUE: u32 = u8::MAX as u32;
 /// The encoding scheme is simple:
 /// The least significant 5 (6) bits encode maximum excess (which is between -8 (-16) and 8 (16),
 /// which we store with an offset of 8 (16), so we don't have to deal with dual encoding),
-/// the next 5 (6) bits are the minimum excess encoded analogously,
-/// and the following 5 (6) bits are the total excess.
+/// the next 5 (6) bits are the minimum excess encoded analogously. We do not encode total excess,
+/// as that can easily be calculated using popcnt.
 ///
 /// The rest of the bits are zero.
 #[allow(long_running_const_eval)]
@@ -54,15 +54,9 @@ const ENCODING_OFFSET: i32 = LOOKUP_BLOCK_SIZE as i32;
 
 /// Bitmask for one of the lookup values.
 #[cfg(feature = "u16_lookup")]
-const ENCODING_MASK: u32 = 0b111111;
+const ENCODING_MASK: EncodedTableType = 0b111111;
 #[cfg(not(feature = "u16_lookup"))]
-const ENCODING_MASK: u16 = 0b11111;
-
-/// Where in the encoded bit pattern to store total excess
-#[cfg(feature = "u16_lookup")]
-const TOTAL_EXCESS_POSITION: usize = 12;
-#[cfg(not(feature = "u16_lookup"))]
-const TOTAL_EXCESS_POSITION: usize = 10;
+const ENCODING_MASK: EncodedTableType = 0b11111;
 
 /// Where in the encoded bit pattern to store minimum excess
 #[cfg(feature = "u16_lookup")]
@@ -95,8 +89,7 @@ const fn calculate_lookup_table() -> [EncodedTableType; 1 << LOOKUP_BLOCK_SIZE] 
             i += 1;
         }
 
-        let mut encoded: EncodedTableType = ((total_excess as i32 + ENCODING_OFFSET) as EncodedTableType & ENCODING_MASK) << TOTAL_EXCESS_POSITION;
-        encoded |= ((minimum_excess as i32 + ENCODING_OFFSET) as EncodedTableType & ENCODING_MASK) << MINIMUM_EXCESS_POSITION;
+        let mut encoded: EncodedTableType = ((minimum_excess as i32 + ENCODING_OFFSET) as EncodedTableType & ENCODING_MASK) << MINIMUM_EXCESS_POSITION;
         encoded |= (maximum_excess as i32 + ENCODING_OFFSET) as EncodedTableType & ENCODING_MASK;
         lookup[v as usize] = encoded;
 
@@ -104,11 +97,6 @@ const fn calculate_lookup_table() -> [EncodedTableType; 1 << LOOKUP_BLOCK_SIZE] 
     }
 
     lookup
-}
-
-/// Obtain the total excess from an encoded 16 bit value from the lookup table
-const fn get_total_excess(value: EncodedTableType) -> i64 {
-    (value >> TOTAL_EXCESS_POSITION) as i64 - ENCODING_OFFSET as i64
 }
 
 /// Obtain the minimum excess from an encoded 16 bit value from the lookup table
@@ -134,7 +122,7 @@ const fn max(a: SignedLookupBlockType, b: SignedLookupBlockType) -> SignedLookup
 /// Get the total excess of a block of eight parenthesis
 #[inline(always)]
 fn lookup_total_excess(block: LookupBlockType) -> i64 {
-    get_total_excess(PAREN_BLOCK_LOOKUP[block as usize])
+    block.count_ones() as i64 - block.count_zeros() as i64
 }
 
 /// Get the maximum excess of a block of eight parenthesis
