@@ -1,3 +1,5 @@
+#![allow(long_running_const_eval)]
+
 use std::cmp::Reverse;
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use rand::{Rng, SeedableRng};
