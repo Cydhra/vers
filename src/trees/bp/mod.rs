@@ -89,7 +89,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         let upper_lookup_boundary = max(lookup_boundary, (block_boundary / LOOKUP_BLOCK_SIZE as usize) * LOOKUP_BLOCK_SIZE as usize);
 
         for i in (lookup_boundary..upper_lookup_boundary).step_by(LOOKUP_BLOCK_SIZE as usize) {
-            if let Ok(idx) = process_block_fwd(self.vec.get_bits_unchecked(i, LOOKUP_BLOCK_SIZE as usize) as u8, relative_excess) {
+            if let Ok(idx) = process_block_fwd(self.vec.get_bits_unchecked(i, LOOKUP_BLOCK_SIZE as usize).try_into().unwrap(), relative_excess) {
                 return Ok(i + idx as usize);
             }
         }
@@ -170,7 +170,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         }
 
         for i in (block_boundary..lookup_boundary).step_by(LOOKUP_BLOCK_SIZE as usize).rev() {
-            if let Ok(idx) = process_block_bwd(self.vec.get_bits_unchecked(i, LOOKUP_BLOCK_SIZE as usize) as u8, relative_excess) {
+            if let Ok(idx) = process_block_bwd(self.vec.get_bits_unchecked(i, LOOKUP_BLOCK_SIZE as usize).try_into().unwrap(), relative_excess) {
                 return Ok(i + idx as usize);
             }
         }
