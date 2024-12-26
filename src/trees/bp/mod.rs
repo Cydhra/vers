@@ -38,7 +38,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// # Arguments
     /// - `index`: The starting index.
     /// - `relative_excess`: The desired relative excess value.
-    pub fn fwd_search(&self, index: usize, relative_excess: i64) -> Option<usize> {
+    pub fn fwd_search(&self, index: usize, mut relative_excess: i64) -> Option<usize> {
         // check for greater than or equal length minus one, because the last element
         // won't ever have a result from fwd_search
         if index >= (self.vec.len() - 1) {
@@ -46,18 +46,17 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         }
 
         let block_index = (index + 1) / BLOCK_SIZE;
-        self.fwd_search_block(index, block_index, relative_excess).map_or_else(
-            |mut current_relative_excess| {
+        self.fwd_search_block(index, block_index, &mut relative_excess).map_or_else(
+            |_| {
                 // find the block that contains the desired relative excess
                 let block = self
                     .min_max_tree
-                    .fwd_search(block_index, relative_excess - current_relative_excess);
+                    .fwd_search(block_index, relative_excess);
 
                 // check the result block for the exact position
-                block.and_then(|(block, relative_excess)| {
-                    current_relative_excess = 0;
+                block.and_then(|(block, mut relative_excess)| {
                     self
-                        .fwd_search_block(block * BLOCK_SIZE - 1, block, relative_excess)
+                        .fwd_search_block(block * BLOCK_SIZE - 1, block, &mut relative_excess)
                         .ok()
                 })
             },
@@ -72,18 +71,16 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// with the excess at the end of the current block if no index with the desired relative excess
     /// is found.
     #[inline(always)]
-    fn fwd_search_block(&self, start_index: usize, block_index: usize, relative_excess: i64) -> Result<usize, i64> {
+    fn fwd_search_block(&self, start_index: usize, block_index: usize, relative_excess: &mut i64) -> Result<usize, ()> {
         let block_boundary = min((block_index + 1) * BLOCK_SIZE, self.vec.len());
-
-        let mut current_relative_excess = 0;
 
         // the boundary at which we can start with table lookups
         let lookup_boundary = min(((start_index + 1 + LOOKUP_BLOCK_SIZE as usize - 1) / LOOKUP_BLOCK_SIZE as usize) * LOOKUP_BLOCK_SIZE as usize, block_boundary);
         for i in start_index + 1..lookup_boundary {
             let bit = self.vec.get_unchecked(i);
-            current_relative_excess += if bit == 1 { 1 } else { -1 };
+            *relative_excess -= if bit == 1 { 1 } else { -1 };
 
-            if current_relative_excess == relative_excess {
+            if *relative_excess == 0 {
                 return Ok(i);
             }
         }
@@ -92,9 +89,8 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         let upper_lookup_boundary = max(lookup_boundary, (block_boundary / LOOKUP_BLOCK_SIZE as usize) * LOOKUP_BLOCK_SIZE as usize);
 
         for i in (lookup_boundary..upper_lookup_boundary).step_by(LOOKUP_BLOCK_SIZE as usize) {
-            match process_block_fwd(self.vec.get_bits_unchecked(i, LOOKUP_BLOCK_SIZE as usize) as u8, relative_excess - current_relative_excess) {
-                Ok(idx) => return Ok(i + idx as usize),
-                Err(total_excess) => { current_relative_excess += total_excess; }
+            if let Ok(idx) = process_block_fwd(self.vec.get_bits_unchecked(i, LOOKUP_BLOCK_SIZE as usize) as u8, relative_excess) {
+                return Ok(i + idx as usize);
             }
         }
 
@@ -102,14 +98,14 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         // block in the vector)
         for i in upper_lookup_boundary..block_boundary {
             let bit = self.vec.get_unchecked(i);
-            current_relative_excess += if bit == 1 { 1 } else { -1 };
+            *relative_excess -= if bit == 1 { 1 } else { -1 };
 
-            if current_relative_excess == relative_excess {
+            if *relative_excess == 0 {
                 return Ok(i);
             }
         }
 
-        Err(current_relative_excess)
+        Err(())
     }
 
     /// Search for a position where the excess relative to the starting `index` is `relative_excess`.
@@ -120,7 +116,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// # Arguments
     /// - `index`: The starting index.
     /// - `relative_excess`: The desired relative excess value.
-    pub fn bwd_search(&self, index: usize, relative_excess: i64) -> Option<usize> {
+    pub fn bwd_search(&self, index: usize, mut relative_excess: i64) -> Option<usize> {
         if index >= self.vec.len() {
             return None;
         }
@@ -136,21 +132,20 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         let block_index = (index - 1) / BLOCK_SIZE;
 
         // check the current block
-        self.bwd_search_block(index, block_index, relative_excess).map_or_else(
-            |mut current_relative_excess| {
+        self.bwd_search_block(index, block_index, &mut relative_excess).map_or_else(
+            |_| {
                 // find the block that contains the desired relative excess
                 let block = self
                     .min_max_tree
-                    .bwd_search(block_index, relative_excess - current_relative_excess);
+                    .bwd_search(block_index, relative_excess);
 
                 // check the result block for the exact position
-                block.and_then(|(block, relative_excess)| {
-                    current_relative_excess = 0;
+                block.and_then(|(block, mut relative_excess)| {
                     for i in (block * BLOCK_SIZE..(block + 1) * BLOCK_SIZE).rev() {
                         let bit = self.vec.get_unchecked(i);
-                        current_relative_excess += if bit == 1 { -1 } else { 1 };
+                        relative_excess -= if bit == 1 { -1 } else { 1 };
 
-                        if current_relative_excess == relative_excess {
+                        if relative_excess == 0 {
                             return Some(i);
                         }
                     }
@@ -169,22 +164,20 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// with the excess at the end of the current block if no index with the desired relative excess
     /// is found.
     #[inline(always)]
-    fn bwd_search_block(&self, start_index: usize, block_index: usize, relative_excess: i64) -> Result<usize, i64> {
+    fn bwd_search_block(&self, start_index: usize, block_index: usize, relative_excess: &mut i64) -> Result<usize, ()> {
         let block_boundary = min(block_index * BLOCK_SIZE, self.vec.len());
-
-        let mut current_relative_excess = 0;
 
         // check the current block
         for i in (block_boundary..start_index).rev() {
             let bit = self.vec.get_unchecked(i);
-            current_relative_excess += if bit == 1 { -1 } else { 1 };
+            *relative_excess -= if bit == 1 { -1 } else { 1 };
 
-            if current_relative_excess == relative_excess {
+            if *relative_excess == 0 {
                 return Ok(i);
             }
         }
 
-        Err(current_relative_excess)
+        Err(())
     }
 
     /// Find the position of the matching closing parenthesis for the opening parenthesis at `index`.

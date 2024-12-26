@@ -109,20 +109,20 @@ pub(crate) fn lookup_minimum_excess(block: u8) -> i64 {
 }
 
 #[inline(always)]
-pub(crate) fn process_block_fwd(block: u8, relative_excess: i64) -> Result<u64, i64> {
-    if relative_excess <= lookup_maximum_excess(block) && lookup_minimum_excess(block) <= relative_excess {
-        let mut current_relative_excess = 0;
+pub(crate) fn process_block_fwd(block: u8, relative_excess: &mut i64) -> Result<u64, ()> {
+    if *relative_excess <= lookup_maximum_excess(block) && lookup_minimum_excess(block) <= *relative_excess {
         for i in 0..LOOKUP_BLOCK_SIZE {
             let bit = (block >> i) & 0x1;
-            current_relative_excess += if bit == 1 { 1 } else { -1 };
+            *relative_excess -= if bit == 1 { 1 } else { -1 };
 
-            if current_relative_excess == relative_excess {
+            if *relative_excess == 0 {
                 return Ok(i);
             }
         }
 
         unreachable!()
     } else {
-        Err(lookup_total_excess(block))
+        *relative_excess -= lookup_total_excess(block);
+        Err(())
     }
 }
