@@ -12,7 +12,7 @@ mod builder;
 
 // re-export the builders toplevel
 pub use builder::BpDfsBuilder;
-use crate::trees::bp::lookup::{process_block_fwd, LOOKUP_BLOCK_SIZE};
+use crate::trees::bp::lookup::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 
 mod lookup;
 
@@ -167,13 +167,20 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     fn bwd_search_block(&self, start_index: usize, block_index: usize, relative_excess: &mut i64) -> Result<usize, ()> {
         let block_boundary = min(block_index * BLOCK_SIZE, self.vec.len());
 
-        // check the current block
-        for i in (block_boundary..start_index).rev() {
+        // the boundary at which we can start with table lookups
+        let lookup_boundary = max((start_index / LOOKUP_BLOCK_SIZE as usize) * LOOKUP_BLOCK_SIZE as usize, block_boundary);
+        for i in (lookup_boundary..start_index).rev() {
             let bit = self.vec.get_unchecked(i);
             *relative_excess -= if bit == 1 { -1 } else { 1 };
 
             if *relative_excess == 0 {
                 return Ok(i);
+            }
+        }
+
+        for i in (block_boundary..lookup_boundary).step_by(LOOKUP_BLOCK_SIZE as usize).rev() {
+            if let Ok(idx) = process_block_bwd(self.vec.get_bits_unchecked(i, LOOKUP_BLOCK_SIZE as usize) as u8, relative_excess) {
+                return Ok(i + idx as usize);
             }
         }
 

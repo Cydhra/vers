@@ -126,3 +126,25 @@ pub(crate) fn process_block_fwd(block: u8, relative_excess: &mut i64) -> Result<
         Err(())
     }
 }
+
+#[inline(always)]
+pub(crate) fn process_block_bwd(block: u8, relative_excess: &mut i64) -> Result<u64, ()> {
+    let total_excess = lookup_total_excess(block);
+    if (*relative_excess + total_excess == 0) || (lookup_minimum_excess(block)
+        <= *relative_excess + total_excess
+        && *relative_excess + total_excess <= lookup_maximum_excess(block)) {
+        for i in (0..LOOKUP_BLOCK_SIZE).rev() {
+            let bit = (block >> i) & 0x1;
+            *relative_excess -= if bit == 1 { -1 } else { 1 };
+
+            if *relative_excess == 0 {
+                return Ok(i);
+            }
+        }
+
+        unreachable!()
+    } else {
+        *relative_excess += total_excess;
+        Err(())
+    }
+}
