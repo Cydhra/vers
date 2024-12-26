@@ -56,16 +56,9 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
                 // check the result block for the exact position
                 block.and_then(|(block, relative_excess)| {
                     current_relative_excess = 0;
-                    for i in block * BLOCK_SIZE..(block + 1) * BLOCK_SIZE {
-                        let bit = self.vec.get_unchecked(i);
-                        current_relative_excess += if bit == 1 { 1 } else { -1 };
-
-                        if current_relative_excess == relative_excess {
-                            return Some(i);
-                        }
-                    }
-
-                    unreachable!("If the block isn't None, the loop should always return Some(i)")
+                    self
+                        .fwd_search_block(block * BLOCK_SIZE - 1, block, relative_excess)
+                        .ok()
                 })
             },
             |i| Some(i),
