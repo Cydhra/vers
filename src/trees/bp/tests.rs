@@ -138,6 +138,15 @@ fn test_fwd_last_element() {
 }
 
 #[test]
+fn test_lookup_max_pop() {
+    // test whether a table lookup works if the bit pattern is only ones
+    let bv = BitVec::from_bits(&[1; 64]);
+    let tree = BpTree::<512>::from_bit_vector(bv);
+
+    assert_eq!(tree.fwd_search(0, 40), Some(40));
+}
+
+#[test]
 fn test_fwd_fuzzy() {
     // we're fuzzing forward search a bit
     const L: usize = 1000;

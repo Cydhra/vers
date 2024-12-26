@@ -10,12 +10,24 @@ pub(crate) const LOOKUP_BLOCK_SIZE: u64 = 8;
 /// contains the minimum, maximum, and total excess encoded in 16 bit.
 ///
 /// The encoding scheme is simple:
-/// The least significant 4 bits encode maximum excess (which is between -8 and 8, which we store
-/// with an offset of 8, so we don't have to deal with dual encoding), the next 4 bits are the
-/// minimum excess encoded analogously, and the following 4 bits are the total excess.
+/// The least significant 5 bits encode maximum excess (which is between -8 and 8, which we store
+/// with an offset of 8, so we don't have to deal with dual encoding), the next 5 bits are the
+/// minimum excess encoded analogously, and the following 5 bits are the total excess.
 ///
 /// The rest of the bits are zero.
 const PAREN_BLOCK_LOOKUP: [u16; 256] = calculate_lookup_table();
+
+/// Offset encoded numbers so negative numbers are stored as positive integers, reducing
+/// encoding complexity
+const ENCODING_OFFSET: i16 = 8;
+
+const ENCODING_MASK: u16 = 0b11111;
+
+/// Where in the encoded bit pattern to store total excess
+const TOTAL_EXCESS_POSITION: usize = 10;
+
+/// Where in the encoded bit pattern to store minimum excess
+const MINIMUM_EXCESS_POSITION: usize = 5;
 
 const fn calculate_lookup_table() -> [u16; 256] {
     // initial sentinel values during excess computation
@@ -42,9 +54,9 @@ const fn calculate_lookup_table() -> [u16; 256] {
             i += 1;
         }
 
-        let mut encoded: u16 = (((total_excess as i16 + 8) & 0xF) << 8) as u16;
-        encoded |= (((minimum_excess as i16 + 8) & 0xF) << 4) as u16;
-        encoded |= ((maximum_excess as i16 + 8) & 0xF) as u16;
+        let mut encoded: u16 = ((total_excess as i16 + ENCODING_OFFSET) as u16 & ENCODING_MASK) << TOTAL_EXCESS_POSITION;
+        encoded |= ((minimum_excess as i16 + ENCODING_OFFSET) as u16 & ENCODING_MASK) << MINIMUM_EXCESS_POSITION;
+        encoded |= (maximum_excess as i16 + ENCODING_OFFSET) as u16 & ENCODING_MASK;
         lookup[v as usize] = encoded;
 
         v += 1;
@@ -55,17 +67,17 @@ const fn calculate_lookup_table() -> [u16; 256] {
 
 /// Obtain the total excess from an encoded 16 bit value from the lookup table
 const fn get_total_excess(value: u16) -> i64 {
-    (value >> 8) as i64 - 8
+    (value >> TOTAL_EXCESS_POSITION) as i64 - ENCODING_OFFSET as i64
 }
 
 /// Obtain the minimum excess from an encoded 16 bit value from the lookup table
 const fn get_minimum_excess(value: u16) -> i64 {
-    ((value >> 4) & 0xF) as i64 - 8
+    ((value >> MINIMUM_EXCESS_POSITION) & ENCODING_MASK) as i64 - ENCODING_OFFSET as i64
 }
 
 /// Obtain the minimum excess from an encoded 16 bit value from the lookup table
 const fn get_maximum_excess(value: u16) -> i64 {
-    (value & 0xF) as i64 - 8
+    (value & ENCODING_MASK) as i64 - ENCODING_OFFSET as i64
 }
 
 /// Branchless const minimum computation for values that cannot overflow
