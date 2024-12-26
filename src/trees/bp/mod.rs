@@ -3,7 +3,7 @@
 use crate::trees::mmt::MinMaxTree;
 use crate::trees::Tree;
 use crate::{BitVec, RsVec};
-use std::cmp::min;
+use std::cmp::{max, min};
 
 const OPEN_PAREN: u64 = 1;
 const CLOSE_PAREN: u64 = 0;
@@ -12,6 +12,9 @@ mod builder;
 
 // re-export the builders toplevel
 pub use builder::BpDfsBuilder;
+use crate::trees::bp::lookup::{process_block_fwd, LOOKUP_BLOCK_SIZE};
+
+mod lookup;
 
 /// A succinct binary tree data structure.
 pub struct BpTree<const BLOCK_SIZE: usize = 512> {
@@ -81,8 +84,30 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
 
         let mut current_relative_excess = 0;
 
-        // check the current block
-        for i in start_index + 1..block_boundary {
+        // the boundary at which we can start with table lookups
+        let lookup_boundary = min(((start_index + 1 + LOOKUP_BLOCK_SIZE as usize - 1) / LOOKUP_BLOCK_SIZE as usize) * LOOKUP_BLOCK_SIZE as usize, block_boundary);
+        for i in start_index + 1..lookup_boundary {
+            let bit = self.vec.get_unchecked(i);
+            current_relative_excess += if bit == 1 { 1 } else { -1 };
+
+            if current_relative_excess == relative_excess {
+                return Ok(i);
+            }
+        }
+
+        // the boundary up to which we can use table lookups
+        let upper_lookup_boundary = max(lookup_boundary, (block_boundary / LOOKUP_BLOCK_SIZE as usize) * LOOKUP_BLOCK_SIZE as usize);
+
+        for i in (lookup_boundary..upper_lookup_boundary).step_by(LOOKUP_BLOCK_SIZE as usize) {
+            match process_block_fwd(self.vec.get_bits_unchecked(i, LOOKUP_BLOCK_SIZE as usize) as u8, relative_excess - current_relative_excess) {
+                Ok(idx) => return Ok(i + idx as usize),
+                Err(total_excess) => { current_relative_excess += total_excess; }
+            }
+        }
+
+        // if the upper_lookup_boundary isn't the block_boundary (which happens in non-full blocks, i.e. the last
+        // block in the vector)
+        for i in upper_lookup_boundary..block_boundary {
             let bit = self.vec.get_unchecked(i);
             current_relative_excess += if bit == 1 { 1 } else { -1 };
 
