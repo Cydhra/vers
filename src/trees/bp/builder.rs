@@ -6,12 +6,12 @@ use crate::trees::DfsTreeBuilder;
 /// [`DfsTreeBuilder`].
 ///
 /// [`BpTree`]: BpTree
-pub struct BpDfsBuilder {
+pub struct BpDfsBuilder<const BLOCK_SIZE: usize> {
     excess: i64,
     bit_vec: BitVec,
 }
 
-impl BpDfsBuilder {
+impl<const BLOCK_SIZE: usize> BpDfsBuilder<BLOCK_SIZE> {
     /// Create new empty `DfsTreeBuilder`
     pub fn new() -> Self {
         Self {
@@ -29,8 +29,8 @@ impl BpDfsBuilder {
     }
 }
 
-impl DfsTreeBuilder for BpDfsBuilder {
-    type Tree = BpTree;
+impl<const BLOCK_SIZE: usize> DfsTreeBuilder for BpDfsBuilder<BLOCK_SIZE> {
+    type Tree = BpTree<BLOCK_SIZE>;
 
     fn enter_node(&mut self) {
         self.excess += 1;

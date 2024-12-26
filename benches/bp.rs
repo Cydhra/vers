@@ -9,8 +9,10 @@ use vers_vecs::trees::{DfsTreeBuilder, Tree};
 
 mod common;
 
+const BLOCK_SIZE: usize = 1024;
+
 // TODO this function has nlogn runtime, which is a bit too much for the largest trees
-fn generate_tree<R: Rng>(rng: &mut R, nodes: u64) -> BpTree {
+fn generate_tree<R: Rng>(rng: &mut R, nodes: u64) -> BpTree<BLOCK_SIZE> {
     // generate prüfer sequence
     let mut sequence = vec![0; (nodes - 2) as usize];
     for i in 0..nodes - 2 {
