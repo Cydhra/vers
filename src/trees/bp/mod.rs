@@ -12,8 +12,15 @@ mod builder;
 // re-export the builders toplevel
 pub use builder::BpDfsBuilder;
 
+#[cfg(feature = "u16_lookup")]
 mod lookup;
-use crate::trees::bp::lookup::*;
+#[cfg(feature = "u16_lookup")]
+use lookup::*;
+
+#[cfg(not(feature = "u16_lookup"))]
+mod lookup_query;
+#[cfg(not(feature = "u16_lookup"))]
+use lookup_query::*;
 
 /// A succinct binary tree data structure.
 pub struct BpTree<const BLOCK_SIZE: usize = 512> {

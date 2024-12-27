@@ -1,5 +1,7 @@
-//! This module provides the lookup table and lookup functionality to obtain excess values for
-//! checking blocks of bits in the tree's bitvector, instead of checking each bit individually.
+//! This module provides the lookup table and lookup functionality to answer excess queries
+//! for 8-bit and 16-bit blocks in the tree vector.
+//! Note that the 8-bit version is unused, since this whole module gets replaced with
+//! `lookup_query.rs` if the 16-bit block feature is disabled (since that module is faster)
 
 /// How big the lookup blocks are. We store this in a constant so we can switch out this module
 /// using a crate feature against one where this constant is redefined to 16, but reuse the actual
