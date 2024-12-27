@@ -164,7 +164,7 @@ pub(crate) fn process_block_bwd(block: LookupBlockType, relative_excess: &mut i6
         && *relative_excess + total_excess <= lookup_maximum_excess(block)) {
         for i in (0..LOOKUP_BLOCK_SIZE).rev() {
             let bit = (block >> i) & 0x1;
-            *relative_excess -= if bit == 1 { -1 } else { 1 };
+            *relative_excess += if bit == 1 { 1 } else { -1 };
 
             if *relative_excess == 0 {
                 return Ok(i);
