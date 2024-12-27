@@ -546,6 +546,8 @@ fn test_root() {
     ]);
     let tree = BpTree::<8>::from_bit_vector(bv);
     assert_eq!(tree.root(), Some(0));
+    assert_eq!(tree.previous_sibling(0), None);
+    assert_eq!(tree.next_sibling(0), None);
 
     let tree = BpTree::<16>::from_bit_vector(BitVec::new());
     assert_eq!(tree.root(), None);

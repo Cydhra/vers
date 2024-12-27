@@ -279,13 +279,17 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
             self.vec.get(node) == Some(OPEN_PAREN),
             "Node handle is invalid"
         );
-        self.vec.get(node - 1).and_then(|bit| {
-            if bit == CLOSE_PAREN {
-                self.open(node - 1)
-            } else {
-                None
-            }
-        })
+        if node == 0 {
+            None
+        } else {
+            self.vec.get(node - 1).and_then(|bit| {
+                if bit == CLOSE_PAREN {
+                    self.open(node - 1)
+                } else {
+                    None
+                }
+            })
+        }
     }
 
     fn last_child(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
