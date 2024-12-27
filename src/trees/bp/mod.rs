@@ -9,12 +9,11 @@ const OPEN_PAREN: u64 = 1;
 const CLOSE_PAREN: u64 = 0;
 
 mod builder;
-
 // re-export the builders toplevel
 pub use builder::BpDfsBuilder;
-use crate::trees::bp::lookup::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 
 mod lookup;
+use crate::trees::bp::lookup::*;
 
 /// A succinct binary tree data structure.
 pub struct BpTree<const BLOCK_SIZE: usize = 512> {
