@@ -143,12 +143,16 @@ fn test_lookup_extreme_pop() {
     let bv = BitVec::from_bits(&[1; 64]);
     let tree = BpTree::<512>::from_bit_vector(bv);
 
-    assert_eq!(tree.fwd_search(0, 40), Some(40));
+    for excess in 1..64 {
+        assert_eq!(tree.fwd_search(0, excess), Some(excess as usize));
+    }
 
     let bv = BitVec::from_bits(&[0; 64]);
     let tree = BpTree::<512>::from_bit_vector(bv);
 
-    assert_eq!(tree.fwd_search(0, -40), Some(40));
+    for excess in 1..64 {
+        assert_eq!(tree.fwd_search(0, -excess), Some(excess as usize));
+    }
 }
 
 #[test]
