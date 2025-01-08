@@ -213,14 +213,14 @@ fn test_custom_iter_behavior() {
     assert!(iter.advance_by(6).is_err());
     assert!(iter.advance_back_by(5).is_ok());
 
-    assert_eq!(bv.iter().skip(2).next(), Some(0));
+    assert_eq!(bv.iter().nth(2), Some(0));
     assert_eq!(bv.iter().count(), 10);
     assert_eq!(bv.iter().skip(2).count(), 8);
     assert_eq!(bv.iter().last(), Some(0));
     assert_eq!(bv.iter().nth(3), Some(1));
     assert_eq!(bv.iter().nth(12), None);
 
-    assert_eq!(bv.clone().into_iter().skip(2).next(), Some(0));
+    assert_eq!(bv.clone().into_iter().nth(2), Some(0));
     assert_eq!(bv.clone().into_iter().count(), 10);
     assert_eq!(bv.clone().into_iter().skip(2).count(), 8);
     assert_eq!(bv.clone().into_iter().last(), Some(0));
