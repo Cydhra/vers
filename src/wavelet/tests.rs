@@ -696,14 +696,14 @@ fn test_wavelet_iter_randomized() {
         let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
 
         let mut iter = wavelet.iter();
-        for i in 0..data.len() {
-            assert_eq!(iter.next(), Some(BitVec::pack_sequence_u8(&[data[i]], 8)));
+        for v in &data {
+            assert_eq!(iter.next(), Some(BitVec::pack_sequence_u8(&[*v], 8)));
         }
         assert_eq!(iter.next(), None);
 
         let mut iter = wavelet.iter_u64().unwrap();
-        for i in 0..data.len() {
-            assert_eq!(iter.next(), Some(data[i] as u64));
+        for v in &data {
+            assert_eq!(iter.next(), Some(*v as u64));
         }
         assert_eq!(iter.next(), None);
     }
