@@ -44,7 +44,7 @@ fn bench(b: &mut Criterion<TimeDiff>) {
 
         for fill_factor in FILL_FACTORS {
             group.bench_with_input(
-                BenchmarkId::new("sparse overhead equal", &fill_factor),
+                BenchmarkId::new("sparse overhead equal", fill_factor),
                 &fill_factor,
                 |b, _| {
                     b.iter_custom(|iters| {
@@ -69,7 +69,7 @@ fn bench(b: &mut Criterion<TimeDiff>) {
             );
 
             group.bench_with_input(
-                BenchmarkId::new("sparse overhead unequal", &fill_factor),
+                BenchmarkId::new("sparse overhead unequal", fill_factor),
                 &fill_factor,
                 |b, _| {
                     b.iter_custom(|iters| {
