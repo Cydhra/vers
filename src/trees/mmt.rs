@@ -40,7 +40,7 @@ impl MinMaxTree {
             return Self::default();
         }
 
-        let num_leaves = (bit_vec.len() + block_size - 1) / block_size;
+        let num_leaves = bit_vec.len().div_ceil(block_size);
         let num_internal_nodes = max(1, (1 << (num_leaves as f64).log2().ceil() as usize) - 1);
 
         let mut nodes = vec![MinMaxNode::default(); num_leaves + num_internal_nodes];
@@ -180,7 +180,7 @@ impl MinMaxTree {
 
     /// Get the index of the first leaf node in the tree
     fn first_leaf(&self) -> usize {
-        debug_assert!(self.nodes.len() > 0);
+        debug_assert!(!self.nodes.is_empty());
         match self.nodes.len() {
             2 => 1,
             _ => ((self.nodes.len() + 1) / 2).next_power_of_two() - 1,
@@ -213,7 +213,7 @@ impl MinMaxTree {
             NonZeroUsize::new(begin + self.first_leaf()).unwrap(),
             relative_excess,
         )
-        .and_then(|(node, relative_excess)| Some((node.get() - self.first_leaf(), relative_excess)))
+        .map(|(node, relative_excess)| (node.get() - self.first_leaf(), relative_excess))
     }
 
     /// Backward search for the leaf node that contains the closest position with the given excess.
@@ -234,7 +234,7 @@ impl MinMaxTree {
             NonZeroUsize::new(begin + self.first_leaf()).unwrap(),
             relative_excess,
         )
-        .and_then(|(node, relative_excess)| Some((node.get() - self.first_leaf(), relative_excess)))
+        .map(|(node, relative_excess)| (node.get() - self.first_leaf(), relative_excess))
     }
 
     /// Search up the tree for the block that contains the relative excess. We assume that the
@@ -297,7 +297,7 @@ impl MinMaxTree {
         // if we arrived at a leaf, we are done. Since we assume that the relative excess is within
         // the range of the block given to the method call, we can return the node.
         if self.is_leaf(node) {
-            return NonZeroUsize::new(node).and_then(|node| Some((node, relative_excess)));
+            return NonZeroUsize::new(node).map(|node| (node, relative_excess));
         }
 
         let left_child = self.left_child(node);
@@ -350,10 +350,11 @@ impl MinMaxTree {
             // if we have a left sibling, check whether it contains the excess
             if let Some(left_sibling) = left_sibling {
                 // if it does, we can go down (relative excess is already relative to start of current block)
-                if (relative_excess + self.total_excess(left_sibling.get()) == 0) || (self.min_excess(left_sibling.get())
-                    <= relative_excess + self.total_excess(left_sibling.get())
-                    && relative_excess + self.total_excess(left_sibling.get())
-                        <= self.max_excess(left_sibling.get()))
+                if (relative_excess + self.total_excess(left_sibling.get()) == 0)
+                    || (self.min_excess(left_sibling.get())
+                        <= relative_excess + self.total_excess(left_sibling.get())
+                        && relative_excess + self.total_excess(left_sibling.get())
+                            <= self.max_excess(left_sibling.get()))
                 {
                     self.do_bwd_downwards_search(left_sibling.get(), relative_excess)
                 } else {
@@ -388,25 +389,27 @@ impl MinMaxTree {
         // if we arrived at a leaf, we are done. Since we assume that the relative excess is within
         // the range of the block given to the method call, we can return the node.
         if self.is_leaf(node) {
-            return NonZeroUsize::new(node).and_then(|node| Some((node, relative_excess)));
+            return NonZeroUsize::new(node).map(|node| (node, relative_excess));
         }
 
         let right_child = self.right_child(node);
         if let Some(right_child) = right_child {
-            if (relative_excess + self.total_excess(right_child.get()) == 0) || (self.min_excess(right_child.get())
-                <= relative_excess + self.total_excess(right_child.get())
-                && relative_excess + self.total_excess(right_child.get())
-                    <= self.max_excess(right_child.get()))
+            if (relative_excess + self.total_excess(right_child.get()) == 0)
+                || (self.min_excess(right_child.get())
+                    <= relative_excess + self.total_excess(right_child.get())
+                    && relative_excess + self.total_excess(right_child.get())
+                        <= self.max_excess(right_child.get()))
             {
                 self.do_bwd_downwards_search(right_child.get(), relative_excess)
             } else {
                 let left_child = self.left_child(node);
                 if let Some(left_child) = left_child {
                     let relative_excess = relative_excess + self.total_excess(right_child.get());
-                    if (relative_excess + self.total_excess(left_child.get()) == 0) || (self.min_excess(left_child.get())
-                        <= relative_excess + self.total_excess(left_child.get())
-                        && relative_excess + self.total_excess(left_child.get())
-                            <= self.max_excess(left_child.get()))
+                    if (relative_excess + self.total_excess(left_child.get()) == 0)
+                        || (self.min_excess(left_child.get())
+                            <= relative_excess + self.total_excess(left_child.get())
+                            && relative_excess + self.total_excess(left_child.get())
+                                <= self.max_excess(left_child.get()))
                     {
                         self.do_bwd_downwards_search(left_child.get(), relative_excess)
                     } else {
@@ -488,7 +491,7 @@ mod tests {
         //  3  4 5 6
         //  /\/\/\/\
         // 7 8 9 10 11 12 - -
-        let bv = BitVec::from_bits(&vec![0; 48]);
+        let bv = BitVec::from_bits(&[0; 48]);
         let tree = MinMaxTree::excess_tree(&bv, 8);
 
         assert_eq!(tree.nodes.len(), 13); // 6 leaves + 7 internal nodes

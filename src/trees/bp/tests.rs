@@ -1,7 +1,7 @@
 use super::*;
 use crate::BitVec;
-use rand::{RngCore, SeedableRng};
 use rand::rngs::StdRng;
+use rand::{RngCore, SeedableRng};
 
 #[test]
 fn test_fwd_search() {
@@ -99,7 +99,7 @@ fn test_fwd_unbalanced_expression() {
 
 #[test]
 fn test_fwd_block_boundary() {
-    let bv = BitVec::from_bits(&[1, 1, 0, 1, 0, 0,]);
+    let bv = BitVec::from_bits(&[1, 1, 0, 1, 0, 0]);
     let tree = BpTree::<4>::from_bit_vector(bv);
 
     // test if a query returns the correct result if the result is the first bit in a block
@@ -113,7 +113,7 @@ fn test_fwd_block_boundary() {
 
 #[test]
 fn test_fwd_negative_block() {
-    let bv = BitVec::from_bits(&[1, 1, 1, 1, 0, 0, 0, 0,]);
+    let bv = BitVec::from_bits(&[1, 1, 1, 1, 0, 0, 0, 0]);
     let tree = BpTree::<2>::from_bit_vector(bv);
 
     // regression: test if a query correctly returns none (instead of crashing) if the following
@@ -285,7 +285,7 @@ fn test_bwd_illegal_queries() {
 fn test_bwd_left_block_boundary() {
     // test if a query returns the correct result if the result is the first bit after
     // a block boundary (the left-most one even for backward search)
-    let bv = BitVec::from_bits(&[1, 1, 0, 1, 0, 0,]);
+    let bv = BitVec::from_bits(&[1, 1, 0, 1, 0, 0]);
     let tree = BpTree::<4>::from_bit_vector(bv);
 
     assert_eq!(tree.bwd_search(5, 0), Some(3));
@@ -307,9 +307,7 @@ fn test_bwd_right_block_boundary() {
 
 #[test]
 fn test_bwd_block_traversal() {
-    let bv = BitVec::from_bits(&[
-        1, 1, 1, 1, 0,
-    ]);
+    let bv = BitVec::from_bits(&[1, 1, 1, 1, 0]);
     let tree = BpTree::<4>::from_bit_vector(bv);
 
     // if we request excess 0 backwards at a block boundary
@@ -346,13 +344,16 @@ fn test_bwd_fuzzy() {
         }
     }
 
-
     let bp = BpTree::<128>::from_bit_vector(bit_vec);
 
     // test any query from valid nodes with the given relative excess values
     for relative_excess in [-3, -2, -1, 0, 1, 2, 3] {
         for node_handle in bp.vec.iter0() {
-            let absolute_excess = if node_handle == 0 { 0 } else { bp.excess(node_handle - 1) + relative_excess };
+            let absolute_excess = if node_handle == 0 {
+                0
+            } else {
+                bp.excess(node_handle - 1) + relative_excess
+            };
             let expected = excess_values[..node_handle]
                 .iter()
                 .rposition(|&excess| excess as i64 == absolute_excess);
@@ -525,13 +526,7 @@ fn test_is_leaf() {
     let bv = BitVec::from_bits(&bits);
     let leaves = bits[..]
         .windows(2)
-        .map(|window| {
-            if window[0] == 1 && window[1] == 0 {
-                true
-            } else {
-                false
-            }
-        })
+        .map(|window| window[0] == 1 && window[1] == 0)
         .collect::<Vec<_>>();
     let tree = BpTree::<8>::from_bit_vector(bv.clone());
 
