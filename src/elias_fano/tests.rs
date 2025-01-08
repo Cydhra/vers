@@ -5,7 +5,7 @@ use rand::{thread_rng, Rng, RngCore, SeedableRng};
 
 #[test]
 fn test_elias_fano() {
-    let ef = EliasFanoVec::from_slice(&vec![0, 1, 4, 7]);
+    let ef = EliasFanoVec::from_slice(&[0, 1, 4, 7]);
 
     assert_eq!(ef.len(), 4);
     assert_eq!(ef.get_unchecked(0), 0);
@@ -24,21 +24,21 @@ fn test_elias_fano() {
 // but the result is the last element before the bounds.
 #[test]
 fn test_edge_case() {
-    let ef = EliasFanoVec::from_slice(&vec![0, 1, u64::MAX - 10, u64::MAX - 1]);
+    let ef = EliasFanoVec::from_slice(&[0, 1, u64::MAX - 10, u64::MAX - 1]);
     assert_eq!(ef.predecessor_unchecked(u64::MAX - 11), 1);
 }
 
 // test a query that is way larger than any element in the vector
 #[test]
 fn test_large_query() {
-    let ef = EliasFanoVec::from_slice(&vec![0, 1, 2, 3]);
+    let ef = EliasFanoVec::from_slice(&[0, 1, 2, 3]);
     assert_eq!(ef.predecessor_unchecked(u64::MAX), 3);
 }
 
 // test whether duplicates are handled correctly by predecessor queries and reconstruction
 #[test]
 fn test_duplicates() {
-    let ef = EliasFanoVec::from_slice(&vec![0, 0, 0, 1, 1, 1, 2, 2, 2]);
+    let ef = EliasFanoVec::from_slice(&[0, 0, 0, 1, 1, 1, 2, 2, 2]);
     assert_eq!(ef.predecessor_unchecked(0), 0);
     assert_eq!(ef.predecessor_unchecked(1), 1);
     assert_eq!(ef.predecessor_unchecked(2), 2);
@@ -55,8 +55,8 @@ fn test_duplicates() {
 fn test_randomized_elias_fano() {
     let mut rng = thread_rng();
     let mut seq = vec![0u64; 1000];
-    for i in 0..1000 {
-        seq[i] = rng.gen();
+    for v in seq.iter_mut() {
+        *v = rng.gen();
     }
     seq.sort_unstable();
 
@@ -165,7 +165,7 @@ fn cluster_test(l: usize) {
 
     // query random values from the actual sequences, to force long searches in the lower vec
     for _ in 0..1000 {
-        let elem = sequence[(&mut rng).sample(query_distribution)];
+        let elem = sequence[rng.sample(query_distribution)];
         let supposed = sequence.partition_point(|&n| n <= elem) - 1;
         let supposed_succ = sequence.partition_point(|&n| n < elem);
         assert_eq!(bad_ef_vec.predecessor_unchecked(elem), sequence[supposed]);
@@ -178,7 +178,7 @@ fn cluster_test(l: usize) {
 
 #[test]
 fn test_iter() {
-    let ef = EliasFanoVec::from_slice(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    let ef = EliasFanoVec::from_slice(&[0, 1, 2, 3, 4, 5, 6, 7, 8]);
 
     // borrowing iter test
     let mut iter = ef.iter();
@@ -193,7 +193,6 @@ fn test_iter() {
     assert_eq!(iter.next(), Some(8));
     assert_eq!(iter.next(), None);
     assert_eq!(iter.next(), None);
-    drop(iter); // end borrow for next test
 
     let mut iter = ef.iter();
     assert_eq!(iter.next_back(), Some(8));
@@ -207,7 +206,6 @@ fn test_iter() {
     assert_eq!(iter.next_back(), Some(0));
     assert_eq!(iter.next_back(), None);
     assert_eq!(iter.next_back(), None);
-    drop(iter); // end borrow for next test
 
     let mut iter = ef.iter();
     assert_eq!(iter.next(), Some(0));
@@ -223,20 +221,17 @@ fn test_iter() {
     assert_eq!(iter.next(), None);
     assert_eq!(iter.next_back(), None);
     assert_eq!(iter.next(), None);
-    drop(iter); // end borrow for next test
 
     // owning iter and into_iter test
-    let mut i = 0;
-    for elem in ef {
-        assert_eq!(elem, i);
-        i += 1;
+    for (i, elem) in ef.into_iter().enumerate() {
+        assert_eq!(elem, i as u64);
     }
 }
 
 #[test]
 fn test_custom_iter_behavior() {
-    let ef = EliasFanoVec::from_slice(&vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
-    assert_eq!(ef.iter().skip(2).next(), Some(2));
+    let ef = EliasFanoVec::from_slice(&[0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    assert_eq!(ef.iter().nth(2), Some(2));
     assert_eq!(ef.iter().count(), 9);
     assert_eq!(ef.iter().skip(2).count(), 7);
     assert_eq!(ef.iter().last(), Some(8));
@@ -255,7 +250,7 @@ fn test_custom_iter_behavior() {
     assert!(iter.advance_by(6).is_err());
     assert!(iter.advance_back_by(4).is_ok());
 
-    assert_eq!(ef.clone().into_iter().skip(2).next(), Some(2));
+    assert_eq!(ef.clone().into_iter().nth(2), Some(2));
     assert_eq!(ef.clone().into_iter().count(), 9);
     assert_eq!(ef.clone().into_iter().skip(2).count(), 7);
     assert_eq!(ef.clone().into_iter().last(), Some(8));
@@ -282,7 +277,7 @@ fn test_custom_iter_behavior() {
 
 #[test]
 fn test_empty_iter() {
-    let ef = EliasFanoVec::from_slice(&vec![]);
+    let ef = EliasFanoVec::from_slice(&[]);
     let mut iter = ef.iter();
     assert_eq!(iter.clone().count(), 0);
 
@@ -295,7 +290,7 @@ fn test_empty_iter() {
     assert!(iter.advance_by(100).is_err());
     assert!(iter.advance_back_by(100).is_err());
 
-    let ef = EliasFanoVec::from_slice(&vec![0]);
+    let ef = EliasFanoVec::from_slice(&[0]);
     let mut iter = ef.iter();
     assert_eq!(iter.clone().count(), 1);
     assert!(iter.advance_by(1).is_ok());
@@ -305,7 +300,7 @@ fn test_empty_iter() {
     assert!(iter.advance_by(1).is_err());
     assert!(iter.advance_back_by(1).is_err());
 
-    let ef = EliasFanoVec::from_slice(&vec![1]);
+    let ef = EliasFanoVec::from_slice(&[1]);
     let mut iter = ef.iter();
     assert_eq!(iter.clone().count(), 1);
     assert!(iter.advance_back_by(1).is_ok());
@@ -326,8 +321,8 @@ fn test_iter_randomized() {
     for _ in 0..100 {
         let len = (rng.next_u64() % 4000) as usize;
         let mut seq = vec![0u64; len];
-        for i in 0..len {
-            seq[i] = rng.next_u64();
+        for v in seq.iter_mut() {
+            *v = rng.next_u64();
         }
 
         seq.sort_unstable();
@@ -351,7 +346,7 @@ fn test_iter_randomized() {
 
 #[test]
 fn test_successor() {
-    let ef = EliasFanoVec::from_slice(&vec![0, 1, 4, 7]);
+    let ef = EliasFanoVec::from_slice(&[0, 1, 4, 7]);
     assert_eq!(ef.len(), 4);
 
     assert_eq!(ef.successor_unchecked(0), 0);
@@ -363,7 +358,7 @@ fn test_successor() {
 
 #[test]
 fn test_edge_case_successor() {
-    let ef = EliasFanoVec::from_slice(&vec![0, 1, u64::MAX - 10, u64::MAX - 1]);
+    let ef = EliasFanoVec::from_slice(&[0, 1, u64::MAX - 10, u64::MAX - 1]);
     assert_eq!(ef.successor_unchecked(2), u64::MAX - 10);
     assert_eq!(ef.successor_unchecked(u64::MAX - 11), u64::MAX - 10);
     assert_eq!(ef.successor_unchecked(u64::MAX - 10), u64::MAX - 10);
@@ -372,14 +367,14 @@ fn test_edge_case_successor() {
 
 #[test]
 fn test_large_query_successor() {
-    let ef = EliasFanoVec::from_slice(&vec![0, 1, 2, 3]);
+    let ef = EliasFanoVec::from_slice(&[0, 1, 2, 3]);
     assert_eq!(ef.successor(u64::MAX), None);
 }
 
 // test whether duplicates are handled correctly by predecessor queries and reconstruction
 #[test]
 fn test_duplicates_successor() {
-    let ef = EliasFanoVec::from_slice(&vec![0, 0, 0, 1, 1, 1, 2, 2, 2]);
+    let ef = EliasFanoVec::from_slice(&[0, 0, 0, 1, 1, 1, 2, 2, 2]);
     assert_eq!(ef.successor_unchecked(0), 0);
     assert_eq!(ef.successor_unchecked(1), 1);
     assert_eq!(ef.successor_unchecked(2), 2);
@@ -392,8 +387,8 @@ fn test_duplicates_successor() {
 fn test_randomized_elias_fano_successor() {
     let mut rng = thread_rng();
     let mut seq = vec![0u64; 1000];
-    for i in 0..1000 {
-        seq[i] = rng.gen();
+    for v in seq.iter_mut() {
+        *v = rng.gen();
     }
     seq.sort_unstable();
 
@@ -422,7 +417,7 @@ fn test_randomized_elias_fano_successor() {
 
 #[test]
 fn test_empty_ef_vec() {
-    let ef = EliasFanoVec::from_slice(&vec![]);
+    let ef = EliasFanoVec::from_slice(&[]);
     assert_eq!(ef.len(), 0);
     assert_eq!(ef.successor(0), None);
     assert_eq!(ef.successor(u64::MAX), None);
