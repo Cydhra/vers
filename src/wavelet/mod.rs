@@ -94,7 +94,7 @@ impl WaveletMatrix {
 
         for (level, data) in data.iter_mut().enumerate() {
             let mut total_zeros = 0;
-            for (i, p) in permutation.iter().enumerate().take(num_elements) {
+            for (i, p) in permutation.iter().enumerate() {
                 if bit_lookup(*p, element_len - level - 1) == 0 {
                     total_zeros += 1;
                 } else {
@@ -107,7 +107,7 @@ impl WaveletMatrix {
             if level < element_len - 1 {
                 let mut zero_boundary = 0;
                 let mut one_boundary = total_zeros;
-                for (i, p) in permutation.iter().enumerate().take(num_elements) {
+                for (i, p) in permutation.iter().enumerate() {
                     if data.get_unchecked(i) == 0 {
                         next_permutation[zero_boundary] = *p;
                         zero_boundary += 1;
