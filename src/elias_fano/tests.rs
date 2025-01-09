@@ -252,7 +252,9 @@ fn test_custom_iter_behavior() {
     assert!(iter.advance_by(6).is_err());
     assert!(iter.advance_back_by(4).is_ok());
 
-    assert_eq!(ef.clone().into_iter().nth(2), Some(2));
+    #[allow(clippy::iter_skip_next)]
+    let next = ef.clone().into_iter().skip(2).next(); // explicit test for skip()
+    assert_eq!(next, Some(2));
     assert_eq!(ef.clone().into_iter().count(), 9);
     assert_eq!(ef.clone().into_iter().skip(2).count(), 7);
     assert_eq!(ef.clone().into_iter().last(), Some(8));
