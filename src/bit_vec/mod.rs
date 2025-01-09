@@ -533,7 +533,7 @@ impl BitVec {
             return;
         }
 
-        let new_limb_count = (self.len - n + WORD_SIZE - 1) / WORD_SIZE;
+        let new_limb_count = (self.len - n).div_ceil(WORD_SIZE);
 
         // cut off limbs that we no longer need
         if new_limb_count < self.data.len() {

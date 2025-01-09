@@ -1,10 +1,10 @@
 #![allow(long_running_const_eval)]
 
-use std::cmp::Reverse;
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
-use rand::{Rng, SeedableRng};
-use std::collections::{BinaryHeap, HashSet};
 use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
+use std::cmp::Reverse;
+use std::collections::{BinaryHeap, HashSet};
 use vers_vecs::trees::bp::BpDfsBuilder;
 use vers_vecs::trees::bp::BpTree;
 use vers_vecs::trees::{DfsTreeBuilder, Tree};
@@ -37,7 +37,11 @@ fn generate_tree<R: Rng>(rng: &mut R, nodes: u64) -> BpTree<BLOCK_SIZE> {
 
     // keep a priority queue of nodes with degree one to reduce runtime from O(n^2) to O(n log n)
     let mut degree_one_set = BinaryHeap::new();
-    degrees.iter().enumerate().filter(|(_, &v)| v == 1).for_each(|(idx, _)| degree_one_set.push(Reverse(idx as u64)));
+    degrees
+        .iter()
+        .enumerate()
+        .filter(|(_, &v)| v == 1)
+        .for_each(|(idx, _)| degree_one_set.push(Reverse(idx as u64)));
 
     sequence.iter().for_each(|&i| {
         let j = degree_one_set.pop().unwrap().0;
@@ -74,9 +78,13 @@ fn generate_tree<R: Rng>(rng: &mut R, nodes: u64) -> BpTree<BLOCK_SIZE> {
         if enter {
             bpb.enter_node();
             stack.push((depth, node, false));
-            for c in prefix_sum[node as usize]..*prefix_sum.get(node as usize + 1).unwrap_or(&children.len()) {
-                if visited.insert(children[c]) {
-                    stack.push((depth + 1, children[c], true))
+            for child in children
+                .iter()
+                .take(*prefix_sum.get(node as usize + 1).unwrap_or(&children.len()))
+                .skip(prefix_sum[node as usize])
+            {
+                if visited.insert(*child) {
+                    stack.push((depth + 1, *child, true))
                 }
             }
         } else {
@@ -102,27 +110,35 @@ fn bench_navigation(b: &mut Criterion) {
         let node_handles = (0..l).map(|i| bp.node_handle(i)).collect::<Vec<_>>();
 
         group.bench_with_input(BenchmarkId::new("parent", l), &l, |b, _| {
-            b.iter_batched(|| node_handles[rng.gen_range(0..node_handles.len())], |h| {
-                black_box(bp.parent(h))
-            }, BatchSize::SmallInput)
+            b.iter_batched(
+                || node_handles[rng.gen_range(0..node_handles.len())],
+                |h| black_box(bp.parent(h)),
+                BatchSize::SmallInput,
+            )
         });
 
         group.bench_with_input(BenchmarkId::new("last_child", l), &l, |b, _| {
-            b.iter_batched(|| node_handles[rng.gen_range(0..node_handles.len())], |h| {
-                black_box(bp.last_child(h))
-            }, BatchSize::SmallInput)
+            b.iter_batched(
+                || node_handles[rng.gen_range(0..node_handles.len())],
+                |h| black_box(bp.last_child(h)),
+                BatchSize::SmallInput,
+            )
         });
 
         group.bench_with_input(BenchmarkId::new("next_sibling", l), &l, |b, _| {
-            b.iter_batched(|| node_handles[rng.gen_range(0..node_handles.len())], |h| {
-                black_box(bp.next_sibling(h))
-            }, BatchSize::SmallInput)
+            b.iter_batched(
+                || node_handles[rng.gen_range(0..node_handles.len())],
+                |h| black_box(bp.next_sibling(h)),
+                BatchSize::SmallInput,
+            )
         });
 
         group.bench_with_input(BenchmarkId::new("prev_sibling", l), &l, |b, _| {
-            b.iter_batched(|| node_handles[rng.gen_range(0..node_handles.len())], |h| {
-                black_box(bp.previous_sibling(h))
-            }, BatchSize::SmallInput)
+            b.iter_batched(
+                || node_handles[rng.gen_range(0..node_handles.len())],
+                |h| black_box(bp.previous_sibling(h)),
+                BatchSize::SmallInput,
+            )
         });
     }
 }

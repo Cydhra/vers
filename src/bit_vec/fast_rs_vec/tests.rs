@@ -45,14 +45,14 @@ fn test_random_data_rank() {
         let data_index = rnd_index / WORD_SIZE;
         let bit_index = rnd_index % WORD_SIZE;
 
-        for i in 0..data_index {
-            expected_rank1 += data[i].count_ones() as usize;
-            expected_rank0 += data[i].count_zeros() as usize;
+        for v in data.iter().take(data_index) {
+            expected_rank1 += v.count_ones() as usize;
+            expected_rank0 += v.count_zeros() as usize;
         }
 
         if bit_index > 0 {
-            expected_rank1 += (data[data_index] & (1 << bit_index) - 1).count_ones() as usize;
-            expected_rank0 += (!data[data_index] & (1 << bit_index) - 1).count_ones() as usize;
+            expected_rank1 += (data[data_index] & ((1 << bit_index) - 1)).count_ones() as usize;
+            expected_rank0 += (!data[data_index] & ((1 << bit_index) - 1)).count_ones() as usize;
         }
 
         assert_eq!(actual_rank1, expected_rank1);
@@ -503,14 +503,14 @@ fn test_custom_iter_behavior() {
     assert!(iter.advance_by(6).is_err());
     assert!(iter.advance_back_by(5).is_ok());
 
-    assert_eq!(rs.iter().skip(2).next(), Some(0));
+    assert_eq!(rs.iter().nth(2), Some(0));
     assert_eq!(rs.iter().count(), 10);
     assert_eq!(rs.iter().skip(2).count(), 8);
     assert_eq!(rs.iter().last(), Some(0));
     assert_eq!(rs.iter().nth(3), Some(1));
     assert_eq!(rs.iter().nth(12), None);
 
-    assert_eq!(rs.clone().into_iter().skip(2).next(), Some(0));
+    assert_eq!(rs.clone().into_iter().nth(2), Some(0));
     assert_eq!(rs.clone().into_iter().count(), 10);
     assert_eq!(rs.clone().into_iter().skip(2).count(), 8);
     assert_eq!(rs.clone().into_iter().last(), Some(0));
@@ -1093,21 +1093,21 @@ fn test_sparse_equals() {
     let rs1 = RsVec::from_bit_vec(bv.clone());
     let rs2 = RsVec::from_bit_vec(bv.clone());
 
-    assert_eq!(rs1.sparse_equals::<false>(&rs2), true);
-    assert_eq!(rs1.sparse_equals::<true>(&rs2), true);
+    assert!(rs1.sparse_equals::<false>(&rs2));
+    assert!(rs1.sparse_equals::<true>(&rs2));
 
     bv.flip_bit(3);
     let rs2 = RsVec::from_bit_vec(bv.clone());
 
-    assert_eq!(rs1.sparse_equals::<false>(&rs2), false);
-    assert_eq!(rs1.sparse_equals::<true>(&rs2), false);
+    assert!(!rs1.sparse_equals::<false>(&rs2));
+    assert!(!rs1.sparse_equals::<true>(&rs2));
 
     bv.flip_bit(3);
     bv.flip_bit(2 * SUPER_BLOCK_SIZE - 1);
     let rs1 = RsVec::from_bit_vec(bv.clone());
 
-    assert_eq!(rs1.sparse_equals::<false>(&rs2), false);
-    assert_eq!(rs1.sparse_equals::<true>(&rs2), false);
+    assert!(!rs1.sparse_equals::<false>(&rs2));
+    assert!(!rs1.sparse_equals::<true>(&rs2));
 }
 
 #[test]
@@ -1137,18 +1137,18 @@ fn test_full_equals() {
     let rs1 = RsVec::from_bit_vec(bv.clone());
     let rs2 = RsVec::from_bit_vec(bv.clone());
 
-    assert_eq!(rs1.full_equals(&rs2), true);
+    assert!(rs1.full_equals(&rs2));
 
     bv.flip_bit(3);
     let rs2 = RsVec::from_bit_vec(bv.clone());
 
-    assert_eq!(rs1.full_equals(&rs2), false);
+    assert!(!rs1.full_equals(&rs2));
 
     bv.flip_bit(3);
     bv.flip_bit(2 * SUPER_BLOCK_SIZE - 1);
     let rs1 = RsVec::from_bit_vec(bv.clone());
 
-    assert_eq!(rs1.full_equals(&rs2), false);
+    assert!(!rs1.full_equals(&rs2));
 }
 
 // fuzzing test for iter1 and iter0 as last ditch fail-safe
@@ -1332,7 +1332,7 @@ fn test_iter1_regression_i8() {
     let mut bv = BitVec::from_zeros(8193);
 
     for idx in &input_on_bits {
-        bv.set(*idx as usize, 1).unwrap();
+        bv.set(*idx, 1).unwrap();
     }
 
     let bv = RsVec::from_bit_vec(bv);

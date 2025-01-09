@@ -1,6 +1,6 @@
-use crate::BitVec;
 use crate::trees::bp::BpTree;
 use crate::trees::DfsTreeBuilder;
+use crate::BitVec;
 
 /// A builder for [`BpTrees`] using depth-first traversal of the tree. See the documentation of
 /// [`DfsTreeBuilder`].
@@ -26,6 +26,12 @@ impl<const BLOCK_SIZE: usize> BpDfsBuilder<BLOCK_SIZE> {
             excess: 0,
             bit_vec: BitVec::with_capacity((capacity * 2) as usize),
         }
+    }
+}
+
+impl<const BLOCK_SIZE: usize> Default for BpDfsBuilder<BLOCK_SIZE> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
