@@ -231,7 +231,9 @@ fn test_iter() {
 #[test]
 fn test_custom_iter_behavior() {
     let ef = EliasFanoVec::from_slice(&[0, 1, 2, 3, 4, 5, 6, 7, 8]);
-    assert_eq!(ef.iter().nth(2), Some(2));
+    #[allow(clippy::iter_skip_next)]
+    let next = ef.iter().skip(2).next(); // explicit test for skip()
+    assert_eq!(next, Some(2));
     assert_eq!(ef.iter().count(), 9);
     assert_eq!(ef.iter().skip(2).count(), 7);
     assert_eq!(ef.iter().last(), Some(8));
