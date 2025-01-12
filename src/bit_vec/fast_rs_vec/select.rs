@@ -11,7 +11,7 @@ const BLOCKS_PER_SUPERBLOCK: usize = 16;
 
 impl super::RsVec {
     /// Return the position of the 0-bit with the given rank. See `rank0`.
-    /// The following holds:
+    /// The following holds for all `pos` with 0-bits:
     /// ``select0(rank0(pos)) == pos``
     ///
     /// If the rank is larger than the number of 0-bits in the vector, the vector length is returned.
@@ -186,7 +186,7 @@ impl super::RsVec {
     }
 
     /// Return the position of the 1-bit with the given rank. See `rank1`.
-    /// The following holds:
+    /// The following holds for all `pos` with 1-bits:
     /// ``select1(rank1(pos)) == pos``
     ///
     /// If the rank is larger than the number of 1-bits in the bit-vector, the vector length is returned.
