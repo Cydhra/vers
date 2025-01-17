@@ -368,6 +368,22 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
         self.vec.get(node + 1) == Some(CLOSE_PAREN)
     }
 
+    fn is_ancestor(&self, ancestor: Self::NodeHandle, descendant: Self::NodeHandle) -> bool {
+        debug_assert!(
+            self.vec.get(ancestor) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+        debug_assert!(
+            self.vec.get(descendant) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+        ancestor <= descendant
+            && descendant
+                <= self
+                    .close(ancestor)
+                    .expect("Ancestor node handle does not close")
+    }
+
     fn depth(&self, node: Self::NodeHandle) -> u64 {
         debug_assert!(
             self.vec.get(node) == Some(OPEN_PAREN),

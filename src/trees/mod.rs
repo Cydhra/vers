@@ -47,9 +47,14 @@ pub trait Tree {
     /// If the index is out of bounds, the behavior is unspecified.
     fn node_handle(&self, index: usize) -> Self::NodeHandle;
 
-    /// Returns true, if the node is a leaf.
+    /// Returns true if the node is a leaf.
     /// If `node` is not a valid node handle, the result is meaningless.
     fn is_leaf(&self, node: Self::NodeHandle) -> bool;
+
+    /// Returns true if ancestor is an ancestor of the descendant node
+    ///
+    /// Note that a node is considered an ancestor of itself.
+    fn is_ancestor(&self, ancestor: Self::NodeHandle, descendant: Self::NodeHandle) -> bool;
 
     /// Returns the depth of the node in the tree.
     /// The root node has depth 0.
@@ -97,7 +102,6 @@ pub trait LevelTree: Tree {
 /// Once the full tree has been visited, the caller must call [`build`] to create an instance of the
 /// implementing tree type.
 pub trait DfsTreeBuilder {
-
     /// The tree type constructed with this interface
     type Tree;
 

@@ -539,6 +539,38 @@ fn test_is_leaf() {
 }
 
 #[test]
+fn test_is_ancestor() {
+    // (()((())()))
+    // ab cde  f
+    let bits = vec![1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0];
+    let bv = BitVec::from_bits(&bits);
+    let tree = BpTree::<8>::from_bit_vector(bv);
+    let a = tree.root().unwrap();
+    let b = tree.first_child(a).unwrap();
+    let c = tree.next_sibling(b).unwrap();
+    let d = tree.first_child(c).unwrap();
+    let e = tree.first_child(d).unwrap();
+    let f = tree.next_sibling(d).unwrap();
+
+    assert!(tree.is_ancestor(a, b));
+    assert!(tree.is_ancestor(a, c));
+    assert!(tree.is_ancestor(a, d));
+    assert!(tree.is_ancestor(a, e));
+    assert!(tree.is_ancestor(a, f));
+
+    assert!(!tree.is_ancestor(b, a));
+    assert!(!tree.is_ancestor(b, c));
+    assert!(tree.is_ancestor(c, d));
+    assert!(tree.is_ancestor(c, e));
+    assert!(tree.is_ancestor(c, f));
+    assert!(!tree.is_ancestor(f, e));
+    assert!(!tree.is_ancestor(e, d));
+
+    assert!(tree.is_ancestor(a, a));
+    assert!(tree.is_ancestor(b, b));
+}
+
+#[test]
 fn test_root() {
     let bv = BitVec::from_bits(&[
         1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
