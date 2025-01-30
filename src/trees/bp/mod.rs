@@ -1,7 +1,7 @@
 //! A succinct tree data structure backed by the balanced parentheses representation.
 
 use crate::trees::mmt::MinMaxTree;
-use crate::trees::{IsAncestor, Tree};
+use crate::trees::{IsAncestor, LevelTree, Tree};
 use crate::{BitVec, RsVec};
 use std::cmp::{max, min};
 
@@ -402,6 +402,37 @@ impl<const BLOCK_SIZE: usize> IsAncestor for BpTree<BLOCK_SIZE> {
 
         self.close(ancestor)
             .map(|closing| ancestor <= descendant && descendant < closing)
+    }
+}
+
+impl<const BLOCK_SIZE: usize> LevelTree for BpTree<BLOCK_SIZE> {
+    fn level_ancestor(&self, node: Self::NodeHandle, level: u64) -> Option<Self::NodeHandle> {
+        if level == 0 {
+            return Some(node);
+        }
+
+        self.bwd_search(node, -(level as i64))
+    }
+
+    fn level_next(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
+        self.fwd_search(self.close(node)?, 1)
+    }
+
+    fn level_prev(&self, node: Self::NodeHandle) -> Option<Self::NodeHandle> {
+        self.open(self.bwd_search(node, 1)?)
+    }
+
+    fn level_leftmost(&self, level: u64) -> Option<Self::NodeHandle> {
+        // fwd_search doesn't support returning the input position
+        if level == 0 {
+            return Some(0)
+        }
+
+        self.fwd_search(0, level as i64)
+    }
+
+    fn level_rightmost(&self, level: u64) -> Option<Self::NodeHandle> {
+        self.open(self.bwd_search(self.size() * 2 - 1, level as i64)?)
     }
 }
 

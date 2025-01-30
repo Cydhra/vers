@@ -89,7 +89,8 @@ pub trait IsAncestor: Tree {
 
 /// A trait for succinct tree data structures that support level-order traversal.
 pub trait LevelTree: Tree {
-    /// Returns the `level`'th ancestor of the given node, if it exists.
+    /// Returns the `level`'th ancestor of the given node, if it exists. If the level is 0, `node`
+    /// is returned. If `node` is not a valid node handle, the result is meaningless.
     fn level_ancestor(&self, node: Self::NodeHandle, level: u64) -> Option<Self::NodeHandle>;
 
     /// Returns the next node in the level order traversal of the tree, if it exists.
