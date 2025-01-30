@@ -386,7 +386,11 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
 }
 
 impl<const BLOCK_SIZE: usize> IsAncestor for BpTree<BLOCK_SIZE> {
-    fn is_ancestor(&self, ancestor: Self::NodeHandle, descendant: Self::NodeHandle) -> Option<bool> {
+    fn is_ancestor(
+        &self,
+        ancestor: Self::NodeHandle,
+        descendant: Self::NodeHandle,
+    ) -> Option<bool> {
         debug_assert!(
             self.vec.get(ancestor) == Some(OPEN_PAREN),
             "Node handle is invalid"
@@ -396,7 +400,8 @@ impl<const BLOCK_SIZE: usize> IsAncestor for BpTree<BLOCK_SIZE> {
             "Node handle is invalid"
         );
 
-        self.close(ancestor).map(|closing| ancestor <= descendant && descendant < closing)
+        self.close(ancestor)
+            .map(|closing| ancestor <= descendant && descendant < closing)
     }
 }
 

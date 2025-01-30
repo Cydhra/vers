@@ -83,7 +83,8 @@ pub trait IsAncestor: Tree {
     ///
     /// Returns `None` if the parenthesis expression is unbalanced and `ancestor` does not have a
     /// closing parenthesis.
-    fn is_ancestor(&self, ancestor: Self::NodeHandle, descendant: Self::NodeHandle) -> Option<bool>;
+    fn is_ancestor(&self, ancestor: Self::NodeHandle, descendant: Self::NodeHandle)
+        -> Option<bool>;
 }
 
 /// A trait for succinct tree data structures that support level-order traversal.
