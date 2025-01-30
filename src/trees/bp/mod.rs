@@ -1,7 +1,7 @@
 //! A succinct tree data structure backed by the balanced parentheses representation.
 
 use crate::trees::mmt::MinMaxTree;
-use crate::trees::Tree;
+use crate::trees::{IsAncestor, Tree};
 use crate::{BitVec, RsVec};
 use std::cmp::{max, min};
 
@@ -368,22 +368,6 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
         self.vec.get(node + 1) == Some(CLOSE_PAREN)
     }
 
-    fn is_ancestor(&self, ancestor: Self::NodeHandle, descendant: Self::NodeHandle) -> bool {
-        debug_assert!(
-            self.vec.get(ancestor) == Some(OPEN_PAREN),
-            "Node handle is invalid"
-        );
-        debug_assert!(
-            self.vec.get(descendant) == Some(OPEN_PAREN),
-            "Node handle is invalid"
-        );
-        ancestor <= descendant
-            && descendant
-                <= self
-                    .close(ancestor)
-                    .expect("Ancestor node handle does not close")
-    }
-
     fn depth(&self, node: Self::NodeHandle) -> u64 {
         debug_assert!(
             self.vec.get(node) == Some(OPEN_PAREN),
@@ -398,6 +382,21 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
 
     fn is_empty(&self) -> bool {
         self.vec.is_empty()
+    }
+}
+
+impl<const BLOCK_SIZE: usize> IsAncestor for BpTree<BLOCK_SIZE> {
+    fn is_ancestor(&self, ancestor: Self::NodeHandle, descendant: Self::NodeHandle) -> Option<bool> {
+        debug_assert!(
+            self.vec.get(ancestor) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+        debug_assert!(
+            self.vec.get(descendant) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+
+        self.close(ancestor).map(|closing| ancestor <= descendant && descendant < closing)
     }
 }
 

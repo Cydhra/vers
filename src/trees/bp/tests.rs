@@ -552,22 +552,22 @@ fn test_is_ancestor() {
     let e = tree.first_child(d).unwrap();
     let f = tree.next_sibling(d).unwrap();
 
-    assert!(tree.is_ancestor(a, b));
-    assert!(tree.is_ancestor(a, c));
-    assert!(tree.is_ancestor(a, d));
-    assert!(tree.is_ancestor(a, e));
-    assert!(tree.is_ancestor(a, f));
+    assert!(tree.is_ancestor(a, b).unwrap());
+    assert!(tree.is_ancestor(a, c).unwrap());
+    assert!(tree.is_ancestor(a, d).unwrap());
+    assert!(tree.is_ancestor(a, e).unwrap());
+    assert!(tree.is_ancestor(a, f).unwrap());
 
-    assert!(!tree.is_ancestor(b, a));
-    assert!(!tree.is_ancestor(b, c));
-    assert!(tree.is_ancestor(c, d));
-    assert!(tree.is_ancestor(c, e));
-    assert!(tree.is_ancestor(c, f));
-    assert!(!tree.is_ancestor(f, e));
-    assert!(!tree.is_ancestor(e, d));
+    assert!(!tree.is_ancestor(b, a).unwrap());
+    assert!(!tree.is_ancestor(b, c).unwrap());
+    assert!(tree.is_ancestor(c, d).unwrap());
+    assert!(tree.is_ancestor(c, e).unwrap());
+    assert!(tree.is_ancestor(c, f).unwrap());
+    assert!(!tree.is_ancestor(f, e).unwrap());
+    assert!(!tree.is_ancestor(e, d).unwrap());
 
-    assert!(tree.is_ancestor(a, a));
-    assert!(tree.is_ancestor(b, b));
+    assert!(tree.is_ancestor(a, a).unwrap());
+    assert!(tree.is_ancestor(b, b).unwrap());
 }
 
 #[test]

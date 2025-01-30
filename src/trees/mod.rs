@@ -51,11 +51,6 @@ pub trait Tree {
     /// If `node` is not a valid node handle, the result is meaningless.
     fn is_leaf(&self, node: Self::NodeHandle) -> bool;
 
-    /// Returns true if ancestor is an ancestor of the descendant node
-    ///
-    /// Note that a node is considered an ancestor of itself.
-    fn is_ancestor(&self, ancestor: Self::NodeHandle, descendant: Self::NodeHandle) -> bool;
-
     /// Returns the depth of the node in the tree.
     /// The root node has depth 0.
     /// If `node` is not a valid node handle, the result is meaningless.
@@ -70,11 +65,25 @@ pub trait Tree {
     }
 }
 
-/// A trait for succinct tree data structures that support subtree size queries.
+/// A trait for succinct tree data structures that support [`subtree_size`] queries.
+///
+/// [`subtree_size`]: SubtreeSize::subtree_size
 pub trait SubtreeSize: Tree {
     /// Returns the number of nodes in the subtree rooted at the given node.
     /// todo: define whether that includes the node itself or not.
     fn subtree_size(&self, node: Self::NodeHandle) -> usize;
+}
+
+/// A trait for succinct tree data structures that support [`is_ancestor`] queries.
+///
+/// [`is_ancestor`]: IsAncestor::is_ancestor
+pub trait IsAncestor: Tree {
+    /// Returns true if `ancestor` is an ancestor of the `descendant` node.
+    /// Note that a node is considered an ancestor of itself.
+    ///
+    /// Returns `None` if the parenthesis expression is unbalanced and `ancestor` does not have a
+    /// closing parenthesis.
+    fn is_ancestor(&self, ancestor: Self::NodeHandle, descendant: Self::NodeHandle) -> Option<bool>;
 }
 
 /// A trait for succinct tree data structures that support level-order traversal.
