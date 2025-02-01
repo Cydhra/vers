@@ -438,6 +438,11 @@ impl<const BLOCK_SIZE: usize> LevelTree for BpTree<BLOCK_SIZE> {
 
 impl<const BLOCK_SIZE: usize> SubtreeSize for BpTree<BLOCK_SIZE> {
     fn subtree_size(&self, node: Self::NodeHandle) -> Option<usize> {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+
         self.close(node)
             .map(|c| self.vec.rank1(c) - self.vec.rank1(node))
     }

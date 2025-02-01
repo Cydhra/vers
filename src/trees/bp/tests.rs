@@ -586,9 +586,7 @@ fn test_root() {
 
 #[test]
 fn test_level_ancestor() {
-    let bv = BitVec::from_bits(&[
-        1, 1, 1, 0, 0, 1, 0, 0
-    ]);
+    let bv = BitVec::from_bits(&[1, 1, 1, 0, 0, 1, 0, 0]);
     let tree = BpTree::<4>::from_bit_vector(bv);
 
     assert_eq!(tree.level_ancestor(2, 0), Some(2));
@@ -604,7 +602,7 @@ fn test_level_ancestor() {
 #[test]
 fn test_level_next() {
     let bv = BitVec::from_bits(&[
-        1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0 // intentionally unbalanced
+        1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, // intentionally unbalanced
     ]);
     let tree = BpTree::<4>::from_bit_vector(bv);
 
@@ -618,9 +616,7 @@ fn test_level_next() {
 
 #[test]
 fn test_level_prev() {
-    let bv = BitVec::from_bits(&[
-        1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0
-    ]);
+    let bv = BitVec::from_bits(&[1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
     let tree = BpTree::<4>::from_bit_vector(bv);
 
     assert_eq!(tree.level_prev(0), None);
@@ -636,9 +632,7 @@ fn test_level_prev() {
 
 #[test]
 fn test_level_leftmost() {
-    let bv = BitVec::from_bits(&[
-        1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0
-    ]);
+    let bv = BitVec::from_bits(&[1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
     let tree = BpTree::<4>::from_bit_vector(bv);
 
     assert_eq!(tree.level_leftmost(0), Some(0));
@@ -651,9 +645,7 @@ fn test_level_leftmost() {
 
 #[test]
 fn test_level_rightmost() {
-    let bv = BitVec::from_bits(&[
-        1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0
-    ]);
+    let bv = BitVec::from_bits(&[1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
     let tree = BpTree::<4>::from_bit_vector(bv);
 
     assert_eq!(tree.level_rightmost(0), Some(0));
@@ -662,4 +654,20 @@ fn test_level_rightmost() {
     assert_eq!(tree.level_rightmost(3), Some(13));
     assert_eq!(tree.level_rightmost(4), None);
     assert_eq!(tree.level_rightmost(10), None);
+}
+
+#[test]
+fn test_subtree_size() {
+    let bv = BitVec::from_bits(&[1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
+    let tree = BpTree::<4>::from_bit_vector(bv);
+
+    assert_eq!(tree.subtree_size(0), Some(9));
+    assert_eq!(tree.subtree_size(1), Some(2));
+    assert_eq!(tree.subtree_size(2), Some(1));
+    assert_eq!(tree.subtree_size(5), Some(1));
+    assert_eq!(tree.subtree_size(7), Some(2));
+    assert_eq!(tree.subtree_size(8), Some(1));
+    assert_eq!(tree.subtree_size(11), Some(3));
+    assert_eq!(tree.subtree_size(12), Some(2));
+    assert_eq!(tree.subtree_size(13), Some(1));
 }
