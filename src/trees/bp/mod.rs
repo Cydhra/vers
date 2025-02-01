@@ -22,7 +22,22 @@ mod lookup_query;
 #[cfg(not(feature = "u16_lookup"))]
 use lookup_query::*;
 
-/// A succinct binary tree data structure.
+/// A succinct tree data structure based on balanced parenthesis expressions.
+/// A tree with `n` nodes is encoded in a bit vector using `2n` bits plus the rank/select overhead
+/// of the [`RsVec`] implementation. Additionally, a small pointerless heap data structure stores
+/// additional meta information required to perform most tree operations.
+///
+/// The tree is thus pointer-less and succinct.
+/// It supports tree navigation operations between parent, child, and sibling nodes, both in
+/// depth-first search order and in level order. All operations run in `O(log n)` time with small
+/// overheads.
+///
+/// The tree is implemented in a way to theoretically support unbalanced parenthesis expressions
+/// (which encode invalid trees) without panicking. However, some operations may behave erratically
+/// if the parenthesis expression isn't balanced.
+/// TODO: add test cases for this behavior
+///
+/// [`RsVec`]: RsVec
 pub struct BpTree<const BLOCK_SIZE: usize = 512> {
     vec: RsVec,
     min_max_tree: MinMaxTree,
