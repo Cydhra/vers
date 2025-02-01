@@ -70,8 +70,12 @@ pub trait Tree {
 /// [`subtree_size`]: SubtreeSize::subtree_size
 pub trait SubtreeSize: Tree {
     /// Returns the number of nodes in the subtree rooted at the given node.
-    /// todo: define whether that includes the node itself or not.
-    fn subtree_size(&self, node: Self::NodeHandle) -> usize;
+    /// This includes the node itself, meaning the minimum subtree size is 1.
+    /// If the function is called on an invalid node handle, the result is meaningless.
+    ///
+    /// Returns `None` if the `node` has no closing parenthesis (in an unbalanced parenthesis
+    /// expression).
+    fn subtree_size(&self, node: Self::NodeHandle) -> Option<usize>;
 }
 
 /// A trait for succinct tree data structures that support [`is_ancestor`] queries.

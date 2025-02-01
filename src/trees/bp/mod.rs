@@ -1,7 +1,7 @@
 //! A succinct tree data structure backed by the balanced parentheses representation.
 
 use crate::trees::mmt::MinMaxTree;
-use crate::trees::{IsAncestor, LevelTree, Tree};
+use crate::trees::{IsAncestor, LevelTree, SubtreeSize, Tree};
 use crate::{BitVec, RsVec};
 use std::cmp::{max, min};
 
@@ -425,7 +425,7 @@ impl<const BLOCK_SIZE: usize> LevelTree for BpTree<BLOCK_SIZE> {
     fn level_leftmost(&self, level: u64) -> Option<Self::NodeHandle> {
         // fwd_search doesn't support returning the input position
         if level == 0 {
-            return Some(0)
+            return Some(0);
         }
 
         self.fwd_search(0, level as i64)
@@ -433,6 +433,13 @@ impl<const BLOCK_SIZE: usize> LevelTree for BpTree<BLOCK_SIZE> {
 
     fn level_rightmost(&self, level: u64) -> Option<Self::NodeHandle> {
         self.open(self.bwd_search(self.size() * 2 - 1, level as i64)?)
+    }
+}
+
+impl<const BLOCK_SIZE: usize> SubtreeSize for BpTree<BLOCK_SIZE> {
+    fn subtree_size(&self, node: Self::NodeHandle) -> Option<usize> {
+        self.close(node)
+            .map(|c| self.vec.rank1(c) - self.vec.rank1(node))
     }
 }
 
