@@ -1729,7 +1729,7 @@ impl WaveletMatrix {
             range,
             &symbol,
             0,
-            |level, symbol| symbol >> ((self.bits_per_element() - 1) - level) & 1,
+            |level, symbol| (symbol >> ((self.bits_per_element() - 1) - level)) & 1,
             |bit, _level, result| {
                 // we ignore the level here, and instead rely on the fact that the bits are set in order.
                 // we have to do that, because the quantile_search_u64 does the same.
@@ -1916,7 +1916,7 @@ impl WaveletMatrix {
             range,
             &symbol,
             0,
-            |level, symbol| symbol >> ((self.bits_per_element() - 1) - level) & 1,
+            |level, symbol| (symbol >> ((self.bits_per_element() - 1) - level)) & 1,
             |bit, _level, result| {
                 // we ignore the level here, and instead rely on the fact that the bits are set in order.
                 // we have to do that, because the quantile_search_u64 does the same.
@@ -2021,7 +2021,9 @@ impl WaveletMatrix {
     }
 
     /// Get the number of bits per element in the alphabet of the encoded sequence.
+    #[must_use]
     #[deprecated(since = "1.5.1", note = "please use `bits_per_element` instead")]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn bit_len(&self) -> u16 {
         self.bits_per_element() as u16
     }

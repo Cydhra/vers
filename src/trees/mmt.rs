@@ -15,7 +15,9 @@ use crate::BitVec;
 use std::cmp::max;
 use std::num::NonZeroUsize;
 
-/// A singular node in a binary min-max tree that is part of the BpTree data structure.
+/// A singular node in a binary min-max tree that is part of the [`BpTree`] data structure.
+///
+/// [`BpTree`]: crate::trees::bp::BpTree
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
 struct MinMaxNode {
     /// excess from l..=r in the node [l, r]
@@ -28,7 +30,9 @@ struct MinMaxNode {
     max_excess: i64,
 }
 
-/// A binary min-max tree that is part of the BpTree data structure.
+/// A binary min-max tree that is part of the [`BpTree`] data structure.
+///
+/// [`BpTree`]: crate::trees::bp::BpTree
 #[derive(Clone, Debug, Default)]
 pub(crate) struct MinMaxTree {
     nodes: Vec<MinMaxNode>,
@@ -248,6 +252,7 @@ impl MinMaxTree {
         debug_assert!(node.get() < self.nodes.len());
 
         // if this is a right node, we need to go up
+        #[allow(clippy::if_not_else)] // handle the easy case first for readability
         if !self.is_left_child(node) {
             let parent = NonZeroUsize::new(self.parent(node).unwrap());
             if let Some(parent) = parent {

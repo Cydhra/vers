@@ -13,6 +13,7 @@ pub struct BpDfsBuilder<const BLOCK_SIZE: usize> {
 
 impl<const BLOCK_SIZE: usize> BpDfsBuilder<BLOCK_SIZE> {
     /// Create new empty `DfsTreeBuilder`
+    #[must_use]
     pub fn new() -> Self {
         Self {
             excess: 0,
@@ -21,6 +22,7 @@ impl<const BLOCK_SIZE: usize> BpDfsBuilder<BLOCK_SIZE> {
     }
 
     /// Create a new empty `DfsTreeBuilder` with the given capacity for nodes.
+    #[must_use]
     pub fn with_capacity(capacity: u64) -> Self {
         Self {
             excess: 0,

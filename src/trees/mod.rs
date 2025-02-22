@@ -127,7 +127,10 @@ pub trait DfsTreeBuilder {
     /// Called after the subtree of a node in the tree has already been visited.
     fn leave_node(&mut self);
 
-    /// Finalize the tree instance. Returns `Err(excess)` if the constructed tree is invalid
+    /// Finalize the tree instance.
+    ///
+    /// # Errors
+    /// Returns `Err(excess)` if the constructed tree is invalid
     /// (i.e. there are nodes for which [`leave_node`] has not been called,
     /// or there are more calls to `leave_node` than to [`enter_node`];
     /// the number of extraneous calls to `enter_node` is returned in the error).

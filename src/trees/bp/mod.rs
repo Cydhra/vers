@@ -15,12 +15,12 @@ pub use builder::BpDfsBuilder;
 #[cfg(feature = "u16_lookup")]
 mod lookup;
 #[cfg(feature = "u16_lookup")]
-use lookup::*;
+use lookup::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 
 #[cfg(not(feature = "u16_lookup"))]
 mod lookup_query;
 #[cfg(not(feature = "u16_lookup"))]
-use lookup_query::*;
+use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 
 /// A succinct tree data structure based on balanced parenthesis expressions.
 /// A tree with `n` nodes is encoded in a bit vector using `2n` bits plus the rank/select overhead
@@ -68,6 +68,7 @@ pub struct BpTree<const BLOCK_SIZE: usize = 512> {
 
 impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// Construct a new `BpTree` from a given bit vector.
+    #[must_use]
     pub fn from_bit_vector(bv: BitVec) -> Self {
         let min_max_tree = MinMaxTree::excess_tree(&bv, BLOCK_SIZE);
         let vec = bv.into();
@@ -92,7 +93,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         let block_index = (index + 1) / BLOCK_SIZE;
         self.fwd_search_block(index, block_index, &mut relative_excess)
             .map_or_else(
-                |_| {
+                |()| {
                     // find the block that contains the desired relative excess
                     let block = self.min_max_tree.fwd_search(block_index, relative_excess);
 
@@ -193,7 +194,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         // check the current block
         self.bwd_search_block(index, block_index, &mut relative_excess)
             .map_or_else(
-                |_| {
+                |()| {
                     // find the block that contains the desired relative excess
                     let block = self.min_max_tree.bwd_search(block_index, relative_excess);
 
@@ -257,6 +258,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// Find the position of the matching closing parenthesis for the opening parenthesis at `index`.
     /// If the bit at `index` is not an opening parenthesis, the result is meaningless.
     /// If there is no matching closing parenthesis, `None` is returned.
+    #[must_use]
     pub fn close(&self, index: usize) -> Option<usize> {
         if index >= self.vec.len() {
             return None;
@@ -268,6 +270,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// Find the position of the matching opening parenthesis for the closing parenthesis at `index`.
     /// If the bit at `index` is not a closing parenthesis, the result is meaningless.
     /// If there is no matching opening parenthesis, `None` is returned.
+    #[must_use]
     pub fn open(&self, index: usize) -> Option<usize> {
         if index >= self.vec.len() {
             return None;
@@ -279,6 +282,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// Find the position of the opening parenthesis that encloses the position `index`.
     /// This works regardless of whether the bit at `index` is an opening or closing parenthesis.
     /// If there is no enclosing parenthesis, `None` is returned.
+    #[must_use]
     pub fn enclose(&self, index: usize) -> Option<usize> {
         if index >= self.vec.len() {
             return None;
@@ -297,6 +301,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// Get the excess of open parentheses up to and including the position `index`.
     /// The excess is the number of open parentheses minus the number of closing parentheses.
     /// If `index` is out of bounds, the total excess of the parentheses expression is returned.
+    #[must_use]
     pub fn excess(&self, index: usize) -> i64 {
         debug_assert!(index < self.vec.len(), "Index out of bounds");
         self.vec.rank1(index + 1) as i64 - self.vec.rank0(index + 1) as i64
@@ -307,10 +312,10 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
     type NodeHandle = usize;
 
     fn root(&self) -> Option<Self::NodeHandle> {
-        if !self.vec.is_empty() {
-            Some(0)
-        } else {
+        if self.vec.is_empty() {
             None
+        } else {
+            Some(0)
         }
     }
 
@@ -411,6 +416,7 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
             self.vec.get(node) == Some(OPEN_PAREN),
             "Node handle is invalid"
         );
+        // todo add test case for unbalanced parenthesis
         (self.excess(node) as u64).saturating_sub(1)
     }
 

@@ -709,9 +709,9 @@ fn test_all_functions(tree: &BpTree<4>) {
         tree.bwd_search(i, 0);
         tree.fwd_search(i, 1);
         tree.bwd_search(i, 1);
-        tree.close(i);
-        tree.open(i);
-        tree.enclose(i);
+        let _ = tree.close(i);
+        let _ = tree.open(i);
+        let _ = tree.enclose(i);
 
         if tree.vec.get(i).unwrap() == OPEN_PAREN {
             tree.parent(i);
