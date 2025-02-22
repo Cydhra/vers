@@ -65,7 +65,7 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 ///
 /// # Example
 /// ```rust
-/// #![allow(long_running_const_eval)] // TODO why do we have to specify this in a downstream crate?
+/// # #![allow(long_running_const_eval)] // for some reason this is needed for test cases
 /// use vers_vecs::{BitVec, BpDfsBuilder, BpTree, DfsTreeBuilder, Tree};
 ///
 /// let mut builder = BpDfsBuilder::<512>::new();
