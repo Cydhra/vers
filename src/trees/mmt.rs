@@ -19,15 +19,15 @@ use std::num::NonZeroUsize;
 ///
 /// [`BpTree`]: crate::trees::bp::BpTree
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
-struct MinMaxNode {
+struct ExcessNode {
     /// excess from l..=r in the node [l, r]
-    total_excess: i64,
+    total: i64,
 
     /// minimum (relative) excess in the node [l, r]
-    min_excess: i64,
+    min: i64,
 
     /// maximum (relative) excess in the node [l, r]
-    max_excess: i64,
+    max: i64,
 }
 
 /// A binary min-max tree that is part of the [`BpTree`] data structure.
@@ -35,7 +35,7 @@ struct MinMaxNode {
 /// [`BpTree`]: crate::trees::bp::BpTree
 #[derive(Clone, Debug, Default)]
 pub(crate) struct MinMaxTree {
-    nodes: Vec<MinMaxNode>,
+    nodes: Vec<ExcessNode>,
 }
 
 impl MinMaxTree {
@@ -47,7 +47,7 @@ impl MinMaxTree {
         let num_leaves = bit_vec.len().div_ceil(block_size);
         let num_internal_nodes = max(1, (1 << (num_leaves as f64).log2().ceil() as usize) - 1);
 
-        let mut nodes = vec![MinMaxNode::default(); num_leaves + num_internal_nodes];
+        let mut nodes = vec![ExcessNode::default(); num_leaves + num_internal_nodes];
         let mut total_excess = 0;
         let mut min_excess = i64::MAX;
         let mut max_excess = i64::MIN;
@@ -55,10 +55,10 @@ impl MinMaxTree {
         // bottom up construction
         for i in 0..bit_vec.len() {
             if i > 0 && i % block_size == 0 {
-                nodes[num_internal_nodes + i / block_size - 1] = MinMaxNode {
-                    total_excess,
-                    min_excess,
-                    max_excess,
+                nodes[num_internal_nodes + i / block_size - 1] = ExcessNode {
+                    total: total_excess,
+                    min: min_excess,
+                    max: max_excess,
                 };
                 total_excess = 0;
                 min_excess = i64::MAX;
@@ -72,10 +72,10 @@ impl MinMaxTree {
             min_excess = min_excess.min(total_excess);
             max_excess = max_excess.max(total_excess);
         }
-        nodes[num_internal_nodes + num_leaves - 1] = MinMaxNode {
-            total_excess,
-            min_excess,
-            max_excess,
+        nodes[num_internal_nodes + num_leaves - 1] = ExcessNode {
+            total: total_excess,
+            min: min_excess,
+            max: max_excess,
         };
 
         let mut current_level_size = max(1, num_leaves.next_power_of_two() / 2);
@@ -89,14 +89,10 @@ impl MinMaxTree {
                     if right_child_index < nodes.len() {
                         let left_child = &nodes[left_child_index];
                         let right_child = &nodes[right_child_index];
-                        nodes[current_level_start + i] = MinMaxNode {
-                            total_excess: left_child.total_excess + right_child.total_excess,
-                            min_excess: left_child
-                                .min_excess
-                                .min(left_child.total_excess + right_child.min_excess),
-                            max_excess: left_child
-                                .max_excess
-                                .max(left_child.total_excess + right_child.max_excess),
+                        nodes[current_level_start + i] = ExcessNode {
+                            total: left_child.total + right_child.total,
+                            min: left_child.min.min(left_child.total + right_child.min),
+                            max: left_child.max.max(left_child.total + right_child.max),
                         };
                     } else {
                         nodes[current_level_start + i] = nodes[left_child_index].clone();
@@ -117,15 +113,15 @@ impl MinMaxTree {
     }
 
     pub(crate) fn total_excess(&self, index: usize) -> i64 {
-        self.nodes[index].total_excess
+        self.nodes[index].total
     }
 
     pub(crate) fn min_excess(&self, index: usize) -> i64 {
-        self.nodes[index].min_excess
+        self.nodes[index].min
     }
 
     pub(crate) fn max_excess(&self, index: usize) -> i64 {
-        self.nodes[index].max_excess
+        self.nodes[index].max
     }
 
     pub(crate) fn parent(&self, index: NonZeroUsize) -> Option<usize> {
@@ -450,32 +446,32 @@ mod tests {
         assert_eq!(tree.nodes.len(), 6);
 
         // leaf nodes
-        assert_eq!(tree.nodes[3].total_excess, 4);
-        assert_eq!(tree.nodes[3].min_excess, 1);
-        assert_eq!(tree.nodes[3].max_excess, 4);
+        assert_eq!(tree.nodes[3].total, 4);
+        assert_eq!(tree.nodes[3].min, 1);
+        assert_eq!(tree.nodes[3].max, 4);
 
-        assert_eq!(tree.nodes[4].total_excess, 0);
-        assert_eq!(tree.nodes[4].min_excess, -1);
-        assert_eq!(tree.nodes[4].max_excess, 2);
+        assert_eq!(tree.nodes[4].total, 0);
+        assert_eq!(tree.nodes[4].min, -1);
+        assert_eq!(tree.nodes[4].max, 2);
 
-        assert_eq!(tree.nodes[5].total_excess, -4);
-        assert_eq!(tree.nodes[5].min_excess, -4);
-        assert_eq!(tree.nodes[5].max_excess, 1);
+        assert_eq!(tree.nodes[5].total, -4);
+        assert_eq!(tree.nodes[5].min, -4);
+        assert_eq!(tree.nodes[5].max, 1);
 
         // root node
-        assert_eq!(tree.nodes[0].total_excess, 0); // the tree should be balanced
-        assert_eq!(tree.nodes[0].min_excess, 0);
-        assert_eq!(tree.nodes[0].max_excess, 6);
+        assert_eq!(tree.nodes[0].total, 0); // the tree should be balanced
+        assert_eq!(tree.nodes[0].min, 0);
+        assert_eq!(tree.nodes[0].max, 6);
 
         // left child of the root
-        assert_eq!(tree.nodes[1].total_excess, 4);
-        assert_eq!(tree.nodes[1].min_excess, 1);
-        assert_eq!(tree.nodes[1].max_excess, 6);
+        assert_eq!(tree.nodes[1].total, 4);
+        assert_eq!(tree.nodes[1].min, 1);
+        assert_eq!(tree.nodes[1].max, 6);
 
         // right child of the root
-        assert_eq!(tree.nodes[2].total_excess, -4);
-        assert_eq!(tree.nodes[2].min_excess, -4);
-        assert_eq!(tree.nodes[2].max_excess, 1);
+        assert_eq!(tree.nodes[2].total, -4);
+        assert_eq!(tree.nodes[2].min, -4);
+        assert_eq!(tree.nodes[2].max, 1);
     }
 
     #[test]
