@@ -24,17 +24,35 @@ use lookup_query::*;
 
 /// A succinct tree data structure based on balanced parenthesis expressions.
 /// A tree with `n` nodes is encoded in a bit vector using `2n` bits plus the rank/select overhead
-/// of the [`RsVec`] implementation. Additionally, a small pointerless heap data structure stores
+/// of the [`RsVec`] implementation.
+/// Additionally, a small pointerless heap data structure stores
 /// additional meta information required to perform most tree operations.
 ///
 /// The tree is thus pointer-less and succinct.
 /// It supports tree navigation operations between parent, child, and sibling nodes, both in
-/// depth-first search order and in level order. All operations run in `O(log n)` time with small
-/// overheads.
+/// depth-first search order and in level order.
+/// All operations run in `O(log n)` time with small overheads.
 ///
+/// ## Lookup Table
+/// The tree internally uses a lookup table for subqueries on blocks of bits.
+/// The lookup table requires 4 KiB of memory and is compiled into the binary.
+/// If the `u16_lookup` feature is enabled, a larger lookup table is used, which requires 128 KiB of
+/// memory, but answers queries faster.
+///
+/// ## Block Size
+/// The tree has a block size of 512 bits by default, which can be changed by setting the
+/// `BLOCK_SIZE` generic parameter.
+/// The block size should be chosen based on the expected size of the tree and the available memory.
+/// Smaller block sizes increase the size of the supporting data structure but reduce the time
+/// complexity of some operations by a constant amount.
+/// Very large block sizes are best combined with the `u16_lookup` feature to keep the query time
+/// low.
+///
+/// ## Unbalanced Parentheses
 /// The tree is implemented in a way to theoretically support unbalanced parenthesis expressions
-/// (which encode invalid trees) without panicking. However, some operations may behave erratically
-/// if the parenthesis expression isn't balanced.
+/// (which encode invalid trees) without panicking.
+/// However, some operations may behave erratically if the parenthesis expression isn't balanced.
+/// Generally, operations specify if they require a balanced tree.
 ///
 /// The results of the operations are unspecified,
 /// meaning no guarantees are made about the stability of the results across versions
