@@ -16,6 +16,7 @@ since the intrinsics speed up both `rank` and `select` operations by a factor of
 - An Elias-Fano encoding of monotone sequences supporting constant-time predecessor/successor queries.
 - Two Range Minimum Query vector structures for constant-time range minimum queries.
 - A Wavelet Matrix supporting `O(k)` rank, select, statistical, predecessor, and successor queries.
+- A succinct tree structure supporting level-ordered and depth-first-ordered tree navigation and subtree queries.
 
 ## Why Vers?
 - Vers is among the fastest publicly available bit vector implementations for rank and select operations.
@@ -33,6 +34,7 @@ It also enables a special iterator for the rank/select bit vector that uses vect
 The feature only works on nightly Rust.
 Enabling it on stable Rust is a no-op, because the required CPU features are not available there.
 - `serde`: Enables serialization and deserialization of the data structures using the `serde` crate.
+- `u16_lookup` Enables a larger lookup table for BP tree queries. The larger table requires 128 KiB instead of 4 KiB.
 
 ## Benchmarks
 I benchmarked the implementations against publicly available implementations of the same data structures.
