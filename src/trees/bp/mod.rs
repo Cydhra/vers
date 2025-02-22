@@ -63,6 +63,37 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// However, for research purposes, this behavior can be useful and should yield expected results
 /// in most cases.
 ///
+/// # Example
+/// ```rust
+/// #![allow(long_running_const_eval)] // TODO why do we have to specify this in a downstream crate?
+/// use vers_vecs::{BitVec, BpDfsBuilder, BpTree, DfsTreeBuilder, Tree};
+///
+/// let mut builder = BpDfsBuilder::<512>::new();
+///
+/// // build the tree by depth-first traversal
+/// builder.enter_node();
+/// builder.enter_node();
+/// builder.enter_node();
+/// builder.leave_node();
+/// builder.enter_node();
+/// builder.leave_node();
+/// builder.leave_node();
+/// builder.enter_node();
+/// builder.leave_node();
+/// builder.leave_node();
+///
+/// let tree = builder.build().unwrap();
+/// let root = tree.root().unwrap();
+/// assert_eq!(root, 0);
+/// assert_eq!(tree.first_child(root), Some(1));
+/// assert_eq!(tree.next_sibling(1), Some(7));
+/// assert_eq!(tree.next_sibling(7), None);
+///
+/// assert_eq!(root, 0);
+/// assert_eq!(tree.depth(2), 2);
+/// assert_eq!(tree.depth(7), 1);
+/// ```
+///
 /// [`RsVec`]: RsVec
 pub struct BpTree<const BLOCK_SIZE: usize = DEFAULT_BLOCK_SIZE> {
     vec: RsVec,
