@@ -14,6 +14,7 @@ pub trait Tree {
     type NodeHandle;
 
     /// Returns the root node of the tree, if the tree isn't empty.
+    /// If the tree is unbalanced, the result is meaningless.
     fn root(&self) -> Option<Self::NodeHandle>;
 
     /// Returns the parent of a node, if it exists.

@@ -489,6 +489,8 @@ fn test_children() {
 
 #[test]
 fn test_contiguous_index() {
+    // test whether `node_index` and `node_handle` return correct indices / node handles.
+
     let bv = BitVec::from_bits(&[1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0]);
     let tree = BpTree::<4>::from_bit_vector(bv.clone());
     let rs: RsVec = bv.into();
@@ -700,6 +702,8 @@ fn test_malformed_tree_negative() {
 
 // helper function to run all functions on a tree once, without any asserts.
 fn test_all_functions(tree: &BpTree<4>) {
+    tree.root();
+
     for i in 0..tree.vec.len() {
         tree.fwd_search(i, 0);
         tree.bwd_search(i, 0);
