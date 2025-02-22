@@ -455,6 +455,8 @@ impl<const BLOCK_SIZE: usize> LevelTree for BpTree<BLOCK_SIZE> {
             return Some(node);
         }
 
+        #[allow(clippy::cast_possible_wrap)]
+        // if the level exceeds 2^63, we accept that the result is wrong
         self.bwd_search(node, -(level as i64))
     }
 
@@ -472,10 +474,14 @@ impl<const BLOCK_SIZE: usize> LevelTree for BpTree<BLOCK_SIZE> {
             return Some(0);
         }
 
+        #[allow(clippy::cast_possible_wrap)]
+        // if the level exceeds 2^63, we accept that the result is wrong
         self.fwd_search(0, level as i64)
     }
 
     fn level_rightmost(&self, level: u64) -> Option<Self::NodeHandle> {
+        #[allow(clippy::cast_possible_wrap)]
+        // if the level exceeds 2^63, we accept that the result is wrong
         self.open(self.bwd_search(self.size() * 2 - 1, level as i64)?)
     }
 }
