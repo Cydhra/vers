@@ -671,3 +671,66 @@ fn test_subtree_size() {
     assert_eq!(tree.subtree_size(12), Some(2));
     assert_eq!(tree.subtree_size(13), Some(1));
 }
+
+#[test]
+fn test_malformed_tree_positive() {
+    // test that an unbalanced expression doesn't panic.
+    // most results are meaningless, but we don't want to panic and leave the data structure
+    // for further queries in a consistent state.
+
+    // the tree has not enough closing brackets
+    let bv = BitVec::from_bits(&[1, 1, 1, 0, 1, 1, 0, 1, 1, 0]);
+    let tree = BpTree::<4>::from_bit_vector(bv);
+
+    test_all_functions(&tree);
+}
+
+#[test]
+fn test_malformed_tree_negative() {
+    // test that an unbalanced expression doesn't panic.
+    // most results are meaningless, but we don't want to panic and leave the data structure
+    // for further queries in a consistent state.
+
+    // the tree has too many closing brackets
+    let bv = BitVec::from_bits(&[0, 0, 1, 1, 1, 0, 0, 0, 0, 0]);
+    let tree = BpTree::<4>::from_bit_vector(bv);
+
+    test_all_functions(&tree);
+}
+
+// helper function to run all functions on a tree once, without any asserts.
+fn test_all_functions(tree: &BpTree<4>) {
+    for i in 0..tree.vec.len() {
+        tree.fwd_search(i, 0);
+        tree.bwd_search(i, 0);
+        tree.fwd_search(i, 1);
+        tree.bwd_search(i, 1);
+        tree.close(i);
+        tree.open(i);
+        tree.enclose(i);
+
+        if tree.vec.get(i).unwrap() == OPEN_PAREN {
+            tree.parent(i);
+            tree.first_child(i);
+            tree.last_child(i);
+            tree.previous_sibling(i);
+            tree.next_sibling(i);
+            tree.is_leaf(i);
+            tree.depth(i);
+            tree.is_ancestor(i, i);
+
+            for j in 0..i {
+                if tree.vec.get(j).unwrap() == OPEN_PAREN {
+                    tree.is_ancestor(i, j);
+                }
+            }
+
+            tree.level_ancestor(i, 0);
+            tree.level_next(i);
+            tree.level_prev(i);
+            tree.level_leftmost(i as u64);
+            tree.level_rightmost(i as u64);
+            tree.subtree_size(i);
+        }
+    }
+}
