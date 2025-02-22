@@ -35,7 +35,12 @@ use lookup_query::*;
 /// The tree is implemented in a way to theoretically support unbalanced parenthesis expressions
 /// (which encode invalid trees) without panicking. However, some operations may behave erratically
 /// if the parenthesis expression isn't balanced.
-/// TODO: add test cases for this behavior
+///
+/// The results of the operations are unspecified,
+/// meaning no guarantees are made about the stability of the results across versions
+/// (except the operations not panicking).
+/// However, for research purposes, this behavior can be useful and should yield expected results
+/// in most cases.
 ///
 /// [`RsVec`]: RsVec
 pub struct BpTree<const BLOCK_SIZE: usize = 512> {
