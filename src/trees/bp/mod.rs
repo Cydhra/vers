@@ -5,6 +5,9 @@ use crate::trees::{IsAncestor, LevelTree, SubtreeSize, Tree};
 use crate::{BitVec, RsVec};
 use std::cmp::{max, min};
 
+/// The default block size for the tree, used in several const generics
+const DEFAULT_BLOCK_SIZE: usize = 512;
+
 const OPEN_PAREN: u64 = 1;
 const CLOSE_PAREN: u64 = 0;
 
@@ -61,7 +64,7 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// in most cases.
 ///
 /// [`RsVec`]: RsVec
-pub struct BpTree<const BLOCK_SIZE: usize = 512> {
+pub struct BpTree<const BLOCK_SIZE: usize = DEFAULT_BLOCK_SIZE> {
     vec: RsVec,
     min_max_tree: MinMaxTree,
 }

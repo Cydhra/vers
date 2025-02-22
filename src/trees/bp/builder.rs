@@ -1,4 +1,4 @@
-use crate::trees::bp::BpTree;
+use crate::trees::bp::{BpTree, DEFAULT_BLOCK_SIZE};
 use crate::trees::DfsTreeBuilder;
 use crate::BitVec;
 
@@ -6,7 +6,7 @@ use crate::BitVec;
 /// [`DfsTreeBuilder`].
 ///
 /// [`BpTree`]: BpTree
-pub struct BpDfsBuilder<const BLOCK_SIZE: usize> {
+pub struct BpDfsBuilder<const BLOCK_SIZE: usize = DEFAULT_BLOCK_SIZE> {
     excess: i64,
     bit_vec: BitVec,
 }
