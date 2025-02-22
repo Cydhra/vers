@@ -700,6 +700,18 @@ fn test_malformed_tree_negative() {
     test_all_functions(&tree);
 }
 
+#[test]
+fn test_negative_depth() {
+    // test that a tree with negative depth doesn't panic.
+    // most results are meaningless, but we don't want to panic and leave the data structure
+    // for further queries in a consistent state.
+
+    let bv = BitVec::from_bits(&[0, 0, 0, 0, 1, 1, 0]);
+    let tree = BpTree::<4>::from_bit_vector(bv);
+
+    assert_eq!(tree.depth(4), 0);
+}
+
 // helper function to run all functions on a tree once, without any asserts.
 fn test_all_functions(tree: &BpTree<4>) {
     tree.root();

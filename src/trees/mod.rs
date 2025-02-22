@@ -55,6 +55,9 @@ pub trait Tree {
     /// Returns the depth of the node in the tree.
     /// The root node has depth 0.
     /// If `node` is not a valid node handle, the result is meaningless.
+    ///
+    /// If the tree is unbalanced, the result is zero for nodes that are preceded by too many closing
+    /// parenthesis.
     fn depth(&self, node: Self::NodeHandle) -> u64;
 
     /// Returns the number of nodes in the tree.

@@ -416,8 +416,8 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
             self.vec.get(node) == Some(OPEN_PAREN),
             "Node handle is invalid"
         );
-        // todo add test case for unbalanced parenthesis
-        (self.excess(node) as u64).saturating_sub(1)
+        let excess: u64 = self.excess(node).try_into().unwrap_or(0);
+        excess.saturating_sub(1)
     }
 
     fn size(&self) -> usize {
