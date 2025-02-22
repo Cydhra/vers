@@ -738,3 +738,81 @@ fn test_all_functions(tree: &BpTree<4>) {
         }
     }
 }
+
+#[test]
+fn fuzz_tree_navigation() {
+    // fuzzing the tree navigation operations on an unbalanced tree
+    // because those are easier to generate uniformly.
+
+    const L: usize = 1 << 14;
+    const L_BITS: usize = L * size_of::<u64>() * 8;
+
+    // we generate a vector using a seeded random generator and check that every query works as expected
+    let mut rng = StdRng::from_seed([0; 32]);
+    let mut bit_vec = BitVec::with_capacity(L_BITS);
+
+    for _ in 0..L / 64 {
+        bit_vec.append_word(rng.next_u64());
+    }
+
+    let tree = BpTree::<32>::from_bit_vector(bit_vec.clone());
+    let mut parent_stack = Vec::new();
+
+    // keep track of last sibling for each node
+    let mut last_sibling_stack = Vec::new();
+    last_sibling_stack.push(None);
+
+    // keep track of how many siblings we encountered on the current node level yet
+    let mut sibling_count_stack = Vec::new();
+
+    tree.vec.iter().enumerate().for_each(|(idx, bit)| {
+        if bit == OPEN_PAREN {
+            assert_eq!(tree.parent(idx), parent_stack.last().copied());
+            assert_eq!(
+                tree.previous_sibling(idx),
+                last_sibling_stack.last().copied().unwrap()
+            );
+
+            if let Some(num_child) = sibling_count_stack.last() {
+                let mut child = tree.first_child(tree.parent(idx).unwrap()).unwrap();
+                for _ in 0..*num_child {
+                    child = tree.next_sibling(child).unwrap();
+                }
+                assert_eq!(child, idx);
+            }
+
+            parent_stack.push(idx);
+            last_sibling_stack.push(None);
+            sibling_count_stack.push(0);
+        } else {
+            let last_parent = parent_stack.pop();
+
+            // check the last child, and previous_sibling
+            if let Some(parent) = last_parent {
+                let mut child = tree.first_child(parent);
+                let mut reverse_child = tree.last_child(parent);
+                let num_children = *sibling_count_stack.last().unwrap();
+
+                for _ in 1..num_children {
+                    child = tree.next_sibling(child.unwrap());
+                    reverse_child = tree.previous_sibling(reverse_child.unwrap());
+                }
+
+                assert_eq!(child, tree.last_child(parent));
+                assert_eq!(reverse_child, tree.first_child(parent));
+            }
+
+            // pop the last sibling element for the current level, and pop the last sibling element for the parent level,
+            // replacing it with the parent node
+            last_sibling_stack.pop();
+            last_sibling_stack.pop();
+            last_sibling_stack.push(last_parent);
+
+            // update sibling count
+            sibling_count_stack.pop();
+            if let Some(counter) = sibling_count_stack.pop() {
+                sibling_count_stack.push(counter + 1);
+            }
+        }
+    });
+}
