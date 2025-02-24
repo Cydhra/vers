@@ -1,5 +1,5 @@
-//! Min-Max tree implementation as described by Cordova and Navarro in
-//! [Simple and efficient fully-functional succinct trees](https://doi.org/10.1016/j.tcs.2016.04.031).
+//! Min-Max tree implementation as described by Navarro and Sadakane in
+//! [Fully Functional Static and Dynamic Succinct Trees](https://dl.acm.org/doi/pdf/10.1145/2601073).
 //!
 //! It supports the operations `fwd_search` and `bwd_search` to search positions in
 //! parenthesis-expressions that have a specified excess of opening or closing parentheses.
