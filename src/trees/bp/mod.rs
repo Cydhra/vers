@@ -15,14 +15,14 @@ mod builder;
 // re-export the builders toplevel
 pub use builder::BpDfsBuilder;
 
-#[cfg(feature = "u16_lookup")]
+#[cfg(feature = "bp_u16_lookup")]
 mod lookup;
-#[cfg(feature = "u16_lookup")]
+#[cfg(feature = "bp_u16_lookup")]
 use lookup::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 
-#[cfg(not(feature = "u16_lookup"))]
+#[cfg(not(feature = "bp_u16_lookup"))]
 mod lookup_query;
-#[cfg(not(feature = "u16_lookup"))]
+#[cfg(not(feature = "bp_u16_lookup"))]
 use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 
 /// A succinct tree data structure based on balanced parenthesis expressions.
