@@ -125,19 +125,19 @@ const fn max(a: SignedLookupBlockType, b: SignedLookupBlockType) -> SignedLookup
         & -(((a - b) as LookupBlockType >> (LOOKUP_BLOCK_SIZE - 1)) as SignedLookupBlockType))
 }
 
-/// Get the total excess of a block of eight parenthesis
+/// Get the total excess of a block of eight parentheses
 #[inline(always)]
 fn lookup_total_excess(block: LookupBlockType) -> i64 {
     block.count_ones() as i64 - block.count_zeros() as i64
 }
 
-/// Get the maximum excess of a block of eight parenthesis
+/// Get the maximum excess of a block of eight parentheses
 #[inline(always)]
 fn lookup_maximum_excess(block: LookupBlockType) -> i64 {
     get_maximum_excess(PAREN_BLOCK_LOOKUP[block as usize])
 }
 
-/// Get the minimum excess of a block of eight parenthesis
+/// Get the minimum excess of a block of eight parentheses
 #[inline(always)]
 fn lookup_minimum_excess(block: LookupBlockType) -> i64 {
     get_minimum_excess(PAREN_BLOCK_LOOKUP[block as usize])
