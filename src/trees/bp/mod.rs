@@ -63,6 +63,13 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// However, for research purposes, this behavior can be useful and should yield expected results
 /// in most cases.
 ///
+/// Only the basic operations like [`fwd_search`] and [`bwd_search`],
+/// as well as the tree navigation operations
+/// (defined by the traits [`Tree`], [`IsAncestor`], [`LevelTree`], and [`SubtreeSize`]),
+/// are included in this guarantee.
+/// Additional operations like iterators may panic if the tree is unbalanced (this is documented per
+/// operation).
+///
 /// # Example
 /// ```rust
 /// # #![allow(long_running_const_eval)] // for some reason this is needed for test cases
@@ -339,6 +346,29 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     pub fn excess(&self, index: usize) -> i64 {
         debug_assert!(index < self.vec.len(), "Index out of bounds");
         self.vec.rank1(index + 1) as i64 - self.vec.rank0(index + 1) as i64
+    }
+
+    /// Iterate over the nodes of the tree in depth-first (pre-)order.
+    /// This is the most efficient way to iterate over all nodes of the tree.
+    ///
+    /// If the tree is unbalanced, the iterator returns the node handles in the order they appear in
+    /// the parenthesis expression, and it will return handles that don't have a matching closing
+    /// parenthesis.
+    pub fn dfs_iter(
+        &self,
+    ) -> impl Iterator<Item = <BpTree<BLOCK_SIZE> as Tree>::NodeHandle> + use<'_, BLOCK_SIZE> {
+        self.vec.iter1()
+    }
+
+    /// Iterate over the nodes of a valid tree in depth-first (post-)order.
+    /// This is slower than the pre-order iteration.
+    ///
+    /// # Panics
+    /// The iterator may panic at any point if the parenthesis expression is unbalanced.
+    pub fn dfs_post_iter_balanced(
+        &self,
+    ) -> impl Iterator<Item = <BpTree<BLOCK_SIZE> as Tree>::NodeHandle> + use<'_, BLOCK_SIZE> {
+        self.vec.iter0().map(|n| self.open(n).unwrap())
     }
 }
 

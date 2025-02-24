@@ -828,3 +828,19 @@ fn fuzz_tree_navigation() {
         }
     });
 }
+
+#[test]
+fn test_dfs_iterators() {
+    let tree = BpTree::<32>::from_bit_vector(BitVec::from_bits(&[
+        1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0,
+    ]));
+
+    let pre_order = vec![0, 1, 2, 4, 5, 7, 8, 10, 12, 13];
+    let post_order = vec![2, 5, 8, 10, 13, 12, 7, 4, 1, 0];
+
+    assert_eq!(tree.dfs_iter().collect::<Vec<_>>(), pre_order);
+    assert_eq!(
+        tree.dfs_post_iter_balanced().collect::<Vec<_>>(),
+        post_order
+    );
+}
