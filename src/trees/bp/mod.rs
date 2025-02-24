@@ -45,10 +45,14 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// ## Block Size
 /// The tree has a block size of 512 bits by default, which can be changed by setting the
 /// `BLOCK_SIZE` generic parameter.
-/// The block size should be chosen based on the expected size of the tree and the available memory.
+/// This block size is expected to be a good choice for most applications,
+/// as it will fit a cache line.
+///
+/// If you want to tune the parameter,
+/// the block size should be chosen based on the expected size of the tree and the available memory.
 /// Smaller block sizes increase the size of the supporting data structure but reduce the time
 /// complexity of some operations by a constant amount.
-/// Very large block sizes are best combined with the `u16_lookup` feature to keep the query time
+/// Larger block sizes are best combined with the `u16_lookup` feature to keep the query time
 /// low.
 ///
 /// ## Unbalanced Parentheses
