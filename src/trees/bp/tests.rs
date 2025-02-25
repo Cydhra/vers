@@ -839,8 +839,5 @@ fn test_dfs_iterators() {
     let post_order = vec![2, 5, 8, 10, 13, 12, 7, 4, 1, 0];
 
     assert_eq!(tree.dfs_iter().collect::<Vec<_>>(), pre_order);
-    assert_eq!(
-        tree.dfs_post_iter_balanced().collect::<Vec<_>>(),
-        post_order
-    );
+    assert_eq!(tree.dfs_post_iter().collect::<Vec<_>>(), post_order);
 }

@@ -387,7 +387,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     ///
     /// # Panics
     /// The iterator may panic at any point if the parenthesis expression is unbalanced.
-    pub fn dfs_post_iter_balanced(
+    pub fn dfs_post_iter(
         &self,
     ) -> impl Iterator<Item = <BpTree<BLOCK_SIZE> as Tree>::NodeHandle> + use<'_, BLOCK_SIZE> {
         self.vec.iter0().map(|n| self.open(n).unwrap())
