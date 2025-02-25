@@ -5,9 +5,9 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashSet};
-use vers_vecs::trees::bp::BpDfsBuilder;
+use vers_vecs::trees::bp::BpBuilder;
 use vers_vecs::trees::bp::BpTree;
-use vers_vecs::trees::{DfsTreeBuilder, Tree};
+use vers_vecs::trees::{Tree, TreeBuilder};
 
 mod common;
 
@@ -69,7 +69,7 @@ fn generate_tree<R: Rng>(rng: &mut R, nodes: u64) -> BpTree<BLOCK_SIZE> {
     children[prefix_sum[v as usize] + assigned_children[v as usize]] = u;
 
     // build tree
-    let mut bpb = BpDfsBuilder::with_capacity(nodes);
+    let mut bpb = BpBuilder::with_capacity(nodes);
     let mut stack = Vec::new();
     let mut visited = HashSet::with_capacity(nodes as usize);
     visited.insert(0);

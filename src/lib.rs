@@ -65,8 +65,8 @@ pub use bit_vec::BitVec;
 pub use elias_fano::EliasFanoVec;
 pub use rmq::binary_rmq::BinaryRmq;
 pub use rmq::fast_rmq::FastRmq;
-pub use trees::bp::{BpDfsBuilder, BpTree};
-pub use trees::{DfsTreeBuilder, IsAncestor, LevelTree, SubtreeSize, Tree};
+pub use trees::bp::{BpBuilder, BpTree};
+pub use trees::{IsAncestor, LevelTree, SubtreeSize, Tree, TreeBuilder};
 pub use wavelet::WaveletMatrix;
 
 pub mod bit_vec;

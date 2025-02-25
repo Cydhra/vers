@@ -13,7 +13,7 @@ const CLOSE_PAREN: u64 = 0;
 
 mod builder;
 // re-export the builders toplevel
-pub use builder::BpDfsBuilder;
+pub use builder::BpBuilder;
 
 #[cfg(feature = "bp_u16_lookup")]
 mod lookup;
@@ -77,9 +77,9 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// # Example
 /// ```rust
 /// # #![allow(long_running_const_eval)] // for some reason this is needed for test cases
-/// use vers_vecs::{BitVec, BpDfsBuilder, BpTree, DfsTreeBuilder, Tree};
+/// use vers_vecs::{BitVec, BpBuilder, BpTree, TreeBuilder, Tree};
 ///
-/// let mut builder = BpDfsBuilder::<512>::new();
+/// let mut builder = BpBuilder::<512>::new();
 ///
 /// // build the tree by depth-first traversal
 /// builder.enter_node();

@@ -120,7 +120,7 @@ pub trait LevelTree: Tree {
 ///
 /// Once the full tree has been visited, the caller must call [`build`] to create an instance of the
 /// implementing tree type.
-pub trait DfsTreeBuilder {
+pub trait TreeBuilder {
     /// The tree type constructed with this interface
     type Tree;
 
