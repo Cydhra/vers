@@ -1,6 +1,7 @@
 //! Tree data structures. Currently only the [BP][bp] tree is exposed.
 //! The trees are succinct, approaching the information-theoretic lower bound for the space complexity:
-//! They need O(n) bits to store a tree with n nodes, and o(n) extra bits to support queries.
+//! They need O(n) bits to store a tree with n nodes, and theoretically o(n) extra bits to support queries.
+//! However, this is relaxed to O(n) with a factor smaller than 1 in practice.
 //!
 //! For details, see the submodules.
 
