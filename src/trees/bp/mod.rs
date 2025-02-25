@@ -416,6 +416,53 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     ) -> impl Iterator<Item = <BpTree<BLOCK_SIZE> as Tree>::NodeHandle> + use<'_, BLOCK_SIZE> {
         self.vec.iter0().map(|n| self.open(n).unwrap())
     }
+
+    /// Iterate over a subtree rooted at `node` in depth-first (pre-)order.
+    /// The iteration starts with the node itself.
+    ///
+    /// Calling this method on an invalid node handle, or an unbalanced parenthesis expression,
+    /// will produce an iterator over an unspecified subset of nodes.
+    pub fn subtree_iter(
+        &self,
+        node: <BpTree<BLOCK_SIZE> as Tree>::NodeHandle,
+    ) -> impl Iterator<Item = <BpTree<BLOCK_SIZE> as Tree>::NodeHandle> + use<'_, BLOCK_SIZE> {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+
+        let index = self.vec.rank1(node);
+        let close = self.close(node).unwrap_or(node);
+        let subtree_size = self.vec.rank1(close) - index;
+
+        self.vec.iter1().skip(index).take(subtree_size)
+    }
+
+    /// Iterate over a subtree rooted at `node` in depth-first (post-)order.
+    /// This is slower than the pre-order iteration.
+    /// The iteration ends with the node itself.
+    ///
+    /// Calling this method on an invalid node handle, or an unbalanced parenthesis expression,
+    /// will produce an iterator over an unspecified subset of nodes.
+    pub fn subtree_post_iter(
+        &self,
+        node: <BpTree<BLOCK_SIZE> as Tree>::NodeHandle,
+    ) -> impl Iterator<Item = <BpTree<BLOCK_SIZE> as Tree>::NodeHandle> + use<'_, BLOCK_SIZE> {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+
+        let index = self.vec.rank0(node);
+        let close = self.close(node).unwrap_or(node);
+        let subtree_size = self.vec.rank0(close) + 1 - index;
+
+        self.vec
+            .iter0()
+            .skip(index)
+            .take(subtree_size)
+            .map(|n| self.open(n).unwrap())
+    }
 }
 
 impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
