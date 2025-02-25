@@ -1,5 +1,6 @@
 //! A succinct tree data structure backed by the balanced parentheses representation.
 
+use crate::bit_vec::fast_rs_vec::SelectIntoIter;
 use crate::trees::mmt::MinMaxTree;
 use crate::trees::{IsAncestor, LevelTree, SubtreeSize, Tree};
 use crate::{BitVec, RsVec};
@@ -604,6 +605,15 @@ impl<const BLOCK_SIZE: usize> SubtreeSize for BpTree<BLOCK_SIZE> {
 
         self.close(node)
             .map(|c| self.vec.rank1(c) - self.vec.rank1(node))
+    }
+}
+
+impl<const BLOCK_SIZE: usize> IntoIterator for BpTree<BLOCK_SIZE> {
+    type Item = <BpTree<BLOCK_SIZE> as Tree>::NodeHandle;
+    type IntoIter = SelectIntoIter<false>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.vec.into_iter1()
     }
 }
 
