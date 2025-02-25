@@ -11,7 +11,8 @@ pub(crate) mod mmt;
 
 /// A trait for succinct tree data structures defining the most basic tree navigation operations.
 pub trait Tree {
-    /// A type that represents a node during tree navigation.
+    /// A type that represents a node during tree navigation. Note that the handle is not necessarily
+    /// a contiguous index.
     type NodeHandle;
 
     /// Returns the root node of the tree, if the tree isn't empty.
