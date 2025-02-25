@@ -39,7 +39,7 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// ## Lookup Table
 /// The tree internally uses a lookup table for subqueries on blocks of bits.
 /// The lookup table requires 4 KiB of memory and is compiled into the binary.
-/// If the `u16_lookup` feature is enabled, a larger lookup table is used, which requires 128 KiB of
+/// If the `bp_u16_lookup` feature is enabled, a larger lookup table is used, which requires 128 KiB of
 /// memory, but answers queries faster.
 ///
 /// ## Block Size
@@ -52,8 +52,9 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// the block size should be chosen based on the expected size of the tree and the available memory.
 /// Smaller block sizes increase the size of the supporting data structure but reduce the time
 /// complexity of some operations by a constant amount.
-/// Larger block sizes are best combined with the `u16_lookup` feature to keep the query time
+/// Larger block sizes are best combined with the `bp_u16_lookup` feature to keep the query time
 /// low.
+/// In any case, benchmarking for the specific use case is recommended for tuning.
 ///
 /// ## Unbalanced Parentheses
 /// The tree is implemented in a way to theoretically support unbalanced parenthesis expressions
