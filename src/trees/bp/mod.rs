@@ -74,7 +74,10 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// Additional operations like iterators may panic if the tree is unbalanced (this is documented per
 /// operation).
 ///
-/// # Example
+/// # Examples
+///
+/// The high-level approach to building a tree is to use the [`BpBuilder`] to construct the tree
+/// using depth-first traversal of all its nodes.
 /// ```rust
 /// # #![allow(long_running_const_eval)] // for some reason this is needed for test cases
 /// use vers_vecs::{BitVec, BpBuilder, BpTree, TreeBuilder, Tree};
@@ -103,6 +106,20 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// assert_eq!(root, 0);
 /// assert_eq!(tree.depth(2), 2);
 /// assert_eq!(tree.depth(7), 1);
+/// ```
+///
+/// Alternatively, the tree can be constructed from a [`BitVec`] containing the parenthesis
+/// expression directly.
+/// This is also how trees with unbalanced parenthesis expressions can be constructed.
+///
+/// ```rust
+/// # #![allow(long_running_const_eval)]
+/// use vers_vecs::{BitVec, BpTree, Tree};
+/// let bv = BitVec::pack_sequence_u8(&[0b1101_0111, 0b0010_0100], 8);
+/// let tree = BpTree::<4>::from_bit_vector(bv);
+///
+/// let nodes = tree.dfs_iter().collect::<Vec<_>>();
+/// assert_eq!(nodes, vec![0, 1, 2, 4, 6, 7, 10, 13]);
 /// ```
 ///
 /// [`RsVec`]: RsVec
