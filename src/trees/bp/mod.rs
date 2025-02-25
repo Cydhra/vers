@@ -378,6 +378,21 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         self.vec.rank1(index + 1) as i64 - self.vec.rank0(index + 1) as i64
     }
 
+    /// Iterate over the nodes of the tree.
+    /// The iterator yields the nodes in depth-first (pre-)order.
+    /// This method is an alias for [`dfs_iter`].
+    ///
+    /// If the tree is unbalanced, the iterator returns the node handles in the order they appear in
+    /// the parenthesis expression, and it will return handles that don't have a matching closing
+    /// parenthesis.
+    ///
+    /// [`dfs_iter`]: BpTree::dfs_iter
+    pub fn iter(
+        &self,
+    ) -> impl Iterator<Item = <BpTree<BLOCK_SIZE> as Tree>::NodeHandle> + use<'_, BLOCK_SIZE> {
+        self.dfs_iter()
+    }
+
     /// Iterate over the nodes of the tree in depth-first (pre-)order.
     /// This is the most efficient way to iterate over all nodes of the tree.
     ///
