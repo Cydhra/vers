@@ -124,6 +124,14 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// ```
 ///
 /// [`RsVec`]: RsVec
+/// [`fwd_search`]: BpTree::fwd_search
+/// [`bwd_search`]: BpTree::bwd_search
+/// [`Tree`]: Tree
+/// [`IsAncestor`]: IsAncestor
+/// [`LevelTree`]: LevelTree
+/// [`SubtreeSize`]: SubtreeSize
+/// [`BpBuilder`]: BpBuilder
+/// [`BitVec`]: BitVec
 pub struct BpTree<const BLOCK_SIZE: usize = DEFAULT_BLOCK_SIZE> {
     vec: RsVec,
     min_max_tree: MinMaxTree,
