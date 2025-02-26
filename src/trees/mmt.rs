@@ -35,7 +35,7 @@ struct ExcessNode {
 /// [`BpTree`]: crate::trees::bp::BpTree
 #[derive(Clone, Debug, Default)]
 pub(crate) struct MinMaxTree {
-    nodes: Vec<ExcessNode>,
+    nodes: Box<[ExcessNode]>,
 }
 
 impl MinMaxTree {
@@ -109,7 +109,7 @@ impl MinMaxTree {
             current_level_start -= current_level_size;
         }
 
-        Self { nodes }
+        Self { nodes: nodes.into_boxed_slice() }
     }
 
     pub(crate) fn total_excess(&self, index: usize) -> i64 {
