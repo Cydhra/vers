@@ -672,5 +672,11 @@ impl<const BLOCK_SIZE: usize> IntoIterator for BpTree<BLOCK_SIZE> {
     }
 }
 
+impl<const BLOCK_SIZE: usize> From<BitVec> for BpTree<BLOCK_SIZE> {
+    fn from(bv: BitVec) -> Self {
+        Self::from_bit_vector(bv)
+    }
+}
+
 #[cfg(test)]
 mod tests;
