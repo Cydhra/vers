@@ -426,6 +426,13 @@ impl MinMaxTree {
             unreachable!();
         }
     }
+
+    /// Returns the number of bytes used on the heap for this structure. This does not include
+    /// allocated space that is not used (e.g. by the allocation behavior of `Vec`).
+    #[must_use]
+    pub fn heap_size(&self) -> usize {
+        self.nodes.len() * size_of::<ExcessNode>()
+    }
 }
 
 #[cfg(test)]

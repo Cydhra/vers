@@ -463,6 +463,13 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
             .take(subtree_size)
             .map(|n| self.open(n).unwrap())
     }
+
+    /// Returns the number of bytes used on the heap for this tree. This does not include
+    /// allocated space that is not used (e.g. by the allocation behavior of `Vec`).
+    #[must_use]
+    pub fn heap_size(&self) -> usize {
+        self.vec.heap_size() + self.min_max_tree.heap_size()
+    }
 }
 
 impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
