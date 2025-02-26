@@ -180,8 +180,8 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
             )
     }
 
-    /// Perform the forward search within one block. If this doesn't yield a result, the search
-    /// continues in the min-max-tree.
+    /// Perform the forward search within one block. If this doesn't yield a result, the caller must
+    /// continue the search in the min-max-tree.
     ///
     /// Returns Ok(index) if an index with the desired relative excess is found, or None(excess)
     /// with the excess at the end of the current block if no index with the desired relative excess
@@ -281,8 +281,8 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
             )
     }
 
-    /// Perform the backward search within one block. If this doesn't yield a result, the search
-    /// continues in the min-max-tree.
+    /// Perform the backward search within one block. If this doesn't yield a result, the caller must
+    /// continue the search in the min-max-tree.
     ///
     /// Returns Ok(index) if an index with the desired relative excess is found, or None(excess)
     /// with the excess at the end of the current block if no index with the desired relative excess
