@@ -133,6 +133,7 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// [`SubtreeSize`]: SubtreeSize
 /// [`BpBuilder`]: BpBuilder
 /// [`BitVec`]: BitVec
+#[derive(Clone, Debug)]
 pub struct BpTree<const BLOCK_SIZE: usize = DEFAULT_BLOCK_SIZE> {
     vec: RsVec,
     min_max_tree: MinMaxTree,
