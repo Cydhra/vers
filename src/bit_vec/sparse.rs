@@ -1,7 +1,15 @@
 use crate::{BitVec, EliasFanoVec};
 
 /// A succinct representation of a sparse vector with rank and select support.
-/// The vector is a compressed sequence of indices of set bits.
+/// The vector is a compressed sequence of indices of 1-bits.
+///
+/// It is a thin wrapper around an [`EliasFanoVec`] that compresses the indices.
+/// Therefore, no `select0` function is provided.
+/// However, the constructor [`from_bitvec_inverted`] can be used to cheaply invert the input `BitVec`,
+/// reversing the roles of 1-bits and 0-bits.
+///
+/// [`EliasFanoVec`]: struct.EliasFanoVec.html
+/// [`from_bitvec_inverted`]: #method.from_bitvec_inverted
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SparseRSVec {
