@@ -84,8 +84,7 @@ impl SparseRSVec {
 
     /// Returns true if the bit at position `i` is set.
     ///
-    /// # Panics
-    /// If `i` is out of bounds the function might panic or produce incorrect results.
+    /// If `i` is out of bounds the function produces incorrect results.
     /// Use [`is_set`] for a checked version.
     ///
     /// [`is_set`]: #method.is_set
@@ -97,7 +96,11 @@ impl SparseRSVec {
     ///
     /// Returns `None` if `i` is out of bounds.
     pub fn is_set(&self, i: u64) -> Option<bool> {
-        self.vec.predecessor(i).map(|p| p == i)
+        if i >= self.len {
+            None
+        } else {
+            Some(self.vec.predecessor_unchecked(i) == i)
+        }
     }
 
     /// Gets the bit at position `i`.
