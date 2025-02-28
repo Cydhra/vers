@@ -51,6 +51,37 @@ impl SparseRSVec {
         )
     }
 
+    /// Creates a new `SparseRSVec` from a `BitVec`.
+    /// However, before compressing the 1-bits, the input is inverted.
+    /// This means that the sparse vector will compress the 0-bits instead of the 1-bits,
+    /// and the [`rank1`] and [`select1`] functions will return the number of 0-bits and the position of 0-bits.
+    ///
+    /// This is a convenience function to allow for easy creation of sparse vectors that compress
+    /// zeros, despite the lack of a `select0` function.
+    ///
+    /// However, do note that [`get`] will return the inverted value of the bit at position `i` from
+    /// the original `BitVec`.
+    ///
+    /// # Parameters
+    /// - `input`: The input `BitVec` to compress.
+    ///
+    /// [`rank1`]: #method.rank1
+    /// [`select1`]: #method.select1
+    /// [`get`]: #method.get
+    pub fn from_bitvec_inverted(input: &BitVec) -> Self {
+        let len = input.len() as u64;
+        Self::new(
+            input
+                .iter()
+                .enumerate()
+                .filter(|&(_, bit)| bit == 0)
+                .map(|(i, _)| i as u64)
+                .collect::<Vec<_>>()
+                .as_slice(),
+            len,
+        )
+    }
+
     /// Returns true if the bit at position `i` is set.
     ///
     /// # Panics
@@ -108,12 +139,12 @@ impl SparseRSVec {
 
 impl From<BitVec> for SparseRSVec {
     fn from(input: BitVec) -> Self {
-        Self::from_bitvec(&input)
+        Self::from_bitvec_inverted(&input)
     }
 }
 
 impl<'a> From<&'a BitVec> for SparseRSVec {
     fn from(input: &'a BitVec) -> Self {
-        Self::from_bitvec(input)
+        Self::from_bitvec_inverted(input)
     }
 }
