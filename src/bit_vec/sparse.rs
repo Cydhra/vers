@@ -91,17 +91,23 @@ impl SparseRSVec {
         self.sparse_is_set(i).map(|b| b as u64)
     }
 
-    pub fn select1(&self, i: usize) -> Option<u64> {
-        self.vec.get(i)
+    /// Return the position of the sparse bit with the given rank.
+    /// The following holds for all `pos` with sparse bits:
+    /// ``sparse_select(sparse_rank(pos)) == pos``
+    ///
+    /// If the rank is larger than the number of sparse bits in the vector, the vector length is returned.
+    ///
+    /// The sparse bits are the ones this vector is built from, meaning they can be either 0 or 1,
+    /// depending on the input to the constructor.
+    pub fn sparse_select(&self, i: usize) -> u64 {
+        self.vec.get(i).unwrap_or(self.len)
     }
 
-    pub fn rank1(&self, i: u64) -> Option<u64> {
+    pub fn sparse_rank(&self, i: u64) -> Option<u64> {
         todo!("implement rank for elias fano")
     }
-}
 
-impl From<&[u64]> for SparseRSVec {
-    fn from(input: &[u64]) -> Self {
-        Self::new(input)
+    pub fn reverse_rank(&self, i: u64) -> Option<u64> {
+        todo!("implement via sparse-rank")
     }
 }
