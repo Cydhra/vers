@@ -154,6 +154,20 @@ impl EliasFanoVec {
         Some(self.get_unchecked(index))
     }
 
+    /// Returns the element with the given rank, or `None` if the rank exceeds the length of the
+    /// vector.
+    /// The element with rank `i` is the `i`-th smallest element in the vector.
+    ///
+    /// This is simply an alias for [`get`], but matches the `rank`/`select` terminology used in
+    /// other data structures.
+    ///
+    /// Note, that select in bit-vectors returns an index, while select in Elias-Fano returns the
+    /// element at the given rank.
+    #[must_use]
+    pub fn select(&self, rank: usize) -> Option<u64> {
+        self.get(rank)
+    }
+
     /// Returns the element at the given index.
     ///
     /// # Panics
