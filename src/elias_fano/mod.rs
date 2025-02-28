@@ -448,6 +448,36 @@ impl EliasFanoVec {
         self.get_unchecked(upper_bound_lower_index)
     }
 
+    /// Return how many elements strictly smaller than the query element are present in the vector.
+    pub fn rank(&self, value: u64) -> u64 {
+        if value > self.universe_max {
+            return self.len() as u64;
+        }
+
+        if value < self.universe_zero {
+            return 0;
+        }
+
+        let value = value - self.universe_zero;
+        let upper = value >> self.lower_len;
+        let lower = value & ((1 << self.lower_len) - 1);
+        let query_begin = self.upper_vec.select0(upper as usize);
+        let lower_index = query_begin as u64 - upper;
+
+        let mut cursor = 1;
+        while self.upper_vec.get_unchecked(query_begin + cursor) > 0 {
+             let lower_candidate = self
+                .lower_vec
+                .get_bits_unchecked((lower_index as usize + cursor - 1) * self.lower_len, self.lower_len);
+            if lower_candidate >= lower {
+                return lower_index + cursor as u64 - 1;
+            }
+            cursor += 1;
+        }
+
+        lower_index + cursor as u64 - 1
+    }
+
     /// Returns the number of bytes on the heap for this vector. Does not include allocated memory
     /// that isn't used.
     #[must_use]

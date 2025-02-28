@@ -421,6 +421,32 @@ fn test_randomized_elias_fano_successor() {
 }
 
 #[test]
+fn test_rank() {
+    let ef = EliasFanoVec::from_slice(&vec![0, 1, 1, 4, 4, 4, 4, 4, 7, 99, 101, 102, 150]);
+
+    assert_eq!(ef.rank(0), 0);
+    assert_eq!(ef.rank(1), 1);
+    assert_eq!(ef.rank(4), 3);
+    assert_eq!(ef.rank(5), 8);
+    assert_eq!(ef.rank(7), 8);
+    assert_eq!(ef.rank(8), 9);
+    assert_eq!(ef.rank(99), 9);
+    assert_eq!(ef.rank(3000), 13);
+}
+
+#[test]
+fn test_oob_rank() {
+    let ef = EliasFanoVec::from_slice(&vec![1000]);
+    assert_eq!(ef.rank(1000), 0);
+    assert_eq!(ef.rank(1001), 1);
+    assert_eq!(ef.rank(1002), 1);
+    assert_eq!(ef.rank(10000), 1);
+    assert_eq!(ef.rank(u64::MAX), 1);
+    assert_eq!(ef.rank(0), 0);
+    assert_eq!(ef.rank(1), 0);
+}
+
+#[test]
 fn test_empty_ef_vec() {
     let ef = EliasFanoVec::from_slice(&vec![]);
     assert_eq!(ef.len(), 0);
@@ -429,4 +455,5 @@ fn test_empty_ef_vec() {
     assert_eq!(ef.predecessor(0), None);
     assert_eq!(ef.predecessor(u64::MAX), None);
     assert_eq!(ef.get(0), None);
+    assert_eq!(ef.rank(3), 0);
 }
