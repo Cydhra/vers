@@ -101,9 +101,18 @@ impl SparseRSVec {
     }
 
     /// Gets the bit at position `i`.
+    /// Returns 1 if the bit is set, 0 if it is not set.
+    ///
+    /// # Panics
+    /// If `i` is out of bounds the function might panic or produce incorrect results.
+    /// Use [`get`] for a checked version.
+    pub fn get_unchecked(&self, i: u64) -> u64 {
+        self.is_set_unchecked(i) as u64
+    }
+
+    /// Gets the bit at position `i`.
     /// Returns `Some(1)` if the bit is set, `Some(0)` if it is not set, and `None` if `i` is out of bounds.
     pub fn get(&self, i: u64) -> Option<u64> {
-        // todo unchecked version
         self.is_set(i).map(|b| b as u64)
     }
 
