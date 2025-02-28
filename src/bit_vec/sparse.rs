@@ -33,54 +33,39 @@ impl SparseRSVec {
         }
     }
 
-    /// Creates a new `SparseRSVec` from a `BitVec`, by compressing the indices of 0-bits if `zero` is true,
-    /// or the indices of 1-bits if `zero` is false.
+    /// Creates a new `SparseRSVec` from a `BitVec`, by compressing the sparse 1-bits.
     ///
     /// # Parameters
     /// - `input`: The input `BitVec` to compress.
-    /// - `zero`: If true, compress the indices of 0-bits, otherwise compress the indices of 1-bits.
-    pub fn from_bitvec(input: &BitVec, zero: bool) -> Self {
+    pub fn from_bitvec(input: &BitVec) -> Self {
         let len = input.len() as u64;
-        if zero {
-            Self::new(
-                input
-                    .iter()
-                    .enumerate()
-                    .filter(|&(_, bit)| bit == 0)
-                    .map(|(i, _)| i as u64)
-                    .collect::<Vec<_>>()
-                    .as_slice(),
-                len,
-            )
-        } else {
-            Self::new(
-                input
-                    .iter()
-                    .enumerate()
-                    .filter(|&(_, bit)| bit == 1)
-                    .map(|(i, _)| i as u64)
-                    .collect::<Vec<_>>()
-                    .as_slice(),
-                len,
-            )
-        }
+        Self::new(
+            input
+                .iter()
+                .enumerate()
+                .filter(|&(_, bit)| bit == 1)
+                .map(|(i, _)| i as u64)
+                .collect::<Vec<_>>()
+                .as_slice(),
+            len,
+        )
     }
 
-    /// Returns true if the bit at position `i` is of the type this vector was built from
-    /// (e.g., true if the bit is 0, and the vector was built from sparse 0 bits).
+    /// Returns true if the bit at position `i` is set.
     ///
     /// # Panics
     /// If `i` is out of bounds the function might panic or produce incorrect results.
-    /// Use `sparse_is_set` for a checked version.
-    pub fn unchecked_sparse_is_set(&self, i: u64) -> bool {
+    /// Use [`is_set`] for a checked version.
+    ///
+    /// [`is_set`]: #method.is_set
+    pub fn is_set_unchecked(&self, i: u64) -> bool {
         self.vec.predecessor_unchecked(i) == i
     }
 
-    /// Returns true if the bit at position `i` is of the type this vector was built from
-    /// (e.g., true if the bit is 0, and the vector was built from sparse 0 bits).
+    /// Returns true if the bit at position `i` is set.
     ///
     /// Returns `None` if `i` is out of bounds.
-    pub fn sparse_is_set(&self, i: u64) -> Option<bool> {
+    pub fn is_set(&self, i: u64) -> Option<bool> {
         self.vec.predecessor(i).map(|p| p == i)
     }
 
@@ -88,27 +73,22 @@ impl SparseRSVec {
     /// Returns `Some(1)` if the bit is set, `Some(0)` if it is not set, and `None` if `i` is out of bounds.
     pub fn get(&self, i: u64) -> Option<u64> {
         // todo unchecked version
-        self.sparse_is_set(i).map(|b| b as u64)
+        self.is_set(i).map(|b| b as u64)
     }
 
-    /// Return the position of the sparse bit with the given rank.
-    /// The following holds for all `pos` with sparse bits:
-    /// ``sparse_select(sparse_rank(pos)) == pos``
+    /// Return the position of the 1-bit with the given rank.
+    /// The following holds for all `pos` with 1-bits:
+    /// ``select1(rank1(pos)) == pos``
     ///
     /// If the rank is larger than the number of sparse bits in the vector, the vector length is returned.
-    ///
-    /// The sparse bits are the ones this vector is built from, meaning they can be either 0 or 1,
-    /// depending on the input to the constructor.
-    pub fn sparse_select(&self, i: usize) -> u64 {
+    pub fn select1(&self, i: usize) -> u64 {
         self.vec.get(i).unwrap_or(self.len)
     }
 
-    /// Returns the number of sparse bits in the vector up to position `i`.
-    /// The sparse bits are the ones this vector is built from, meaning they can be either 0 or 1,
-    /// depending on the input to the constructor.
+    /// Returns the number of 1-bits in the vector up to position `i`.
     ///
-    /// If `i` is out of bounds, the number of sparse bits in the vector is returned.
-    pub fn sparse_rank(&self, i: u64) -> u64 {
+    /// If `i` is out of bounds, the number of 1-bits in the vector is returned.
+    pub fn rank1(&self, i: u64) -> u64 {
         self.vec.rank(i)
     }
 
@@ -117,7 +97,7 @@ impl SparseRSVec {
     /// depending on the input to the constructor.
     ///
     /// If `i` is out of bounds, the number of non-sparse bits in the vector is returned.
-    pub fn reverse_rank(&self, i: u64) -> u64 {
+    pub fn rank0(&self, i: u64) -> u64 {
         if i >= self.len {
             self.len - self.vec.rank(self.len)
         } else {
