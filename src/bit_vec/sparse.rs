@@ -103,11 +103,25 @@ impl SparseRSVec {
         self.vec.get(i).unwrap_or(self.len)
     }
 
-    pub fn sparse_rank(&self, i: u64) -> Option<u64> {
-        todo!("implement rank for elias fano")
+    /// Returns the number of sparse bits in the vector up to position `i`.
+    /// The sparse bits are the ones this vector is built from, meaning they can be either 0 or 1,
+    /// depending on the input to the constructor.
+    ///
+    /// If `i` is out of bounds, the number of sparse bits in the vector is returned.
+    pub fn sparse_rank(&self, i: u64) -> u64 {
+        self.vec.rank(i)
     }
 
-    pub fn reverse_rank(&self, i: u64) -> Option<u64> {
-        todo!("implement via sparse-rank")
+    /// Returns the number of non-sparse bits in the vector up to position `i`.
+    /// The non-sparse bits are the ones this vector is not built from, meaning they can be either 1 or 0,
+    /// depending on the input to the constructor.
+    ///
+    /// If `i` is out of bounds, the number of non-sparse bits in the vector is returned.
+    pub fn reverse_rank(&self, i: u64) -> u64 {
+        if i >= self.len {
+            self.len - self.vec.rank(self.len)
+        } else {
+            i - self.vec.rank(i)
+        }
     }
 }
