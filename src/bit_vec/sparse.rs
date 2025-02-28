@@ -2,7 +2,9 @@ use crate::{BitVec, EliasFanoVec};
 
 /// A succinct representation of a sparse vector with rank and select support.
 /// The vector is a compressed sequence of indices of set bits.
-struct SparseRSVec {
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct SparseRSVec {
     vec: EliasFanoVec,
 }
 
@@ -66,5 +68,11 @@ impl SparseRSVec {
 
     pub fn rank1(&self, i: u64) -> Option<u64> {
         todo!("implement rank for elias fano")
+    }
+}
+
+impl From<&[u64]> for SparseRSVec {
+    fn from(input: &[u64]) -> Self {
+        Self::new(input)
     }
 }
