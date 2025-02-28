@@ -105,3 +105,15 @@ impl SparseRSVec {
         }
     }
 }
+
+impl From<BitVec> for SparseRSVec {
+    fn from(input: BitVec) -> Self {
+        Self::from_bitvec(&input)
+    }
+}
+
+impl<'a> From<&'a BitVec> for SparseRSVec {
+    fn from(input: &'a BitVec) -> Self {
+        Self::from_bitvec(input)
+    }
+}
