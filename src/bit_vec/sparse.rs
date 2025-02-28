@@ -6,12 +6,21 @@ use crate::{BitVec, EliasFanoVec};
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SparseRSVec {
     vec: EliasFanoVec,
+    len: u64,
 }
 
 impl SparseRSVec {
     /// Creates a new `SparseRSVec` from a sequence of set bits represented as indices.
     /// The input must be sorted in ascending order and free of duplicates.
-    pub fn new(input: &[u64]) -> Self {
+    ///
+    /// The length of the vector must be passed as well, as it cannot be inferred from the input,
+    /// if the last bit in the vector is not set.
+    ///
+    /// # Parameters
+    /// - `input`: The positions of set bits, or unset bits if the sparse vector should compress
+    /// zeros.
+    /// - `len`: The length of the vector, which is needed if the last bit is not in the input slice.
+    pub fn new(input: &[u64], len: u64) -> Self {
         debug_assert!(input.is_sorted(), "input must be sorted");
         debug_assert!(
             input.windows(2).all(|w| w[0] != w[1]),
@@ -20,12 +29,18 @@ impl SparseRSVec {
 
         Self {
             vec: EliasFanoVec::from_slice(input),
+            len,
         }
     }
 
     /// Creates a new `SparseRSVec` from a `BitVec`, by compressing the indices of 0-bits if `zero` is true,
     /// or the indices of 1-bits if `zero` is false.
+    ///
+    /// # Parameters
+    /// - `input`: The input `BitVec` to compress.
+    /// - `zero`: If true, compress the indices of 0-bits, otherwise compress the indices of 1-bits.
     pub fn from_bitvec(input: &BitVec, zero: bool) -> Self {
+        let len = input.len() as u64;
         if zero {
             Self::new(
                 input
@@ -35,6 +50,7 @@ impl SparseRSVec {
                     .map(|(i, _)| i as u64)
                     .collect::<Vec<_>>()
                     .as_slice(),
+                len,
             )
         } else {
             Self::new(
@@ -45,6 +61,7 @@ impl SparseRSVec {
                     .map(|(i, _)| i as u64)
                     .collect::<Vec<_>>()
                     .as_slice(),
+                len,
             )
         }
     }
