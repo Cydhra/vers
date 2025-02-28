@@ -1,3 +1,7 @@
+//! A sparse bit vector with `rank1` and `select1` support.
+//! The vector requires `O(n log u/n) + o(n)` bits of space, where `n` is the number of bits in the vector
+//! and `u` is the number of 1-bits.
+
 use crate::{BitVec, EliasFanoVec};
 
 /// A succinct representation of a sparse vector with rank and select support.
