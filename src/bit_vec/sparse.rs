@@ -66,9 +66,21 @@ impl SparseRSVec {
         }
     }
 
-    /// Returns true if the bit at position `i` is set.
-    pub fn is_set(&self, i: u64) -> Option<bool> {
-        // TODO unchecked version
+    /// Returns true if the bit at position `i` is of the type this vector was built from
+    /// (e.g., true if the bit is 0, and the vector was built from sparse 0 bits).
+    ///
+    /// # Panics
+    /// If `i` is out of bounds the function might panic or produce incorrect results.
+    /// Use `sparse_is_set` for a checked version.
+    pub fn unchecked_sparse_is_set(&self, i: u64) -> bool {
+        self.vec.predecessor_unchecked(i) == i
+    }
+
+    /// Returns true if the bit at position `i` is of the type this vector was built from
+    /// (e.g., true if the bit is 0, and the vector was built from sparse 0 bits).
+    ///
+    /// Returns `None` if `i` is out of bounds.
+    pub fn sparse_is_set(&self, i: u64) -> Option<bool> {
         self.vec.predecessor(i).map(|p| p == i)
     }
 
@@ -76,7 +88,7 @@ impl SparseRSVec {
     /// Returns `Some(1)` if the bit is set, `Some(0)` if it is not set, and `None` if `i` is out of bounds.
     pub fn get(&self, i: u64) -> Option<u64> {
         // todo unchecked version
-        self.is_set(i).map(|b| b as u64)
+        self.sparse_is_set(i).map(|b| b as u64)
     }
 
     pub fn select1(&self, i: usize) -> Option<u64> {
