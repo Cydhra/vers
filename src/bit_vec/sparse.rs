@@ -160,6 +160,16 @@ impl SparseRSVec {
             i - self.vec.rank(i)
         }
     }
+
+    /// Returns the length of the bit vector if it was uncompressed.
+    pub fn len(&self) -> u64 {
+        self.len
+    }
+
+    /// Returns true if the vector is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
 }
 
 impl From<BitVec> for SparseRSVec {
@@ -243,6 +253,8 @@ mod tests {
         assert_eq!(sparse.rank0(0), 0);
         assert_eq!(sparse.rank0(1), 0);
         assert_eq!(sparse.rank0(999), 0);
+        assert!(sparse.is_empty());
+        assert_eq!(sparse.len(), 0);
     }
 
     #[test]
