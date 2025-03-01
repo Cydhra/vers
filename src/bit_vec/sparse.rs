@@ -177,6 +177,7 @@ impl<'a> From<&'a BitVec> for SparseRSVec {
 #[cfg(test)]
 mod tests {
     use super::SparseRSVec;
+    use crate::BitVec;
 
     #[test]
     fn test_sparse_rank() {
@@ -259,5 +260,30 @@ mod tests {
         assert_eq!(sparse.get(11), Some(0));
         assert_eq!(sparse.get(12), None);
         assert_eq!(sparse.get(999), None);
+    }
+
+    #[test]
+    fn test_from_bitvector() {
+        let mut bv = BitVec::from_ones(12);
+        bv.flip_bit(6);
+        bv.flip_bit(7);
+
+        let sparse = SparseRSVec::from_bitvec(&bv);
+        assert_eq!(sparse.rank1(0), 0);
+        assert_eq!(sparse.rank1(1), 1);
+        assert_eq!(sparse.rank1(2), 2);
+        assert_eq!(sparse.rank1(7), 6);
+        assert_eq!(sparse.rank1(8), 6);
+        assert_eq!(sparse.rank1(9), 7);
+        assert_eq!(sparse.rank1(12), 10);
+
+        let sparse = SparseRSVec::from_bitvec_inverted(&bv);
+        assert_eq!(sparse.rank1(0), 0);
+        assert_eq!(sparse.rank1(1), 0);
+        assert_eq!(sparse.rank1(2), 0);
+        assert_eq!(sparse.rank1(7), 1);
+        assert_eq!(sparse.rank1(8), 2);
+        assert_eq!(sparse.rank1(9), 2);
+        assert_eq!(sparse.rank1(12), 2);
     }
 }
