@@ -178,6 +178,8 @@ impl<'a> From<&'a BitVec> for SparseRSVec {
 mod tests {
     use super::SparseRSVec;
     use crate::BitVec;
+    use rand::prelude::StdRng;
+    use rand::{Rng, SeedableRng};
 
     #[test]
     fn test_sparse_rank() {
@@ -285,5 +287,29 @@ mod tests {
         assert_eq!(sparse.rank1(8), 2);
         assert_eq!(sparse.rank1(9), 2);
         assert_eq!(sparse.rank1(12), 2);
+    }
+
+    #[test]
+    fn test_fuzzy() {
+        const L: usize = 100_000;
+        let mut bv = BitVec::from_zeros(L);
+        let mut rng = StdRng::from_seed([0; 32]);
+
+        for _ in 0..L / 4 {
+            bv.flip_bit(rng.gen_range(0..L));
+        }
+
+        let sparse = SparseRSVec::from_bitvec(&bv);
+
+        let mut ones = 0;
+        for i in 0..L {
+            assert_eq!(bv.get(i), sparse.get(i as u64));
+            assert_eq!(ones, sparse.rank1(i as u64));
+            assert_eq!(i as u64 - ones, sparse.rank0(i as u64));
+            if bv.get(i) == Some(1) {
+                assert_eq!(i, sparse.select1(ones as usize).try_into().unwrap());
+                ones += 1;
+            }
+        }
     }
 }
