@@ -172,3 +172,50 @@ impl<'a> From<&'a BitVec> for SparseRSVec {
         Self::from_bitvec_inverted(input)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::SparseRSVec;
+
+    #[test]
+    fn test_sparse_rank() {
+        let sparse = SparseRSVec::new(&[1, 3, 5, 7, 9], 12);
+        assert_eq!(sparse.rank1(0), 0);
+        assert_eq!(sparse.rank1(1), 0);
+        assert_eq!(sparse.rank1(2), 1);
+        assert_eq!(sparse.rank1(3), 1);
+        assert_eq!(sparse.rank1(4), 2);
+        assert_eq!(sparse.rank1(5), 2);
+        assert_eq!(sparse.rank1(6), 3);
+        assert_eq!(sparse.rank1(7), 3);
+        assert_eq!(sparse.rank1(8), 4);
+        assert_eq!(sparse.rank1(9), 4);
+        assert_eq!(sparse.rank1(10), 5);
+        assert_eq!(sparse.rank1(11), 5);
+        assert_eq!(sparse.rank1(12), 5);
+        assert_eq!(sparse.rank1(999), 5);
+    }
+
+    #[test]
+    fn test_sparse_select() {
+        let sparse = SparseRSVec::new(&[1, 3, 5, 7, 9], 12);
+        assert_eq!(sparse.select1(0), 1);
+        assert_eq!(sparse.select1(1), 3);
+        assert_eq!(sparse.select1(2), 5);
+        assert_eq!(sparse.select1(3), 7);
+        assert_eq!(sparse.select1(4), 9);
+        assert_eq!(sparse.select1(5), 12);
+        assert_eq!(sparse.select1(6), 12);
+    }
+
+    #[test]
+    fn test_empty_sparse() {
+        let sparse = SparseRSVec::new(&[], 0);
+        assert_eq!(sparse.rank1(0), 0);
+        assert_eq!(sparse.rank1(1), 0);
+        assert_eq!(sparse.rank1(999), 0);
+        assert_eq!(sparse.select1(0), 0);
+        assert_eq!(sparse.select1(1), 0);
+        assert_eq!(sparse.select1(999), 0);
+    }
+}

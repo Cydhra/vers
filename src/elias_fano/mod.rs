@@ -464,7 +464,7 @@ impl EliasFanoVec {
 
     /// Return how many elements strictly smaller than the query element are present in the vector.
     pub fn rank(&self, value: u64) -> u64 {
-        if value > self.universe_max {
+        if value > self.universe_max || self.is_empty() {
             return self.len() as u64;
         }
 
@@ -480,9 +480,10 @@ impl EliasFanoVec {
 
         let mut cursor = 1;
         while self.upper_vec.get_unchecked(query_begin + cursor) > 0 {
-             let lower_candidate = self
-                .lower_vec
-                .get_bits_unchecked((lower_index as usize + cursor - 1) * self.lower_len, self.lower_len);
+            let lower_candidate = self.lower_vec.get_bits_unchecked(
+                (lower_index as usize + cursor - 1) * self.lower_len,
+                self.lower_len,
+            );
             if lower_candidate >= lower {
                 return lower_index + cursor as u64 - 1;
             }
