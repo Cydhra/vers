@@ -111,7 +111,8 @@ impl SparseRSVec {
         if i >= self.len {
             None
         } else {
-            Some(self.vec.predecessor_unchecked(i) == i)
+            // if the predecessor is None, the bit is left of the first 1-bit
+            Some(self.vec.predecessor(i).map(|p| p == i).unwrap_or(false))
         }
     }
 
@@ -209,6 +210,25 @@ mod tests {
     }
 
     #[test]
+    fn test_sparse_rank0() {
+        let sparse = SparseRSVec::new(&[1, 3, 5, 7, 9], 12);
+        assert_eq!(sparse.rank0(0), 0);
+        assert_eq!(sparse.rank0(1), 1);
+        assert_eq!(sparse.rank0(2), 1);
+        assert_eq!(sparse.rank0(3), 2);
+        assert_eq!(sparse.rank0(4), 2);
+        assert_eq!(sparse.rank0(5), 3);
+        assert_eq!(sparse.rank0(6), 3);
+        assert_eq!(sparse.rank0(7), 4);
+        assert_eq!(sparse.rank0(8), 4);
+        assert_eq!(sparse.rank0(9), 5);
+        assert_eq!(sparse.rank0(10), 5);
+        assert_eq!(sparse.rank0(11), 6);
+        assert_eq!(sparse.rank0(12), 7);
+        assert_eq!(sparse.rank0(999), 7);
+    }
+
+    #[test]
     fn test_empty_sparse() {
         let sparse = SparseRSVec::new(&[], 0);
         assert_eq!(sparse.rank1(0), 0);
@@ -217,5 +237,27 @@ mod tests {
         assert_eq!(sparse.select1(0), 0);
         assert_eq!(sparse.select1(1), 0);
         assert_eq!(sparse.select1(999), 0);
+        assert_eq!(sparse.rank0(0), 0);
+        assert_eq!(sparse.rank0(1), 0);
+        assert_eq!(sparse.rank0(999), 0);
+    }
+
+    #[test]
+    fn test_sparse_get() {
+        let sparse = SparseRSVec::new(&[1, 3, 5, 7, 9], 12);
+        assert_eq!(sparse.get(0), Some(0));
+        assert_eq!(sparse.get(1), Some(1));
+        assert_eq!(sparse.get(2), Some(0));
+        assert_eq!(sparse.get(3), Some(1));
+        assert_eq!(sparse.get(4), Some(0));
+        assert_eq!(sparse.get(5), Some(1));
+        assert_eq!(sparse.get(6), Some(0));
+        assert_eq!(sparse.get(7), Some(1));
+        assert_eq!(sparse.get(8), Some(0));
+        assert_eq!(sparse.get(9), Some(1));
+        assert_eq!(sparse.get(10), Some(0));
+        assert_eq!(sparse.get(11), Some(0));
+        assert_eq!(sparse.get(12), None);
+        assert_eq!(sparse.get(999), None);
     }
 }
