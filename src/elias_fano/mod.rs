@@ -511,6 +511,63 @@ impl EliasFanoVec {
         )
     }
 
+    /// Returns the difference between the element at the given index and the previous element.
+    /// If the index exceeds the length of the vector, `None` is returned.
+    /// If the index is 0, the function returns the element at index 0.
+    ///
+    /// # Parameters
+    /// - `index`: The index of an element in the vector
+    ///
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::EliasFanoVec;
+    ///
+    /// let elias_fano_vec = EliasFanoVec::from_slice(&[0, 9, 29, 109]);
+    ///
+    /// assert_eq!(elias_fano_vec.delta(0), Some(0));
+    /// assert_eq!(elias_fano_vec.delta(1), Some(9));
+    /// assert_eq!(elias_fano_vec.delta(2), Some(20));
+    /// assert_eq!(elias_fano_vec.delta(3), Some(80));
+    /// ```
+    pub fn delta(&self, index: usize) -> Option<u64> {
+        if index >= self.len() {
+            return None;
+        }
+
+        let upper_index = self.upper_vec.select1(index);
+        if self.upper_vec.get_unchecked(upper_index - 1) == 1 {
+            // the upper part is guaranteed to be equal to the upper part of the previous element,
+            // and thus index - 1 >= 0
+            Some(
+                self.lower_vec
+                    .get_bits_unchecked(index * self.lower_len, self.lower_len)
+                    - self
+                        .lower_vec
+                        .get_bits_unchecked((index - 1) * self.lower_len, self.lower_len),
+            )
+        } else {
+            let query_upper_part = (upper_index - index - 1) << self.lower_len;
+            let query_number = query_upper_part as u64
+                | self
+                    .lower_vec
+                    .get_bits_unchecked(index * self.lower_len, self.lower_len);
+
+            if index == 0 {
+                // we have to add the universe_zero to the result, because we compare to 0
+                Some(query_number + self.universe_zero)
+            } else {
+                let lower_element_upper_index = self.upper_vec.select1(index - 1);
+                let lower_element_upper = lower_element_upper_index - (index - 1) - 1;
+
+                let lower_elem = (lower_element_upper as u64) << self.lower_len as u64
+                    | self
+                        .lower_vec
+                        .get_bits_unchecked((index - 1) * self.lower_len, self.lower_len);
+                Some(query_number - lower_elem)
+            }
+        }
+    }
+
     /// Return how many elements strictly smaller than the query element are present in the vector.
     #[must_use]
     #[allow(clippy::cast_possible_truncation)] // we will fix this in a breaking update
