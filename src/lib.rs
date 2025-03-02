@@ -60,6 +60,9 @@
 //! - `serde` (disabled by default): Enables serialization and deserialization support for all
 //!   data structures in this crate using the `serde` crate.
 
+#[cfg(all(feature = "serde", feature = "zerocopy"))]
+compile_error!("`serde` and `zerocopy` are mutually excusive features");
+
 pub use bit_vec::fast_rs_vec::RsVec;
 pub use bit_vec::sparse::SparseRSVec;
 pub use bit_vec::BitVec;
