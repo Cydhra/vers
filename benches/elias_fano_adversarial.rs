@@ -27,7 +27,7 @@ fn bench_ef(b: &mut Criterion) {
 
         // query random values from the actual sequences, to be equivalent to the worst case
         // benchmark below
-        group.bench_with_input(BenchmarkId::new("uniform input", l), &l, |b, _| {
+        group.bench_with_input(BenchmarkId::new("uniform predecessor", l), &l, |b, _| {
             b.iter_batched(
                 || sequence[query_distribution.sample(&mut rng)],
                 |e| black_box(uniform_ef_vec.predecessor_unchecked(e)),
@@ -51,10 +51,22 @@ fn bench_ef(b: &mut Criterion) {
 
         let bad_ef_vec = EliasFanoVec::from_slice(&sequence);
         // query random values from the actual sequences, to force long searches in the lower vec
-        group.bench_with_input(BenchmarkId::new("adversarial input", l), &l, |b, _| {
+        group.bench_with_input(
+            BenchmarkId::new("adversarial predecessor", l),
+            &l,
+            |b, _| {
+                b.iter_batched(
+                    || sequence[query_distribution.sample(&mut rng)],
+                    |e| black_box(bad_ef_vec.predecessor_unchecked(e)),
+                    BatchSize::SmallInput,
+                )
+            },
+        );
+
+        group.bench_with_input(BenchmarkId::new("adversarial rank", l), &l, |b, _| {
             b.iter_batched(
                 || sequence[query_distribution.sample(&mut rng)],
-                |e| black_box(bad_ef_vec.predecessor_unchecked(e)),
+                |e| black_box(bad_ef_vec.rank(e)),
                 BatchSize::SmallInput,
             )
         });

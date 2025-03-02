@@ -61,6 +61,7 @@
 //!   data structures in this crate using the `serde` crate.
 
 pub use bit_vec::fast_rs_vec::RsVec;
+pub use bit_vec::sparse::SparseRSVec;
 pub use bit_vec::BitVec;
 pub use elias_fano::EliasFanoVec;
 pub use rmq::binary_rmq::BinaryRmq;
