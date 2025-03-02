@@ -5,12 +5,38 @@
 use crate::{BitVec, EliasFanoVec};
 
 /// A succinct representation of a sparse vector with rank and select support.
-/// The vector is a compressed sequence of indices of 1-bits.
+/// It is a thin wrapper around an [`EliasFanoVec`] that compresses the indices of 1-bits.
 ///
-/// It is a thin wrapper around an [`EliasFanoVec`] that compresses the indices.
 /// Therefore, no `select0` function is provided.
 /// However, the constructor [`from_bitvec_inverted`] can be used to cheaply invert the input `BitVec`,
 /// reversing the roles of 1-bits and 0-bits.
+///
+/// # Examples
+/// ```
+/// use vers_vecs::SparseRSVec;
+///
+/// let sparse = SparseRSVec::new(&[1, 3, 5, 7, 9], 12);
+/// assert_eq!(sparse.get(5), Some(1));
+/// assert_eq!(sparse.get(11), Some(0));
+/// assert_eq!(sparse.get(12), None);
+///
+/// assert_eq!(sparse.rank1(5), 2);
+/// assert_eq!(sparse.select1(2), 5);
+/// ```
+///
+/// It cn also be constructed from a `BitVec` directly:
+/// ```
+/// use vers_vecs::SparseRSVec;
+/// use vers_vecs::BitVec;
+///
+/// let mut bv = BitVec::from_zeros(12);
+/// bv.flip_bit(6);
+/// bv.flip_bit(7);
+///
+/// let sparse = SparseRSVec::from_bitvec(&bv);
+/// assert_eq!(sparse.rank1(5), 0);
+/// assert_eq!(sparse.select1(0), 6);
+/// ```
 ///
 /// [`EliasFanoVec`]: struct.EliasFanoVec.html
 /// [`from_bitvec_inverted`]: #method.from_bitvec_inverted
@@ -76,6 +102,21 @@ impl SparseRSVec {
     ///
     /// # Parameters
     /// - `input`: The input `BitVec` to compress.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::SparseRSVec;
+    /// use vers_vecs::BitVec;
+    ///
+    /// let mut bv = BitVec::from_ones(12);
+    /// // set 6 and 7 to 0
+    /// bv.flip_bit(6);
+    /// bv.flip_bit(7);
+    ///
+    /// let sparse = SparseRSVec::from_bitvec_inverted(&bv);
+    /// // now select1 gives the position of 0-bits
+    /// assert_eq!(sparse.select1(1), 7);
+    /// ```
     ///
     /// [`rank1`]: #method.rank1
     /// [`select1`]: #method.select1
