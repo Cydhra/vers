@@ -200,6 +200,12 @@ impl SparseRSVec {
         }
     }
 
+    /// Returns an iterator over the 1-bits in the vector.
+    /// The iterator yields the positions of the 1-bits in ascending order.
+    pub fn iter1(&self) -> impl Iterator<Item = u64> + '_ {
+        self.vec.iter()
+    }
+
     /// Returns the length of the bit vector if it was uncompressed.
     pub fn len(&self) -> u64 {
         self.len
