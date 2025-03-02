@@ -56,7 +56,7 @@ impl SparseRSVec {
     ///
     /// # Parameters
     /// - `input`: The positions of set bits, or unset bits if the sparse vector should compress
-    /// zeros.
+    ///   zeros.
     /// - `len`: The length of the vector, which is needed if the last bit is not in the input slice.
     pub fn new(input: &[u64], len: u64) -> Self {
         debug_assert!(input.is_sorted(), "input must be sorted");
