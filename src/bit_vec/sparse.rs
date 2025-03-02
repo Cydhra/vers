@@ -209,6 +209,12 @@ impl SparseRSVec {
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
+
+    /// Returns the number of bytes used by the vector on the heap.
+    ///  Does not include allocated memory that isn't used.
+    pub fn heap_size(&self) -> usize {
+        self.vec.heap_size()
+    }
 }
 
 impl From<BitVec> for SparseRSVec {
