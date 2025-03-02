@@ -207,6 +207,10 @@ impl EliasFanoVec {
     ///
     /// The function is forcibly inlined, as it is used in the critical path of predecessor queries
     #[inline(always)]
+    #[allow(clippy::too_many_lines)] // the complexity is necessary to de-duplicate code
+    #[allow(clippy::cast_sign_loss)] // the direction flag needs isize calculations on usize values
+    #[allow(clippy::cast_possible_wrap)] // same here
+    #[allow(clippy::cast_possible_truncation)] // we will fix this in a breaking update
     fn search_element_in_block<const INDEX: bool, const UPWARD: bool>(
         &self,
         start_index_upper: usize,
@@ -221,6 +225,7 @@ impl EliasFanoVec {
 
         // the function to check if the current candidate no longer fulfills the query
         // criterion
+        #[allow(clippy::collapsible_else_if)] // readability
         let not_yet_enough: fn(_, _) -> bool = if INDEX {
             if UPWARD {
                 PartialOrd::lt
@@ -288,7 +293,8 @@ impl EliasFanoVec {
 
                     // if linear search takes too long, we can use select0 to find the next zero in the
                     // upper vector, and then use binary search
-                    if cursor.abs() as usize == BIN_SEARCH_THRESHOLD {
+                    #[allow(clippy::comparison_chain)] // readability
+                    if cursor.unsigned_abs() == BIN_SEARCH_THRESHOLD {
                         let block_end = if UPWARD {
                             self.upper_vec.select0((query_upper as isize + 1) as usize)
                                 - query_upper as usize
@@ -411,8 +417,7 @@ impl EliasFanoVec {
     /// or produce wrong results.
     /// Use `predecessor` instead if the query might be out of bounds.
     #[must_use]
-    #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::comparison_chain)] // rust-clippy #5354
+    #[allow(clippy::cast_possible_truncation)] // we will fix this in a breaking update
     pub fn predecessor_unchecked(&self, n: u64) -> u64 {
         if n > self.universe_max {
             return self.get_unchecked(self.len() - 1);
@@ -473,8 +478,7 @@ impl EliasFanoVec {
     /// or produce wrong results.
     /// Use `successor` instead if the query might be out of bounds.
     #[must_use]
-    #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::comparison_chain)] // rust-clippy #5354
+    #[allow(clippy::cast_possible_truncation)] // we will fix this in a breaking update
     pub fn successor_unchecked(&self, n: u64) -> u64 {
         if n < self.universe_zero {
             return self.get_unchecked(0);
@@ -508,6 +512,8 @@ impl EliasFanoVec {
     }
 
     /// Return how many elements strictly smaller than the query element are present in the vector.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)] // we will fix this in a breaking update
     pub fn rank(&self, value: u64) -> u64 {
         if value > self.universe_max || self.is_empty() {
             return self.len() as u64;
