@@ -189,11 +189,9 @@ impl SparseRSVec {
         self.vec.rank(i)
     }
 
-    /// Returns the number of non-sparse bits in the vector up to position `i`.
-    /// The non-sparse bits are the ones this vector is not built from, meaning they can be either 1 or 0,
-    /// depending on the input to the constructor.
+    /// Returns the number of 0-bits in the vector up to position `i`.
     ///
-    /// If `i` is out of bounds, the number of non-sparse bits in the vector is returned.
+    /// If `i` is out of bounds, the number of 0-bits in the vector is returned.
     pub fn rank0(&self, i: u64) -> u64 {
         if i >= self.len {
             self.len - self.vec.rank(self.len)
