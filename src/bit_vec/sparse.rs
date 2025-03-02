@@ -302,6 +302,20 @@ mod tests {
     }
 
     #[test]
+    fn test_large_block() {
+        // test that the implementation works correctly if the search triggers a binary search
+        let sparse = SparseRSVec::new(
+            &[
+                1, 100_000, 100_001, 100_002, 100_003, 100_004, 100_005, 100_006, 100_007, 100_008,
+                100_009, 100_010, 1_000_000,
+            ],
+            2_000_000,
+        );
+        assert_eq!(sparse.rank1(100_008), 9);
+        assert_eq!(sparse.rank1(100_012), 12);
+    }
+
+    #[test]
     fn test_fuzzy() {
         const L: usize = 100_000;
         let mut bv = BitVec::from_zeros(L);
