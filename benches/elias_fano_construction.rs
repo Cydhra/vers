@@ -10,7 +10,6 @@ fn bench_ef(b: &mut Criterion) {
     let mut rng = thread_rng();
 
     let mut group = b.benchmark_group("Elias-Fano: Construction");
-    group.plot_config(common::plot_config());
 
     for &l in common::SIZES[0..8].iter() {
         group.bench_with_input(BenchmarkId::new("construction", l), &l, |b, _| {
