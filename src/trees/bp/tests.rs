@@ -872,3 +872,37 @@ fn test_subtree_iterators() {
     assert_eq!(tree.subtree_post_iter(12).collect::<Vec<_>>(), vec![13, 12]);
     assert_eq!(tree.subtree_post_iter(13).collect::<Vec<_>>(), vec![13]);
 }
+
+#[test]
+fn test_children_iterator() {
+    let tree = BpTree::<4>::from_bit_vector(BitVec::from_bits(&[
+        1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0,
+    ]));
+
+    assert_eq!(tree.children(0).collect::<Vec<_>>(), vec![1]);
+    assert_eq!(tree.rev_children(0).collect::<Vec<_>>(), vec![1]);
+
+    assert_eq!(tree.children(1).collect::<Vec<_>>(), vec![2, 4]);
+    assert_eq!(tree.rev_children(1).collect::<Vec<_>>(), vec![4, 2]);
+
+    assert_eq!(tree.children(2).collect::<Vec<_>>(), vec![]);
+    assert_eq!(tree.rev_children(2).collect::<Vec<_>>(), vec![]);
+
+    assert_eq!(tree.children(4).collect::<Vec<_>>(), vec![5, 7]);
+    assert_eq!(tree.rev_children(4).collect::<Vec<_>>(), vec![7, 5]);
+
+    assert_eq!(tree.children(5).collect::<Vec<_>>(), vec![]);
+    assert_eq!(tree.rev_children(5).collect::<Vec<_>>(), vec![]);
+
+    assert_eq!(tree.children(7).collect::<Vec<_>>(), vec![8, 10, 12]);
+    assert_eq!(tree.rev_children(7).collect::<Vec<_>>(), vec![12, 10, 8]);
+
+    assert_eq!(tree.children(8).collect::<Vec<_>>(), vec![]);
+    assert_eq!(tree.rev_children(8).collect::<Vec<_>>(), vec![]);
+
+    assert_eq!(tree.children(10).collect::<Vec<_>>(), vec![]);
+    assert_eq!(tree.rev_children(10).collect::<Vec<_>>(), vec![]);
+
+    assert_eq!(tree.children(12).collect::<Vec<_>>(), vec![13]);
+    assert_eq!(tree.rev_children(12).collect::<Vec<_>>(), vec![13]);
+}

@@ -5,6 +5,7 @@ use crate::trees::mmt::MinMaxTree;
 use crate::trees::{IsAncestor, LevelTree, SubtreeSize, Tree};
 use crate::{BitVec, RsVec};
 use std::cmp::{max, min};
+use std::iter::FusedIterator;
 
 /// The default block size for the tree, used in several const generics
 const DEFAULT_BLOCK_SIZE: usize = 512;
@@ -465,6 +466,40 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
             .map(|n| self.open(n).unwrap())
     }
 
+    /// Iterate over the children of a node in the tree.
+    /// The iterator yields the children in the order they appear in the parenthesis expression.
+    /// If the node is a leaf, the iterator is empty.
+    /// If the node is not a valid node handle, or the tree is unbalanced,
+    /// the iterator will produce an unspecified subset of the tree's nodes.
+    pub fn children(
+        &self,
+        node: <BpTree<BLOCK_SIZE> as Tree>::NodeHandle,
+    ) -> impl Iterator<Item = <BpTree<BLOCK_SIZE> as Tree>::NodeHandle> + use<'_, BLOCK_SIZE> {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+
+        ChildrenIter::<BLOCK_SIZE, true>::new(self, node)
+    }
+
+    /// Iterate over the children of a node in the tree in reverse order.
+    /// The iterator yields the children in the reverse order they appear in the parenthesis expression.
+    /// If the node is a leaf, the iterator is empty.
+    /// If the node is not a valid node handle, or the tree is unbalanced,
+    /// the iterator will produce an unspecified subset of the tree's nodes.
+    pub fn rev_children(
+        &self,
+        node: <BpTree<BLOCK_SIZE> as Tree>::NodeHandle,
+    ) -> impl Iterator<Item = <BpTree<BLOCK_SIZE> as Tree>::NodeHandle> + use<'_, BLOCK_SIZE> {
+        debug_assert!(
+            self.vec.get(node) == Some(OPEN_PAREN),
+            "Node handle is invalid"
+        );
+
+        ChildrenIter::<BLOCK_SIZE, false>::new(self, node)
+    }
+
     /// Returns the number of bytes used on the heap for this tree. This does not include
     /// allocated space that is not used (e.g. by the allocation behavior of `Vec`).
     #[must_use]
@@ -676,6 +711,49 @@ impl<const BLOCK_SIZE: usize> From<BitVec> for BpTree<BLOCK_SIZE> {
     fn from(bv: BitVec) -> Self {
         Self::from_bit_vector(bv)
     }
+}
+
+/// An iterator over the children of a node.
+/// Calls to `next` return the next child node handle in the order they appear in the parenthesis
+/// expression.
+struct ChildrenIter<'a, const BLOCK_SIZE: usize, const FORWARD: bool> {
+    tree: &'a BpTree<BLOCK_SIZE>,
+    current_sibling: Option<usize>,
+}
+
+impl<'a, const BLOCK_SIZE: usize, const FORWARD: bool> ChildrenIter<'a, BLOCK_SIZE, FORWARD> {
+    fn new(tree: &'a BpTree<BLOCK_SIZE>, node: usize) -> Self {
+        Self {
+            tree,
+            current_sibling: if FORWARD {
+                tree.first_child(node)
+            } else {
+                tree.last_child(node)
+            },
+        }
+    }
+}
+
+impl<'a, const BLOCK_SIZE: usize, const FORWARD: bool> Iterator
+    for ChildrenIter<'a, BLOCK_SIZE, FORWARD>
+{
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current = self.current_sibling?;
+        let next = if FORWARD {
+            self.tree.next_sibling(current)
+        } else {
+            self.tree.previous_sibling(current)
+        };
+        self.current_sibling = next;
+        Some(current)
+    }
+}
+
+impl<'a, const BLOCK_SIZE: usize, const FORWARD: bool> FusedIterator
+    for ChildrenIter<'a, BLOCK_SIZE, FORWARD>
+{
 }
 
 #[cfg(test)]
