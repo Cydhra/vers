@@ -1002,6 +1002,7 @@ impl BitVec {
     ///
     /// [`pack_sequence_*`]: BitVec::pack_sequence_u64
     /// [`get_bits_unchecked(index * n, n)`]: BitVec::get_bits_unchecked
+    /// [`unpack_element`]: BitVec::unpack_element
     #[must_use]
     #[allow(clippy::inline_always)]
     #[inline(always)] // to gain optimization if n is constant
