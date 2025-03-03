@@ -60,6 +60,7 @@ impl SparseRSVec {
     /// - `input`: The positions of set bits, or unset bits if the sparse vector should compress
     ///   zeros.
     /// - `len`: The length of the vector, which is needed if the last bit is not in the input slice.
+    #[must_use]
     pub fn new(input: &[u64], len: u64) -> Self {
         debug_assert!(input.is_sorted(), "input must be sorted");
         debug_assert!(
@@ -77,6 +78,7 @@ impl SparseRSVec {
     ///
     /// # Parameters
     /// - `input`: The input `BitVec` to compress.
+    #[must_use]
     pub fn from_bitvec(input: &BitVec) -> Self {
         let len = input.len() as u64;
         Self::new(
@@ -123,6 +125,7 @@ impl SparseRSVec {
     /// [`rank1`]: #method.rank1
     /// [`select1`]: #method.select1
     /// [`get`]: #method.get
+    #[must_use]
     pub fn from_bitvec_inverted(input: &BitVec) -> Self {
         let len = input.len() as u64;
         Self::new(
@@ -143,6 +146,7 @@ impl SparseRSVec {
     /// Use [`is_set`] for a checked version.
     ///
     /// [`is_set`]: #method.is_set
+    #[must_use]
     pub fn is_set_unchecked(&self, i: u64) -> bool {
         self.vec.predecessor_unchecked(i) == i
     }
@@ -150,12 +154,13 @@ impl SparseRSVec {
     /// Returns true if the bit at position `i` is set.
     ///
     /// Returns `None` if `i` is out of bounds.
+    #[must_use]
     pub fn is_set(&self, i: u64) -> Option<bool> {
         if i >= self.len {
             None
         } else {
             // if the predecessor is None, the bit is left of the first 1-bit
-            Some(self.vec.predecessor(i).map(|p| p == i).unwrap_or(false))
+            Some(self.vec.predecessor(i).is_some_and(|p| p == i))
         }
     }
 
@@ -165,14 +170,16 @@ impl SparseRSVec {
     /// # Panics
     /// If `i` is out of bounds the function might panic or produce incorrect results.
     /// Use [`get`] for a checked version.
+    #[must_use]
     pub fn get_unchecked(&self, i: u64) -> u64 {
-        self.is_set_unchecked(i) as u64
+        self.is_set_unchecked(i).into()
     }
 
     /// Gets the bit at position `i`.
     /// Returns `Some(1)` if the bit is set, `Some(0)` if it is not set, and `None` if `i` is out of bounds.
+    #[must_use]
     pub fn get(&self, i: u64) -> Option<u64> {
-        self.is_set(i).map(|b| b as u64)
+        self.is_set(i).map(std::convert::Into::into)
     }
 
     /// Return the position of the 1-bit with the given rank.
@@ -180,6 +187,7 @@ impl SparseRSVec {
     /// ``select1(rank1(pos)) == pos``
     ///
     /// If the rank is larger than the number of sparse bits in the vector, the vector length is returned.
+    #[must_use]
     pub fn select1(&self, i: usize) -> u64 {
         self.vec.get(i).unwrap_or(self.len)
     }
@@ -187,6 +195,7 @@ impl SparseRSVec {
     /// Returns the number of 1-bits in the vector up to position `i`.
     ///
     /// If `i` is out of bounds, the number of 1-bits in the vector is returned.
+    #[must_use]
     pub fn rank1(&self, i: u64) -> u64 {
         self.vec.rank(i)
     }
@@ -194,6 +203,7 @@ impl SparseRSVec {
     /// Returns the number of 0-bits in the vector up to position `i`.
     ///
     /// If `i` is out of bounds, the number of 0-bits in the vector is returned.
+    #[must_use]
     pub fn rank0(&self, i: u64) -> u64 {
         if i >= self.len {
             self.len - self.vec.rank(self.len)
@@ -209,17 +219,20 @@ impl SparseRSVec {
     }
 
     /// Returns the length of the bit vector if it was uncompressed.
+    #[must_use]
     pub fn len(&self) -> u64 {
         self.len
     }
 
     /// Returns true if the vector is empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 
     /// Returns the number of bytes used by the vector on the heap.
     ///  Does not include allocated memory that isn't used.
+    #[must_use]
     pub fn heap_size(&self) -> usize {
         self.vec.heap_size()
     }

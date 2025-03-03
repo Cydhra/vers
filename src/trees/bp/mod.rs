@@ -447,8 +447,10 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// This is slower than the pre-order iteration.
     /// The iteration ends with the node itself.
     ///
+    /// # Panics
     /// Calling this method on an invalid node handle, or an unbalanced parenthesis expression,
-    /// will produce an iterator over an unspecified subset of nodes.
+    /// will produce an iterator over an unspecified subset of nodes, or panic either during
+    /// construction or iteration.
     pub fn subtree_post_iter(
         &self,
         node: <BpTree<BLOCK_SIZE> as Tree>::NodeHandle,
@@ -737,8 +739,8 @@ impl<'a, const BLOCK_SIZE: usize, const FORWARD: bool> ChildrenIter<'a, BLOCK_SI
     }
 }
 
-impl<'a, const BLOCK_SIZE: usize, const FORWARD: bool> Iterator
-    for ChildrenIter<'a, BLOCK_SIZE, FORWARD>
+impl<const BLOCK_SIZE: usize, const FORWARD: bool> Iterator
+    for ChildrenIter<'_, BLOCK_SIZE, FORWARD>
 {
     type Item = usize;
 
@@ -754,8 +756,8 @@ impl<'a, const BLOCK_SIZE: usize, const FORWARD: bool> Iterator
     }
 }
 
-impl<'a, const BLOCK_SIZE: usize, const FORWARD: bool> FusedIterator
-    for ChildrenIter<'a, BLOCK_SIZE, FORWARD>
+impl<const BLOCK_SIZE: usize, const FORWARD: bool> FusedIterator
+    for ChildrenIter<'_, BLOCK_SIZE, FORWARD>
 {
 }
 

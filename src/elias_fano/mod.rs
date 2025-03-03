@@ -530,6 +530,7 @@ impl EliasFanoVec {
     /// assert_eq!(elias_fano_vec.delta(2), Some(20));
     /// assert_eq!(elias_fano_vec.delta(3), Some(80));
     /// ```
+    #[must_use]
     pub fn delta(&self, index: usize) -> Option<u64> {
         if index >= self.len() {
             return None;
@@ -560,7 +561,7 @@ impl EliasFanoVec {
                 let lower_element_upper_index = self.upper_vec.select1(index - 1);
                 let lower_element_upper = lower_element_upper_index - (index - 1) - 1;
 
-                let lower_elem = (lower_element_upper as u64) << self.lower_len as u64
+                let lower_elem = ((lower_element_upper as u64) << self.lower_len as u64)
                     | self
                         .lower_vec
                         .get_bits_unchecked((index - 1) * self.lower_len, self.lower_len);
