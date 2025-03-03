@@ -52,8 +52,8 @@
 //! # Safety
 //! When the `simd` crate feature is not enabled (default),
 //! this crate uses no unsafe code, with the only exception being compiler intrinsics for
-//! bit-manipulation. The intrinsics cannot fail with their inputs (provided they are
-//! supported by the target machine), so even if they were to be implemented incorrectly,
+//! bit-manipulation, if available.
+//! The intrinsics do not operate on addresses, so even if they were to be implemented incorrectly,
 //! no memory safety issues would arise.
 //!
 //! # Crate Features
