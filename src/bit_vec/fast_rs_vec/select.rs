@@ -52,8 +52,7 @@ impl super::RsVec {
         feature = "simd",
         target_arch = "x86_64",
         target_feature = "avx",
-        target_feature = "avx2",
-        target_feature = "avx512f",
+        target_feature = "avx512vl",
         target_feature = "avx512bw",
     ))]
     #[inline(always)]
@@ -90,8 +89,7 @@ impl super::RsVec {
         feature = "simd",
         target_arch = "x86_64",
         target_feature = "avx",
-        target_feature = "avx2",
-        target_feature = "avx512f",
+        target_feature = "avx512vl",
         target_feature = "avx512bw",
     )))]
     #[inline(always)]
@@ -234,7 +232,7 @@ impl super::RsVec {
         target_arch = "x86_64",
         target_feature = "avx",
         target_feature = "avx2",
-        target_feature = "avx512f",
+        target_feature = "avx512vl",
         target_feature = "avx512bw",
     ))]
     #[inline(always)]
@@ -301,7 +299,7 @@ impl super::RsVec {
         target_arch = "x86_64",
         target_feature = "avx",
         target_feature = "avx2",
-        target_feature = "avx512f",
+        target_feature = "avx512vl",
         target_feature = "avx512bw",
     )))]
     #[inline(always)]
