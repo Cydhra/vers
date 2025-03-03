@@ -701,6 +701,41 @@ impl BitVec {
         self.len += len;
     }
 
+    /// Append multiple bits to the bit vector.
+    /// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
+    /// The number of bits to append is given by `len`. The bits are taken from the least
+    /// significant bits of `bits`.
+    ///
+    /// This function does not check if `len` is larger than 64.
+    ///
+    /// Furthermore, if the bit-vector has trailing bits that are not zero
+    /// (i.e. the length is not a multiple of 64, and those bits are partially set),
+    /// the function will OR the new data with the trailing bits, destroying the appended data.
+    /// This can happen, if a call `append_bits[_unchecked](word, len)` appends a word which has
+    /// set bits beyond the `len - 1`-th bit,
+    /// or if bits have been dropped from the bit vector using [`drop_last`].
+    ///
+    /// See [`append_bits`] for a checked version of this function.
+    ///
+    /// # Panics
+    /// If `len` is larger than 64, the behavior is platform-dependent, and a processor
+    /// exception might be triggered.
+    ///
+    /// [`append_bits`]: BitVec::append_bits
+    /// [`drop_last`]: BitVec::drop_last
+    pub fn append_bits_unchecked(&mut self, bits: u64, len: usize) {
+        if self.len % WORD_SIZE == 0 {
+            self.data.push(bits);
+        } else {
+            self.data[self.len / WORD_SIZE] |= bits << (self.len % WORD_SIZE);
+
+            if self.len % WORD_SIZE + len > WORD_SIZE {
+                self.data.push(bits >> (WORD_SIZE - self.len % WORD_SIZE));
+            }
+        }
+        self.len += len;
+    }
+
     /// Return the length of the bit vector. The length is measured in bits.
     #[must_use]
     pub fn len(&self) -> usize {
