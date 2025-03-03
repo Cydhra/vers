@@ -132,7 +132,7 @@ impl WaveletMatrix {
     /// # Parameters
     /// - `bit_vec`: A packed sequence of `n` `k`-bit words. The `i`-th word begins in the
     ///   `bits_per_element * i`-th bit of the bit vector. Words are stored from least to most
-    ///    significant bit.
+    ///   significant bit.
     /// - `bits_per_element`: The number `k` of bits in each word. Cannot exceed 1 << 16.
     ///
     /// # Panics

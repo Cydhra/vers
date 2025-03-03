@@ -109,7 +109,9 @@ impl MinMaxTree {
             current_level_start -= current_level_size;
         }
 
-        Self { nodes: nodes.into_boxed_slice() }
+        Self {
+            nodes: nodes.into_boxed_slice(),
+        }
     }
 
     pub(crate) fn total_excess(&self, index: usize) -> i64 {
@@ -185,7 +187,7 @@ impl MinMaxTree {
         debug_assert!(!self.nodes.is_empty());
         match self.nodes.len() {
             2 => 1,
-            _ => ((self.nodes.len() + 1) / 2).next_power_of_two() - 1,
+            _ => self.nodes.len().div_ceil(2).next_power_of_two() - 1,
         }
     }
 
@@ -204,8 +206,8 @@ impl MinMaxTree {
     /// # Parameters
     /// - `begin`: The index of the leaf block to start the search from (the first leaf is indexed with 0).
     /// - `relative_excess`: The excess to search for relative to the excess at the end of the block.
-    ///    That is, if a query at index `i` seeks excess `x`, and between `i` and the end of the
-    ///    block `j` there is excess `y`, then the relative excess is `x - y`.
+    ///   That is, if a query at index `i` seeks excess `x`, and between `i` and the end of the
+    ///   block `j` there is excess `y`, then the relative excess is `x - y`.
     pub(crate) fn fwd_search(&self, begin: usize, relative_excess: i64) -> Option<(usize, i64)> {
         if begin + self.first_leaf() >= self.nodes.len() {
             return None;
@@ -226,8 +228,8 @@ impl MinMaxTree {
     /// # Parameters
     /// - `begin`: The index of the leaf block to start the search from (the first leaf is indexed with 0).
     /// - `relative_excess`: The excess to search for relative to the excess at the end of the block.
-    ///    That is, if a query at index `i` seeks excess `x`, and between `i` and the start of the
-    ///    block `j` there is excess `y`, then the relative excess is `x - y`.
+    ///   That is, if a query at index `i` seeks excess `x`, and between `i` and the start of the
+    ///   block `j` there is excess `y`, then the relative excess is `x - y`.
     pub(crate) fn bwd_search(&self, begin: usize, relative_excess: i64) -> Option<(usize, i64)> {
         if begin + self.first_leaf() >= self.nodes.len() {
             return None;
