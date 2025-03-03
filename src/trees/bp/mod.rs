@@ -1,4 +1,7 @@
-//! A succinct tree data structure backed by the balanced parentheses representation.
+//! A succinct tree data structure backed by the balanced parenthesis representation.
+//! The tree supports navigation operations between parent, child, and sibling nodes in `O(log n)`
+//! time, as well as subtree size, level-order, and ancestor queries in `O(log n)` time.
+//! The tree is succinct (ideally sublinear space overhead) and pointer-less.
 
 use crate::bit_vec::fast_rs_vec::SelectIntoIter;
 use crate::trees::mmt::MinMaxTree;
