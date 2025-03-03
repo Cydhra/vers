@@ -612,3 +612,17 @@ fn test_from_conversion() {
     assert_eq!(bv.get_bits(0, 64), Some(0));
     assert_eq!(bv.get_bits(64, 64), Some(u64::MAX));
 }
+
+#[test]
+fn test_unpack() {
+    let sequence = [10, 12, 0, 1000, 1, 0, 1, 0];
+    let bv = BitVec::pack_sequence_u64(&sequence, 10);
+
+    for (i, &val) in sequence.iter().enumerate() {
+        assert_eq!(bv.unpack_element(i, 10), Some(val));
+        assert_eq!(bv.unpack_element_unchecked(i, 10), val);
+    }
+
+    assert_eq!(bv.unpack_element(8, 10), None);
+    assert_eq!(bv.unpack_element(1000, 10), None);
+}

@@ -36,6 +36,14 @@ fn bench_ef(b: &mut Criterion) {
             )
         });
 
+        group.bench_with_input(BenchmarkId::new("rank", l), &l, |b, _| {
+            b.iter_batched(
+                || pred_sample.sample(&mut rng),
+                |e| black_box(ef_vec.rank(e)),
+                BatchSize::SmallInput,
+            )
+        });
+
         group.bench_with_input(BenchmarkId::new("bin search", l), &l, |b, _| {
             b.iter_batched(
                 || pred_sample.sample(&mut rng),
