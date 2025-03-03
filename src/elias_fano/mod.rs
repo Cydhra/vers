@@ -106,6 +106,7 @@ impl EliasFanoVec {
         let bits_per_number = (max(universe_bound, 2) as f64).log2().ceil() as usize;
         let bits_for_upper_values = (max(data.len(), 2) as f64).log2().ceil() as usize;
         let lower_width = max(bits_per_number, log_n) - bits_for_upper_values;
+        assert!(lower_width < 64);
 
         let mut upper_vec =
             BitVec::from_zeros(2 + data.len() + (universe_bound >> lower_width) as usize);
@@ -118,7 +119,7 @@ impl EliasFanoVec {
             let lower = word & ((1 << lower_width) - 1);
 
             upper_vec.flip_bit_unchecked(upper + i + 1);
-            lower_vec.append_bits(lower, lower_width);
+            lower_vec.append_bits_unchecked(lower, lower_width);
         }
 
         Self {
