@@ -958,6 +958,57 @@ impl BitVec {
         }
     }
 
+    /// Extract a packed element from a bit vector. The element is encoded in the bits at the given
+    /// `index`. The number of bits per encoded element is given by `n`.
+    ///
+    /// This is a convenience method to access elements previously packed using the [`pack_sequence_*`] methods,
+    /// and is equivalent to calling [`get_bits(index * n, n)`].
+    /// It is thus safe to use this method with any index and any size n <= 64.
+    ///
+    /// If the element is out of bounds, None is returned.
+    /// The element is returned as a u64 value.
+    ///
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::BitVec;
+    ///
+    /// let sequence = [10, 100, 124, 45, 223];
+    /// let bv = BitVec::pack_sequence_u64(&sequence, 8);
+    ///
+    /// assert_eq!(bv.unpack_element(0, 8), Some(10));
+    /// assert_eq!(bv.unpack_element(2, 8), Some(124));
+    /// ```
+    ///
+    /// [`pack_sequence_*`]: BitVec::pack_sequence_u64
+    /// [`get_bits(index * n, n)`]: BitVec::get_bits
+    #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)] // to gain optimization if n is constant
+    pub fn unpack_element(&self, index: usize, n: usize) -> Option<u64> {
+        self.get_bits(index * n, n)
+    }
+
+    /// Extract a packed element from a bit vector. The element is encoded in the bits at the given
+    /// `index`. The number of bits per encoded element is given by `n`.
+    ///
+    /// This is a convenience method to access elements previously packed using the [`pack_sequence_*`] methods,
+    /// and is equivalent to calling [`get_bits_unchecked(index * n, n)`].
+    /// It is thus safe to use this method with any index where `index * n + n` is in-bounds,
+    /// and any size n <= 64.
+    ///
+    /// # Panics
+    /// If the element is out of bounds, the function will either return unpredictable data or panic.
+    /// Use [`unpack_element`] for a checked version of this function.
+    ///
+    /// [`pack_sequence_*`]: BitVec::pack_sequence_u64
+    /// [`get_bits_unchecked(index * n, n)`]: BitVec::get_bits_unchecked
+    #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)] // to gain optimization if n is constant
+    pub fn unpack_element_unchecked(&self, index: usize, n: usize) -> u64 {
+        self.get_bits_unchecked(index * n, n)
+    }
+
     /// Return the number of ones in the bit vector. Since the bit vector doesn't store additional
     /// metadata, this value is calculated. Use [`RsVec`] for constant-time rank operations.
     ///
