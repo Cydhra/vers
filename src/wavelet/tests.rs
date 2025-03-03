@@ -39,10 +39,10 @@ fn test_wavelet_encoding_randomized() {
 
         assert_eq!(wavelet.len(), data.len());
 
-        for i in 0..data.len() {
-            assert_eq!(wavelet.get_u64_unchecked(i), data[i] as u64);
-            assert_eq!(wavelet_from_slice.get_u64_unchecked(i), data[i] as u64);
-            assert_eq!(wavelet_prefix_counting.get_u64_unchecked(i), data[i] as u64);
+        for (i, v) in data.iter().enumerate() {
+            assert_eq!(wavelet.get_u64_unchecked(i), *v as u64);
+            assert_eq!(wavelet_from_slice.get_u64_unchecked(i), *v as u64);
+            assert_eq!(wavelet_prefix_counting.get_u64_unchecked(i), *v as u64);
         }
     }
 }
@@ -137,9 +137,9 @@ fn test_rank_randomized() {
     for symbol in symbols {
         let symbol_bit_vec = BitVec::pack_sequence_u8(&[symbol], 8);
         let mut rank = 0;
-        for i in 0..data.len() {
+        for (i, v) in data.iter().enumerate() {
             assert_eq!(wavelet.rank_unchecked(i, &symbol_bit_vec), rank);
-            if data[i] == symbol {
+            if *v == symbol {
                 rank += 1;
             }
         }
@@ -228,12 +228,12 @@ fn test_quantile() {
 
     sequence.sort();
 
-    for i in 0..sequence.len() {
+    for (i, v) in sequence.iter().enumerate() {
         assert_eq!(
             wavelet.quantile(0..10, i),
-            Some(BitVec::pack_sequence_u8(&[sequence[i] as u8], 4))
+            Some(BitVec::pack_sequence_u8(&[*v as u8], 4))
         );
-        assert_eq!(wavelet.quantile_u64(0..10, i), Some(sequence[i]));
+        assert_eq!(wavelet.quantile_u64(0..10, i), Some(*v));
     }
 
     assert_eq!(wavelet.quantile(0..10, 10), None);
@@ -279,7 +279,7 @@ fn test_quantile_randomized() {
             rng.gen_range(range.clone()) - range.start
         };
 
-        let mut range_data = data[range.clone()].iter().copied().collect::<Vec<u8>>();
+        let mut range_data = data[range.clone()].to_vec();
         range_data.sort_unstable();
 
         assert_eq!(
@@ -696,14 +696,14 @@ fn test_wavelet_iter_randomized() {
         let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
 
         let mut iter = wavelet.iter();
-        for i in 0..data.len() {
-            assert_eq!(iter.next(), Some(BitVec::pack_sequence_u8(&[data[i]], 8)));
+        for v in &data {
+            assert_eq!(iter.next(), Some(BitVec::pack_sequence_u8(&[*v], 8)));
         }
         assert_eq!(iter.next(), None);
 
         let mut iter = wavelet.iter_u64().unwrap();
-        for i in 0..data.len() {
-            assert_eq!(iter.next(), Some(data[i] as u64));
+        for v in &data {
+            assert_eq!(iter.next(), Some(*v as u64));
         }
         assert_eq!(iter.next(), None);
     }

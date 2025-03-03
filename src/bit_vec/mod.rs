@@ -535,7 +535,7 @@ impl BitVec {
             return;
         }
 
-        let new_limb_count = (self.len - n + WORD_SIZE - 1) / WORD_SIZE;
+        let new_limb_count = (self.len - n).div_ceil(WORD_SIZE);
 
         // cut off limbs that we no longer need
         if new_limb_count < self.data.len() {
@@ -1019,11 +1019,12 @@ impl BitVec {
     pub fn count_ones(&self) -> u64 {
         let mut ones: u64 = self.data[0..self.len / WORD_SIZE]
             .iter()
-            .map(|limb| limb.count_ones() as u64)
+            .map(|limb| u64::from(limb.count_ones()))
             .sum();
         if self.len % WORD_SIZE > 0 {
-            ones += (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones()
-                as u64;
+            ones += u64::from(
+                (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones(),
+            );
         }
         ones
     }

@@ -94,8 +94,8 @@ impl WaveletMatrix {
 
         for (level, data) in data.iter_mut().enumerate() {
             let mut total_zeros = 0;
-            for i in 0..num_elements {
-                if bit_lookup(permutation[i], element_len - level - 1) == 0 {
+            for (i, p) in permutation.iter().enumerate() {
+                if bit_lookup(*p, element_len - level - 1) == 0 {
                     total_zeros += 1;
                 } else {
                     data.set(i, 1).unwrap();
@@ -107,12 +107,12 @@ impl WaveletMatrix {
             if level < element_len - 1 {
                 let mut zero_boundary = 0;
                 let mut one_boundary = total_zeros;
-                for i in 0..num_elements {
+                for (i, p) in permutation.iter().enumerate() {
                     if data.get_unchecked(i) == 0 {
-                        next_permutation[zero_boundary] = permutation[i];
+                        next_permutation[zero_boundary] = *p;
                         zero_boundary += 1;
                     } else {
-                        next_permutation[one_boundary] = permutation[i];
+                        next_permutation[one_boundary] = *p;
                         one_boundary += 1;
                     }
                 }
@@ -132,7 +132,7 @@ impl WaveletMatrix {
     /// # Parameters
     /// - `bit_vec`: A packed sequence of `n` `k`-bit words. The `i`-th word begins in the
     ///   `bits_per_element * i`-th bit of the bit vector. Words are stored from least to most
-    ///    significant bit.
+    ///   significant bit.
     /// - `bits_per_element`: The number `k` of bits in each word. Cannot exceed 1 << 16.
     ///
     /// # Panics
@@ -346,7 +346,7 @@ impl WaveletMatrix {
         let mut value = BitVec::from_zeros(self.bits_per_element());
         let mut level = self.bits_per_element() - 1;
         self.reconstruct_value_unchecked(i, |bit| {
-            value.set_unchecked(level as usize, bit);
+            value.set_unchecked(level, bit);
             level = level.saturating_sub(1);
         });
         value
@@ -1729,7 +1729,7 @@ impl WaveletMatrix {
             range,
             &symbol,
             0,
-            |level, symbol| symbol >> ((self.bits_per_element() - 1) - level) & 1,
+            |level, symbol| (symbol >> ((self.bits_per_element() - 1) - level)) & 1,
             |bit, _level, result| {
                 // we ignore the level here, and instead rely on the fact that the bits are set in order.
                 // we have to do that, because the quantile_search_u64 does the same.
@@ -1916,7 +1916,7 @@ impl WaveletMatrix {
             range,
             &symbol,
             0,
-            |level, symbol| symbol >> ((self.bits_per_element() - 1) - level) & 1,
+            |level, symbol| (symbol >> ((self.bits_per_element() - 1) - level)) & 1,
             |bit, _level, result| {
                 // we ignore the level here, and instead rely on the fact that the bits are set in order.
                 // we have to do that, because the quantile_search_u64 does the same.
@@ -2021,7 +2021,9 @@ impl WaveletMatrix {
     }
 
     /// Get the number of bits per element in the alphabet of the encoded sequence.
+    #[must_use]
     #[deprecated(since = "1.5.1", note = "please use `bits_per_element` instead")]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn bit_len(&self) -> u16 {
         self.bits_per_element() as u16
     }
