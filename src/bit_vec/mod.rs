@@ -684,13 +684,8 @@ impl BitVec {
     ///
     /// # Panics
     /// Panics if `len` is larger than 64.
-    pub fn append_bits(&mut self, mut bits: u64, len: usize) {
+    pub fn append_bits(&mut self, bits: u64, len: usize) {
         assert!(len <= 64, "Cannot append more than 64 bits");
-
-        // zero out garbage data
-        if len < 64 {
-            bits &= (1 << len) - 1;
-        }
 
         if self.len % WORD_SIZE == 0 {
             self.data.push(bits);
