@@ -90,14 +90,12 @@ macro_rules! gen_vector_iter_impl {
 
             /// Returns the number of elements that this iterator will iterate over. The size is
             /// precise.
-            #[must_use]
             fn size_hint(&self) -> (usize, Option<usize>) {
                 (self.len(), Some(self.len()))
             }
 
             /// Returns the exact number of elements that this iterator would iterate over. Does not
             /// call `next` internally.
-            #[must_use]
             fn count(self) -> usize
             where
                 Self: Sized,
@@ -106,7 +104,6 @@ macro_rules! gen_vector_iter_impl {
             }
 
             /// Returns the last element of the iterator. Does not call `next` internally.
-            #[must_use]
             fn last(self) -> Option<Self::Item>
             where
                 Self: Sized,
@@ -181,7 +178,6 @@ macro_rules! impl_into_iterator_impls {
             type Item = $element_type;
             type IntoIter = $own;
 
-            #[must_use]
             fn into_iter(self) -> Self::IntoIter {
                 $own::new(self)
             }
@@ -191,7 +187,6 @@ macro_rules! impl_into_iterator_impls {
             type Item = $element_type;
             type IntoIter = $bor<'a>;
 
-            #[must_use]
             fn into_iter(self) -> Self::IntoIter {
                 $bor::new(self)
             }
@@ -204,7 +199,6 @@ macro_rules! impl_into_iterator_impls {
             type Item = $element_type;
             type IntoIter = $bor<'a>;
 
-            #[must_use]
             fn into_iter(self) -> Self::IntoIter {
                 $bor::new(self)
             }

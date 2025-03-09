@@ -8,16 +8,27 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: -C target-cpu=native
+
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
+    env:
+      RUSTFLAGS: -C target-cpu=native
     steps:
     - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose --all-features
     - name: Run tests
       run: cargo test --verbose --all-features
+
+  test-fallbacks:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: -C target-cpu=x86-64
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --verbose --features serde
+      - name: Run tests
+        run: cargo test --verbose --features serde

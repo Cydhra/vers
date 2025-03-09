@@ -213,14 +213,18 @@ fn test_custom_iter_behavior() {
     assert!(iter.advance_by(6).is_err());
     assert!(iter.advance_back_by(5).is_ok());
 
-    assert_eq!(bv.iter().skip(2).next(), Some(0));
+    #[allow(clippy::iter_skip_next)]
+    let next = bv.iter().skip(2).next(); // explicit test for skip()
+    assert_eq!(next, Some(0));
     assert_eq!(bv.iter().count(), 10);
     assert_eq!(bv.iter().skip(2).count(), 8);
     assert_eq!(bv.iter().last(), Some(0));
     assert_eq!(bv.iter().nth(3), Some(1));
     assert_eq!(bv.iter().nth(12), None);
 
-    assert_eq!(bv.clone().into_iter().skip(2).next(), Some(0));
+    #[allow(clippy::iter_skip_next)]
+    let next = bv.clone().into_iter().skip(2).next(); // explicit test for skip()
+    assert_eq!(next, Some(0));
     assert_eq!(bv.clone().into_iter().count(), 10);
     assert_eq!(bv.clone().into_iter().skip(2).count(), 8);
     assert_eq!(bv.clone().into_iter().last(), Some(0));
@@ -607,4 +611,18 @@ fn test_from_conversion() {
     assert_eq!(bv.len, 128);
     assert_eq!(bv.get_bits(0, 64), Some(0));
     assert_eq!(bv.get_bits(64, 64), Some(u64::MAX));
+}
+
+#[test]
+fn test_unpack() {
+    let sequence = [10, 12, 0, 1000, 1, 0, 1, 0];
+    let bv = BitVec::pack_sequence_u64(&sequence, 10);
+
+    for (i, &val) in sequence.iter().enumerate() {
+        assert_eq!(bv.unpack_element(i, 10), Some(val));
+        assert_eq!(bv.unpack_element_unchecked(i, 10), val);
+    }
+
+    assert_eq!(bv.unpack_element(8, 10), None);
+    assert_eq!(bv.unpack_element(1000, 10), None);
 }

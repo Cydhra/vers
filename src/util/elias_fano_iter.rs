@@ -81,14 +81,12 @@ macro_rules! gen_ef_iter_impl {
 
             /// Returns the number of elements that this iterator will iterate over. The size is
             /// precise.
-            #[must_use]
             fn size_hint(&self) -> (usize, Option<usize>) {
                 (self.len(), Some(self.len()))
             }
 
             /// Returns the exact number of elements that this iterator would iterate over. Does not
             /// call `next` internally.
-            #[must_use]
             fn count(self) -> usize
             where
                 Self: Sized,
@@ -97,7 +95,6 @@ macro_rules! gen_ef_iter_impl {
             }
 
             /// Returns the last element of the iterator. Does not call `next` internally.
-            #[must_use]
             fn last(self) -> Option<Self::Item>
             where
                 Self: Sized,

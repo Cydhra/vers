@@ -58,7 +58,7 @@ struct SuperBlockDescriptor {
 
 /// Meta-data for the select query. Each entry i in the select vector contains the indices to find
 /// the i * `SELECT_BLOCK_SIZE`'th 0- and 1-bit in the bitvector. Those indices may be very far apart.
-/// The indices do not point into the bit-vector, but into the select-block vector.
+/// The indices do not point into the bit-vector, but into the super-block vector.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct SelectSuperBlockDescriptor {
@@ -141,7 +141,14 @@ impl RsVec {
             // count the zeros in the current word and add them to the counter
             // the last word may contain padding zeros, which should not be counted,
             // but since we do not append the last block descriptor, this is not a problem
-            let new_zeros = word.count_zeros() as usize;
+            let mut new_zeros = word.count_zeros() as usize;
+
+            // in the last block, remove remaining zeros of limb that aren't part of the vector
+            if idx == vec.data.len() - 1 && vec.len % WORD_SIZE > 0 {
+                let mask = (1 << (vec.len % WORD_SIZE)) - 1;
+                new_zeros -= (word | mask).count_zeros() as usize;
+            }
+
             let all_zeros = total_zeros + current_zeros + new_zeros;
             if all_zeros / SELECT_BLOCK_SIZE > (total_zeros + current_zeros) / SELECT_BLOCK_SIZE {
                 if all_zeros / SELECT_BLOCK_SIZE == select_blocks.len() {
@@ -210,14 +217,15 @@ impl RsVec {
             vec.data.push(0);
         }
 
+        total_zeros += current_zeros;
+
         RsVec {
             data: vec.data,
             len: vec.len,
             blocks,
             super_blocks,
             select_blocks,
-            // the last block may contain padding zeros, which should not be counted
-            rank0: total_zeros + current_zeros - ((WORD_SIZE - (vec.len % WORD_SIZE)) % WORD_SIZE),
+            rank0: total_zeros,
         }
     }
 

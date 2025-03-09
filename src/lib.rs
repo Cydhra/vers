@@ -25,6 +25,8 @@
 //!  - [Elias-Fano][elias_fano::EliasFanoVec] encoding of monotone sequences supporting constant-time predecessor queries.
 //!  - Two [Range Minimum Query][rmq] structures for constant-time range minimum queries.
 //!  - [Wavelet Matrix][wavelet::WaveletMatrix] encoding `k`-bit symbols, supporting rank, select, statistical, and predecessor/successor queries in `O(k)`.
+//!  - [Succinct Tree][trees::bp::BpTree] supporting tree navigation in `O(log n)` time,
+//!    as well as subtree size, level-order, and ancestor queries, and fast depth-first iteration.
 //!
 //! # Performance
 //! Performance was benchmarked against publicly available implementations of the same (or similar)
@@ -50,8 +52,8 @@
 //! # Safety
 //! When the `simd` crate feature is not enabled (default),
 //! this crate uses no unsafe code, with the only exception being compiler intrinsics for
-//! bit-manipulation. The intrinsics cannot fail with their inputs (provided they are
-//! supported by the target machine), so even if they were to be implemented incorrectly,
+//! bit-manipulation, if available.
+//! The intrinsics do not operate on addresses, so even if they were to be implemented incorrectly,
 //! no memory safety issues would arise.
 //!
 //! # Crate Features
@@ -59,12 +61,17 @@
 //!   implementation, and an additional iterator for the `RsVec` data structure.
 //! - `serde` (disabled by default): Enables serialization and deserialization support for all
 //!   data structures in this crate using the `serde` crate.
+//! - `bp_u16_lookup` (disabled by default): Uses a 16-bit lookup table for the balanced parenthesis
+//!   tree data structure. This is faster, but requires 128 KiB instead of 4 KiB.
 
 pub use bit_vec::fast_rs_vec::RsVec;
+pub use bit_vec::sparse::SparseRSVec;
 pub use bit_vec::BitVec;
 pub use elias_fano::EliasFanoVec;
 pub use rmq::binary_rmq::BinaryRmq;
 pub use rmq::fast_rmq::FastRmq;
+pub use trees::bp::{BpBuilder, BpTree};
+pub use trees::{IsAncestor, LevelTree, SubtreeSize, Tree, TreeBuilder};
 pub use wavelet::WaveletMatrix;
 
 pub mod bit_vec;
@@ -76,6 +83,9 @@ pub mod elias_fano;
 pub mod rmq;
 
 #[forbid(unsafe_code)]
-mod wavelet;
+pub mod trees;
+
+#[forbid(unsafe_code)]
+pub mod wavelet;
 
 pub(crate) mod util;

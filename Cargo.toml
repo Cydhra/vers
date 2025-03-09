@@ -1,14 +1,15 @@
 [package]
 name = "vers-vecs"
-version = "1.4.0"
+version = "1.6.1"
 edition = "2021"
 authors = ["Johannes \"Cydhra\" Hengstler"]
 description = "A collection of succinct data structures supported by fast implementations of rank and select queries."
 readme = "readme.md"
 repository = "https://github.com/Cydhra/vers"
 license = "MIT OR Apache-2.0"
-keywords = ["succinct", "elias-fano", "bitvector", "rank", "select"]
+keywords = ["succinct", "elias-fano", "bitvector", "rank", "wavelet-matrix"]
 categories = ["data-structures", "algorithms"]
+documentation = "https://docs.rs/vers-vecs"
 exclude = [
     "images/*",
     ".github/*",
@@ -24,6 +25,7 @@ rand = { version = "0.8", features = ["alloc"] }
 
 [features]
 simd = []
+bp_u16_lookup = []
 docsrs = [] # special feature for docs.rs to enable doc_auto_cfg on nightly
 
 [[bench]]
@@ -60,6 +62,14 @@ harness = false
 
 [[bench]]
 name = "rmq"
+harness = false
+
+[[bench]]
+name = "bp"
+harness = false
+
+[[bench]]
+name = "elias_fano_construction"
 harness = false
 
 [profile.bench]

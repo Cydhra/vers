@@ -8,6 +8,8 @@ use std::mem::size_of;
 
 pub mod fast_rs_vec;
 
+pub mod sparse;
+
 pub mod mask;
 
 /// Size of a word in bitvectors. All vectors operate on 64-bit words.
@@ -533,7 +535,7 @@ impl BitVec {
             return;
         }
 
-        let new_limb_count = (self.len - n + WORD_SIZE - 1) / WORD_SIZE;
+        let new_limb_count = (self.len - n).div_ceil(WORD_SIZE);
 
         // cut off limbs that we no longer need
         if new_limb_count < self.data.len() {
@@ -682,19 +684,49 @@ impl BitVec {
     ///
     /// # Panics
     /// Panics if `len` is larger than 64.
-    pub fn append_bits(&mut self, mut bits: u64, len: usize) {
+    pub fn append_bits(&mut self, bits: u64, len: usize) {
         assert!(len <= 64, "Cannot append more than 64 bits");
-
-        // zero out garbage data
-        if len < 64 {
-            bits &= (1 << len) - 1;
-        }
 
         if self.len % WORD_SIZE == 0 {
             self.data.push(bits);
         } else {
             // zero out the unused bits before or-ing the new one, to ensure no garbage data remains
             self.data[self.len / WORD_SIZE] &= !(u64::MAX << (self.len % WORD_SIZE));
+            self.data[self.len / WORD_SIZE] |= bits << (self.len % WORD_SIZE);
+
+            if self.len % WORD_SIZE + len > WORD_SIZE {
+                self.data.push(bits >> (WORD_SIZE - self.len % WORD_SIZE));
+            }
+        }
+        self.len += len;
+    }
+
+    /// Append multiple bits to the bit vector.
+    /// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
+    /// The number of bits to append is given by `len`. The bits are taken from the least
+    /// significant bits of `bits`.
+    ///
+    /// This function does not check if `len` is larger than 64.
+    ///
+    /// Furthermore, if the bit-vector has trailing bits that are not zero
+    /// (i.e. the length is not a multiple of 64, and those bits are partially set),
+    /// the function will OR the new data with the trailing bits, destroying the appended data.
+    /// This can happen, if a call `append_bits[_unchecked](word, len)` appends a word which has
+    /// set bits beyond the `len - 1`-th bit,
+    /// or if bits have been dropped from the bit vector using [`drop_last`].
+    ///
+    /// See [`append_bits`] for a checked version of this function.
+    ///
+    /// # Panics
+    /// If `len` is larger than 64, the behavior is platform-dependent, and a processor
+    /// exception might be triggered.
+    ///
+    /// [`append_bits`]: BitVec::append_bits
+    /// [`drop_last`]: BitVec::drop_last
+    pub fn append_bits_unchecked(&mut self, bits: u64, len: usize) {
+        if self.len % WORD_SIZE == 0 {
+            self.data.push(bits);
+        } else {
             self.data[self.len / WORD_SIZE] |= bits << (self.len % WORD_SIZE);
 
             if self.len % WORD_SIZE + len > WORD_SIZE {
@@ -926,6 +958,58 @@ impl BitVec {
         }
     }
 
+    /// Extract a packed element from a bit vector. The element is encoded in the bits at the given
+    /// `index`. The number of bits per encoded element is given by `n`.
+    ///
+    /// This is a convenience method to access elements previously packed using the [`pack_sequence_*`] methods,
+    /// and is equivalent to calling [`get_bits(index * n, n)`].
+    /// It is thus safe to use this method with any index and any size n <= 64.
+    ///
+    /// If the element is out of bounds, None is returned.
+    /// The element is returned as a u64 value.
+    ///
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::BitVec;
+    ///
+    /// let sequence = [10, 100, 124, 45, 223];
+    /// let bv = BitVec::pack_sequence_u64(&sequence, 8);
+    ///
+    /// assert_eq!(bv.unpack_element(0, 8), Some(10));
+    /// assert_eq!(bv.unpack_element(2, 8), Some(124));
+    /// ```
+    ///
+    /// [`pack_sequence_*`]: BitVec::pack_sequence_u64
+    /// [`get_bits(index * n, n)`]: BitVec::get_bits
+    #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)] // to gain optimization if n is constant
+    pub fn unpack_element(&self, index: usize, n: usize) -> Option<u64> {
+        self.get_bits(index * n, n)
+    }
+
+    /// Extract a packed element from a bit vector. The element is encoded in the bits at the given
+    /// `index`. The number of bits per encoded element is given by `n`.
+    ///
+    /// This is a convenience method to access elements previously packed using the [`pack_sequence_*`] methods,
+    /// and is equivalent to calling [`get_bits_unchecked(index * n, n)`].
+    /// It is thus safe to use this method with any index where `index * n + n` is in-bounds,
+    /// and any size n <= 64.
+    ///
+    /// # Panics
+    /// If the element is out of bounds, the function will either return unpredictable data or panic.
+    /// Use [`unpack_element`] for a checked version of this function.
+    ///
+    /// [`pack_sequence_*`]: BitVec::pack_sequence_u64
+    /// [`get_bits_unchecked(index * n, n)`]: BitVec::get_bits_unchecked
+    /// [`unpack_element`]: BitVec::unpack_element
+    #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)] // to gain optimization if n is constant
+    pub fn unpack_element_unchecked(&self, index: usize, n: usize) -> u64 {
+        self.get_bits_unchecked(index * n, n)
+    }
+
     /// Return the number of ones in the bit vector. Since the bit vector doesn't store additional
     /// metadata, this value is calculated. Use [`RsVec`] for constant-time rank operations.
     ///
@@ -935,11 +1019,12 @@ impl BitVec {
     pub fn count_ones(&self) -> u64 {
         let mut ones: u64 = self.data[0..self.len / WORD_SIZE]
             .iter()
-            .map(|limb| limb.count_ones() as u64)
+            .map(|limb| u64::from(limb.count_ones()))
             .sum();
         if self.len % WORD_SIZE > 0 {
-            ones += (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones()
-                as u64;
+            ones += u64::from(
+                (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones(),
+            );
         }
         ones
     }
