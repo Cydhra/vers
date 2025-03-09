@@ -1,6 +1,7 @@
 //! A fast succinct bit vector implementation with rank and select queries. Rank computes in
 //! constant-time, select on average in constant-time, with a logarithmic worst case.
 
+use std::fmt;
 use std::mem::size_of;
 
 #[cfg(all(
@@ -232,8 +233,31 @@ impl RsVec {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn rank0(&self, pos: usize) -> usize {
-        self.rank(true, pos)
+        if pos >= self.len() {
+            return self.rank0;
+        }
+        let index = pos / WORD_SIZE;
+        let block_index = pos / BLOCK_SIZE;
+        let super_block_index = pos / SUPER_BLOCK_SIZE;
+        let mut rank = 0;
+
+        // at first add the number of zeros before the current super block
+        rank += self.super_blocks[super_block_index].zeros;
+
+        // then add the number of zeros before the current block
+        rank += self.blocks[block_index].zeros as usize;
+
+        // naive popcount of blocks
+        for &i in &self.data[(block_index * BLOCK_SIZE) / WORD_SIZE..index] {
+            rank += i.count_zeros() as usize;
+        }
+
+        rank += (!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize;
+
+        rank
     }
 
     /// Return the 1-rank of the bit at the given position. The 1-rank is the number of
@@ -245,62 +269,12 @@ impl RsVec {
     /// - `pos`: The position of the bit to return the rank of.
     #[must_use]
     pub fn rank1(&self, pos: usize) -> usize {
-        self.rank(false, pos)
+        if pos >= self.len() { return self.rank1 }
+        pos - self.rank0(pos)
     }
 
-    // I measured 5-10% improvement with this. I don't know why it's not inlined by default, the
-    // branch elimination profits alone should make it worth it.
-    #[allow(clippy::inline_always)]
-    #[inline(always)]
     fn rank(&self, zero: bool, pos: usize) -> usize {
-        #[allow(clippy::collapsible_else_if)]
-        // readability and more obvious where dead branch elimination happens
-        if zero {
-            if pos >= self.len() {
-                return self.rank0;
-            }
-        } else {
-            if pos >= self.len() {
-                return self.rank1;
-            }
-        }
-
-        let index = pos / WORD_SIZE;
-        let block_index = pos / BLOCK_SIZE;
-        let super_block_index = pos / SUPER_BLOCK_SIZE;
-        let mut rank = 0;
-
-        // at first add the number of zeros/ones before the current super block
-        rank += if zero {
-            self.super_blocks[super_block_index].zeros
-        } else {
-            (super_block_index * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_index].zeros
-        };
-
-        // then add the number of zeros/ones before the current block
-        rank += if zero {
-            self.blocks[block_index].zeros as usize
-        } else {
-            ((block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
-                - self.blocks[block_index].zeros as usize
-        };
-
-        // naive popcount of blocks
-        for &i in &self.data[(block_index * BLOCK_SIZE) / WORD_SIZE..index] {
-            rank += if zero {
-                i.count_zeros() as usize
-            } else {
-                i.count_ones() as usize
-            };
-        }
-
-        rank += if zero {
-            (!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
-        } else {
-            (self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
-        };
-
-        rank
+        if zero { self.rank0(pos) } else { self.rank1(pos) }
     }
 
     /// Return the length of the vector, i.e. the number of bits it contains.
