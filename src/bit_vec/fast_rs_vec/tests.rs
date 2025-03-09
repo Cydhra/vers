@@ -1339,3 +1339,34 @@ fn test_iter1_regression_i8() {
     let output_on_bits: Vec<_> = bv.iter1().collect();
     assert_eq!(input_on_bits, output_on_bits);
 }
+
+// Github issue https://github.com/Cydhra/vers/issues/29 regression test
+#[test]
+fn test_append_regression_i29() {
+    // test whether appending trash data to a bit vector and then creating an RsVec from it
+    // works correctly
+    let mut bv = BitVec::new();
+    bv.append_bits(u64::MAX, 1);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.get(0), Some(1));
+    assert_eq!(rs.rank0, 0);
+    assert_eq!(rs.rank1, 1);
+
+    // test whether 0s are counted correctly if no trash data is appended
+    let mut bv = BitVec::new();
+    bv.append_bits(u64::MAX, 63);
+    bv.append_bit(0);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.get(63), Some(0));
+    assert_eq!(rs.rank0, 1);
+    assert_eq!(rs.rank1, 63);
+
+    // test whether 1s are counted correctly if no trash data is appended
+    let mut bv = BitVec::new();
+    bv.append_bits(0, 63);
+    bv.append_bit(1);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.get(63), Some(1));
+    assert_eq!(rs.rank0, 63);
+    assert_eq!(rs.rank1, 1);
+}
