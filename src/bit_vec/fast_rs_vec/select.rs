@@ -193,7 +193,7 @@ impl super::RsVec {
     #[must_use]
     #[allow(clippy::assertions_on_constants)]
     pub fn select1(&self, mut rank: usize) -> usize {
-        if rank >= self.rank1 {
+        if rank >= self.total_rank1() {
             return self.len;
         }
 

@@ -92,7 +92,7 @@ macro_rules! gen_iter_impl {
                 let blocks_len = vec.blocks.len();
                 let super_blocks_len = vec.super_blocks.len();
                 let rank0 = vec.rank0;
-                let rank1 = vec.rank1;
+                let rank1 = vec.total_rank1();
 
                 Self {
                     vec,
@@ -204,7 +204,7 @@ macro_rules! gen_iter_impl {
             fn select_next_1(&mut self) -> Option<usize> {
                 let mut rank = self.next_rank;
 
-                if rank >= self.vec.rank1 || self.next_rank_back.is_none() || rank > self.next_rank_back.unwrap() {
+                if rank >= self.vec.total_rank1() || self.next_rank_back.is_none() || rank > self.next_rank_back.unwrap() {
                     return None;
                 }
 

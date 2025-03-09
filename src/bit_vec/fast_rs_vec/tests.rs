@@ -277,7 +277,7 @@ fn random_data_select1() {
     assert_eq!(bv.len(), LENGTH);
 
     for _ in 0..500 {
-        let rnd_rank1 = rng.gen_range(0..bv.rank1);
+        let rnd_rank1 = rng.gen_range(0..bv.total_rank1());
         let actual_index1 = bv.select1(rnd_rank1);
 
         let data = &bv.data;
@@ -322,7 +322,7 @@ fn test_total_ranks() {
     bv.append_word(0b10110);
     let bv = RsVec::from_bit_vec(bv);
     assert_eq!(bv.rank0, 4 * 61);
-    assert_eq!(bv.rank1, 4 * 3);
+    assert_eq!(bv.total_rank1(), 4 * 3);
 
     let mut bv = BitVec::default();
     for _ in 0..2 * (SUPER_BLOCK_SIZE / WORD_SIZE) {
@@ -335,7 +335,7 @@ fn test_total_ranks() {
     let bv = RsVec::from_bit_vec(bv);
 
     assert_eq!(bv.rank0, 2 * (SUPER_BLOCK_SIZE / WORD_SIZE) * 61 + 2);
-    assert_eq!(bv.rank1, 2 * (SUPER_BLOCK_SIZE / WORD_SIZE) * 3 + 1);
+    assert_eq!(bv.total_rank1(), 2 * (SUPER_BLOCK_SIZE / WORD_SIZE) * 3 + 1);
 }
 
 #[test]
@@ -1212,7 +1212,7 @@ fn test_random_data_iter_both_ends() {
                 let bv = RsVec::from_bit_vec(bv);
 
                 let mut zeros = Vec::with_capacity(bv.rank0);
-                let mut ones = Vec::with_capacity(bv.rank1);
+                let mut ones = Vec::with_capacity(bv.total_rank1());
 
                 let mut iter0 = bv.iter0();
                 let mut iter1 = bv.iter1();
@@ -1228,7 +1228,7 @@ fn test_random_data_iter_both_ends() {
                 zeros.dedup();
                 assert_eq!(zeros.len(), bv.rank0);
 
-                for _ in 0..bv.rank1 {
+                for _ in 0..bv.total_rank1() {
                     ones.push(if sample.sample(&mut rng) < 50 {
                         iter1.next().unwrap()
                     } else {
@@ -1237,7 +1237,7 @@ fn test_random_data_iter_both_ends() {
                 }
                 ones.sort();
                 ones.dedup();
-                assert_eq!(ones.len(), bv.rank1);
+                assert_eq!(ones.len(), bv.total_rank1());
 
                 for idx in ones {
                     assert_eq!(bv.get(idx), Some(1), "bit {} is not 1", idx);
