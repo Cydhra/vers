@@ -404,4 +404,22 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_from_padded_bitvec() {
+        // test no garbage is added to the sparse vec when the bit vector contains trailing data
+        let mut bv = BitVec::new();
+        bv.append_bit(1);
+        bv.append_bit(0);
+        bv.append_bits(u64::MAX, 10);
+        bv.drop_last(10);
+        bv.append_bit(0);
+        bv.drop_last(1);
+
+        let sparse = SparseRSVec::from_bitvec(&bv);
+        assert_eq!(sparse.len(), 2);
+        assert_eq!(sparse.get(0), Some(1));
+        assert_eq!(sparse.get(1), Some(0));
+        assert_eq!(sparse.iter1().collect::<Vec<_>>(), vec![0]);
+    }
 }
