@@ -1,7 +1,6 @@
 //! A fast succinct bit vector implementation with rank and select queries. Rank computes in
 //! constant-time, select on average in constant-time, with a logarithmic worst case.
 
-use std::fmt;
 use std::mem::size_of;
 
 #[cfg(all(
