@@ -1,6 +1,7 @@
 //! A fast succinct bit vector implementation with rank and select queries. Rank computes in
 //! constant-time, select on average in constant-time, with a logarithmic worst case.
 
+use std::fmt;
 use std::mem::size_of;
 
 #[cfg(all(
@@ -91,6 +92,7 @@ pub struct RsVec {
     super_blocks: Vec<SuperBlockDescriptor>,
     select_blocks: Vec<SelectSuperBlockDescriptor>,
     pub(crate) rank0: usize,
+    pub(crate) rank1: usize,
 }
 
 impl RsVec {
@@ -226,6 +228,7 @@ impl RsVec {
             super_blocks,
             select_blocks,
             rank0: total_zeros,
+            rank1: vec.len - total_zeros,
         }
     }
 
@@ -273,11 +276,8 @@ impl RsVec {
     /// - `pos`: The position of the bit to return the rank of.
     #[must_use]
     pub fn rank1(&self, pos: usize) -> usize {
-        if pos >= self.len() {
-            self.total_rank1()
-        } else {
-            pos - self.rank0(pos)
-        }
+        if pos >= self.len() { return self.rank1 }
+        pos - self.rank0(pos)
     }
 
     fn rank(&self, zero: bool, pos: usize) -> usize {
@@ -294,11 +294,6 @@ impl RsVec {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
-    }
-
-    #[must_use]
-    pub(crate) fn total_rank1(&self) -> usize {
-        self.len - self.rank0
     }
 
     /// Return the bit at the given position. The bit takes the least significant
@@ -392,7 +387,7 @@ impl RsVec {
             return false;
         }
 
-        if self.rank0 != other.rank0 {
+        if self.rank0 != other.rank0 || self.rank1 != other.rank1 {
             return false;
         }
 
@@ -425,7 +420,7 @@ impl RsVec {
             return false;
         }
 
-        if self.rank0 != other.rank0 {
+        if self.rank0 != other.rank0 || self.rank1 != other.rank1 {
             return false;
         }
 
@@ -478,7 +473,7 @@ impl PartialEq for RsVec {
     /// [`full_equals`]: RsVec::full_equals
     fn eq(&self, other: &Self) -> bool {
         if self.len > 4_000_000 {
-            if self.total_rank1() > self.rank0 {
+            if self.rank1 > self.rank0 {
                 self.sparse_equals::<true>(other)
             } else {
                 self.sparse_equals::<false>(other)
