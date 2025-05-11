@@ -209,14 +209,6 @@ impl RsVec {
                 select_blocks[last_one_select_block].index_1;
         }
 
-        // pad the internal vector to be block-aligned, so SIMD operations don't try to read
-        // past the end of the vector. Note that this does not affect the content of the vector,
-        // because those bits are not considered part of the vector.
-        // Note further, that currently no SIMD implementation exists.
-        while vec.data.len() % (BLOCK_SIZE / WORD_SIZE) != 0 {
-            vec.data.push(0);
-        }
-
         total_zeros += current_zeros;
 
         RsVec {
