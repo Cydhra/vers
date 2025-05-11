@@ -332,8 +332,8 @@ impl super::RsVec {
             |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
                 if self.blocks.len() > *block_index + boundary && rank >= (*block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.blocks[*block_index + boundary].zeros as usize {
                     *block_index += boundary;
-                }
-            , boundary /= 2);
+                },
+            boundary /= 2);
     }
 
     /// Search for the word in the block that contains the rank, return the index of the rank-th
