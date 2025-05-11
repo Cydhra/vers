@@ -531,6 +531,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// let tree = BpTree::<4>::from_bit_vector(bv);
     /// assert_eq!(tree.size(), 9);
     /// ```
+    #[must_use]
     pub fn into_parentheses_vec(self) -> RsVec {
         self.vec
     }
