@@ -95,14 +95,13 @@ pub struct RsVec {
 }
 
 impl RsVec {
-    /// Build an [`RsVec`] from a [`BitVec`]. This will consume the [`BitVec`]. Since [`RsVec`]s are
-    /// immutable, this is the only way to construct an [`RsVec`].
+    /// Build an `RsVec` from a [`BitVec`]. This will consume the `BitVec`. Since `RsVec`s are
+    /// immutable, this is the only way to construct an `RsVec`.
     ///
     /// # Example
-    /// See the example for [`RsVec`].
+    /// See the example for `RsVec`.
     ///
-    /// [`BitVec`]: ../struct.BitVec.html
-    /// [`RsVec`]: struct.RsVec.html
+    /// [`BitVec`]: BitVec
     #[must_use]
     pub fn from_bit_vec(mut vec: BitVec) -> RsVec {
         // Construct the block descriptor meta data. Each block descriptor contains the number of
