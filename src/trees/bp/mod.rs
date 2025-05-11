@@ -506,6 +506,35 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         ChildrenIter::<BLOCK_SIZE, false>::new(self, node)
     }
 
+    /// Transform the tree into a [`RsVec`] containing the balanced parenthesis expression.
+    /// This consumes the tree and returns the underlying bit vector with the rank and select
+    /// support structure.
+    /// The remaining min-max-tree support structure of the `BpTree` is discarded.
+    /// Since the tree is innately immutable, this is the only way to access the underlying bit
+    /// vector for potential modification.
+    /// Modification requires turning the `RsVec` back into a `BitVec`, discarding the rank and select
+    /// support structure, however.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use vers_vecs::{BitVec, RsVec, BpTree, Tree};
+    ///
+    /// let bv = BitVec::pack_sequence_u8(&[0b1101_0111, 0b0010_0100], 8);
+    /// let tree = BpTree::<4>::from_bit_vector(bv);
+    /// assert_eq!(tree.size(), 8);
+    ///
+    /// let rs_vec = tree.into_parentheses_vec();
+    /// let mut bv = rs_vec.into_bit_vec();
+    ///
+    /// bv.flip_bit(15);
+    /// bv.append_bits(0, 2);
+    /// let tree = BpTree::<4>::from_bit_vector(bv);
+    /// assert_eq!(tree.size(), 9);
+    /// ```
+    pub fn into_parentheses_vec(self) -> RsVec {
+        self.vec
+    }
+
     /// Returns the number of bytes used on the heap for this tree. This does not include
     /// allocated space that is not used (e.g. by the allocation behavior of `Vec`).
     #[must_use]
