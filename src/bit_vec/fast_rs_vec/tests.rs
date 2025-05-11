@@ -1370,3 +1370,19 @@ fn test_append_regression_i29() {
     assert_eq!(rs.rank0, 63);
     assert_eq!(rs.rank1, 1);
 }
+
+#[test]
+fn test_simd_fallback() {
+    // Test case that should fail if run with SIMD enabled if the SIMD implementation attempts
+    // to load a non-full block into a full SIMD register.
+    // If implemented correctly, the SIMD implementation falls back to the non-SIMD implementation
+    // to avoid out of bounds reads. It is likely that other test cases fail as well, but this
+    // explicitly exists to test this case.
+    let bv = BitVec::from_zeros(SUPER_BLOCK_SIZE + 3 * BLOCK_SIZE + 3);
+    let rs = RsVec::from_bit_vec(bv);
+
+    assert_eq!(
+        rs.select0(SUPER_BLOCK_SIZE + 3 * BLOCK_SIZE + 1),
+        SUPER_BLOCK_SIZE + 3 * BLOCK_SIZE + 1
+    );
+}
