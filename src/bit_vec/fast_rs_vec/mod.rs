@@ -103,7 +103,7 @@ impl RsVec {
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
-    pub fn from_bit_vec(mut vec: BitVec) -> RsVec {
+    pub fn from_bit_vec(vec: BitVec) -> RsVec {
         // Construct the block descriptor meta data. Each block descriptor contains the number of
         // zeros in the super-block, up to but excluding the block.
         let mut blocks = Vec::with_capacity(vec.len() / BLOCK_SIZE + 1);
