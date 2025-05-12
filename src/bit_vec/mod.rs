@@ -1240,7 +1240,7 @@ impl BitVec {
     /// If the index is larger than the length of the vector the function will panic or return
     /// unpredictable data. Use [`split_at`] to properly handle this case.
     #[must_use]
-    pub fn split_at_unchecked(self, at: usize) -> (Self, Self) {
+    pub fn split_at_unchecked(mut self, at: usize) -> (Self, Self) {
         let other_len = self.len - at;
         let mut other = Self::with_capacity(other_len);
 
@@ -1266,6 +1266,9 @@ impl BitVec {
         if trailing_partial > 0 {
             other.append_bits_unchecked(self.data[full_limbs], trailing_partial);
         }
+
+        // remove the copied bits from the original vector
+        self.drop_last(other_len);
 
         (self, other)
     }
