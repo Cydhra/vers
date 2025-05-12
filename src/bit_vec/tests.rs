@@ -718,3 +718,32 @@ fn test_split_at() {
     assert_eq!(left.len, 0);
     assert_eq!(right.len, 0);
 }
+
+#[test]
+fn test_split_at_result() {
+    // check splitting at 1
+    let mut bv = BitVec::from_zeros(2);
+    bv.flip_bit(1);
+    let (left, right) = bv.split_at(1).expect("failed to split");
+    assert_eq!(left.len, 1);
+    assert_eq!(right.len, 1);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+
+    // check splitting at 0
+    let bv = BitVec::from_zeros(2);
+    let (left, right) = bv.split_at(0).expect("failed to split");
+    assert_eq!(left.len, 0);
+    assert_eq!(right.len, 2);
+
+    // check splitting at the end
+    let bv = BitVec::from_zeros(2);
+    let (left, right) = bv.split_at(2).expect("failed to split");
+    assert_eq!(left.len, 2);
+    assert_eq!(right.len, 0);
+
+    // check splitting past the end
+    let bv = BitVec::from_zeros(2);
+    let result = bv.split_at(3);
+    assert!(result.is_err());
+}
