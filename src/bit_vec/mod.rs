@@ -1247,7 +1247,11 @@ impl BitVec {
         let first_limb = at / WORD_SIZE;
         let full_limbs = self.len / WORD_SIZE;
 
-        let leading_partial = WORD_SIZE - (at % WORD_SIZE);
+        // if we start in the middle of a limb, we need to copy the leading partial limb.
+        // however, we limit the range to the size of the other vector, since we could be starting
+        // in the last limb of the original vector
+        let leading_partial = min((WORD_SIZE - (at % WORD_SIZE)) % WORD_SIZE, other_len);
+
         let iter_limbs = if leading_partial > 0 {
             other.append_bits_unchecked(
                 self.data[first_limb] >> (WORD_SIZE - leading_partial),
@@ -1262,9 +1266,13 @@ impl BitVec {
             other.append_bits_unchecked(self.data[i], WORD_SIZE);
         }
 
-        let trailing_partial = self.len % WORD_SIZE;
-        if trailing_partial > 0 {
-            other.append_bits_unchecked(self.data[full_limbs], trailing_partial);
+        // if we did not start in the last limb, and there are bits left we didn't copy,
+        // we need to copy the remaining incomplete limb
+        if full_limbs > first_limb {
+            let trailing_partial = self.len - full_limbs * WORD_SIZE;
+            if trailing_partial > 0 {
+                other.append_bits_unchecked(self.data[full_limbs], trailing_partial);
+            }
         }
 
         // remove the copied bits from the original vector
