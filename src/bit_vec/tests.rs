@@ -626,3 +626,43 @@ fn test_unpack() {
     assert_eq!(bv.unpack_element(8, 10), None);
     assert_eq!(bv.unpack_element(1000, 10), None);
 }
+
+#[test]
+fn test_extend() {
+    // test bitvec extend
+    let mut bv = BitVec::from_zeros(10);
+    let bv_ones = BitVec::from_ones(10);
+    bv.extend_bitvec(&bv_ones);
+    assert_eq!(bv.len, 20);
+    assert_eq!(bv.get_bits(0, 20), Some(0b11111111110000000000));
+
+    // extend with an empty bitvec
+    let mut bv = BitVec::from_zeros(10);
+    bv.extend_bitvec(&BitVec::default());
+    assert_eq!(bv.len, 10);
+    assert_eq!(bv.get_bits(0, 10), Some(0));
+
+    // test extend of empty bitvec
+    let mut bv = BitVec::default();
+    let bv_ones = BitVec::from_ones(10);
+    bv.extend_bitvec(&bv_ones);
+    assert_eq!(bv.len, 10);
+    assert_eq!(bv.get_bits(0, 10), Some(0b1111111111));
+
+    // test large vectors
+    let mut bv = BitVec::from_zeros(1000);
+    let bv_ones = BitVec::from_ones(1000);
+    bv.extend_bitvec(&bv_ones);
+    assert_eq!(bv.len, 2000);
+    // sanity check:
+    assert_eq!(bv.get_bits(64, 64), Some(0));
+    assert_eq!(bv.get_bits(1064, 64), Some(u64::MAX));
+
+    // test aligned vectors
+    let mut bv = BitVec::from_zeros(64);
+    let bv_ones = BitVec::from_ones(64);
+    bv.extend_bitvec(&bv_ones);
+    assert_eq!(bv.len, 128);
+    assert_eq!(bv.get_bits(0, 64), Some(0));
+    assert_eq!(bv.get_bits(64, 64), Some(u64::MAX));
+}
