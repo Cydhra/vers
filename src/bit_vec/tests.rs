@@ -666,3 +666,55 @@ fn test_extend() {
     assert_eq!(bv.get_bits(0, 64), Some(0));
     assert_eq!(bv.get_bits(64, 64), Some(u64::MAX));
 }
+
+#[test]
+fn test_split_at() {
+    // test the split_at(_unchecked) function
+    let mut bv = BitVec::from_zeros(64);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+
+    // check splitting at 1
+    let (left, right) = bv.split_at_unchecked(2);
+    assert_eq!(left.len, 2);
+    assert_eq!(right.len, 62);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(left.get(1), Some(1));
+    assert_eq!(right.get(0), Some(0));
+    assert_eq!(right.get(1), Some(1));
+    assert_eq!(right.get_bits(2, 60), Some(0));
+
+    // check splitting at 0
+    let bv = BitVec::from_zeros(1000);
+    let (left, right) = bv.split_at_unchecked(0);
+    assert_eq!(left.len, 0);
+    assert_eq!(right.len, 1000);
+    assert_eq!(right.get(999), Some(0));
+
+    // check splitting at the end
+    let bv = BitVec::from_zeros(1000);
+    let (left, right) = bv.split_at_unchecked(1000);
+    assert_eq!(left.len, 1000);
+    assert_eq!(right.len, 0);
+    assert_eq!(left.get(999), Some(0));
+
+    // check splitting aligned
+    let bv = BitVec::from_ones(128);
+    let (left, right) = bv.split_at_unchecked(64);
+    assert_eq!(left.len, 64);
+    assert_eq!(right.len, 64);
+    assert_eq!(left.get_bits(0, 64), Some(u64::MAX));
+    assert_eq!(right.get_bits(0, 64), Some(u64::MAX));
+
+    // check splitting in single limb
+    let bv = BitVec::from_ones(20);
+    let (left, right) = bv.split_at_unchecked(10);
+    assert_eq!(left.len, 10);
+    assert_eq!(right.len, 10);
+
+    // check splitting empty vector
+    let bv = BitVec::default();
+    let (left, right) = bv.split_at_unchecked(0);
+    assert_eq!(left.len, 0);
+    assert_eq!(right.len, 0);
+}
