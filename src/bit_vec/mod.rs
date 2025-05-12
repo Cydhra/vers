@@ -925,6 +925,9 @@ impl BitVec {
     /// If the position at the end of the query is larger than the length of the vector,
     /// None is returned (even if the query partially overlaps with the vector).
     /// If the length of the query is larger than 64, None is returned.
+    ///
+    /// The first bit at `pos` is the most significant bit of the return value
+    /// limited to `len` bits.
     #[must_use]
     pub fn get_bits(&self, pos: usize, len: usize) -> Option<u64> {
         if len > WORD_SIZE || len == 0 {
