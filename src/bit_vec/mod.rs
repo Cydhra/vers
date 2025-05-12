@@ -736,8 +736,15 @@ impl BitVec {
         self.len += len;
     }
 
-    /// Append the bits of another bit vector to the vector.
+    /// Append the bits of another bit vector to the end of this vector.
+    /// If this vector does not contain a multiple of 64 bits, the appended limbs need to be
+    /// shifted to the left.
+    /// This function is guaranteed to reallocate the underlying vector at most once.
     pub fn extend_bitvec(&mut self, other: &Self) {
+        // reserve space for the new bits, ensuring at most one re-allocation
+        self.data
+            .reserve((self.len + other.len).div_ceil(WORD_SIZE) - self.data.len());
+
         let full_limbs = other.len() / WORD_SIZE;
         for i in 0..full_limbs {
             self.append_bits(other.data[i], WORD_SIZE);
