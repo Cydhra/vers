@@ -381,6 +381,35 @@ impl RsVec {
         }
     }
 
+    /// Convert the `RsVec` into a [`BitVec`].
+    /// This consumes the `RsVec`, and discards all meta-data.
+    /// Since [`RsVec`]s are innately immutable, this conversion is the only way to modify the
+    /// underlying data.
+    ///
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::{BitVec, RsVec};
+    ///
+    /// let mut bit_vec = BitVec::new();
+    /// bit_vec.append_word(u64::MAX);
+    ///
+    /// let rs_vec = RsVec::from_bit_vec(bit_vec);
+    /// assert_eq!(rs_vec.rank1(64), 64);
+    ///
+    /// let mut bit_vec = rs_vec.into_bit_vec();
+    /// bit_vec.flip_bit(32);
+    /// let rs_vec = RsVec::from_bit_vec(bit_vec);
+    /// assert_eq!(rs_vec.rank1(64), 63);
+    /// assert_eq!(rs_vec.select0(0), 32);
+    /// ```
+    #[must_use]
+    pub fn into_bit_vec(self) -> BitVec {
+        BitVec {
+            data: self.data,
+            len: self.len,
+        }
+    }
+
     /// Check if two `RsVec`s are equal. For sparse vectors (either sparsely filled with 1-bits or
     /// 0-bits), this is faster than comparing the vectors bit by bit.
     /// Choose the value of `ZERO` depending on which bits are more sparse.
