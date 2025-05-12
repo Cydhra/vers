@@ -2053,14 +2053,6 @@ impl WaveletMatrix {
     }
 }
 
-impl From<WaveletMatrix> for BitVec {
-    fn from(value: WaveletMatrix) -> Self {
-        let mut output = BitVec::new();
-        output.extend(value);
-        output
-    }
-}
-
 impl_vector_iterator!(
     WaveletMatrix,
     WaveletIter,
