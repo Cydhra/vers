@@ -1220,6 +1220,10 @@ impl BitVec {
     /// right half the remaining bits `at..`. If the split index is larger than the length of the
     /// vector, the vector is returned unmodified in an `Err` variant.
     ///
+    /// # Errors
+    /// If the index is out of bounds, the function will return an error
+    /// containing the original vector.
+    ///
     /// See also: [`split_at_unchecked`]
     pub fn split_at(self, at: usize) -> Result<(Self, Self), Self> {
         if at >= self.len {
