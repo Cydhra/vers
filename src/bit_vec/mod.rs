@@ -1247,7 +1247,7 @@ impl BitVec {
         let first_limb = at / WORD_SIZE;
         let full_limbs = self.len / WORD_SIZE;
 
-        let leading_partial = at % WORD_SIZE;
+        let leading_partial = WORD_SIZE - (at % WORD_SIZE);
         let iter_limbs = if leading_partial > 0 {
             other.append_bits_unchecked(
                 self.data[first_limb] >> (WORD_SIZE - leading_partial),
