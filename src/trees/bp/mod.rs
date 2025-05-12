@@ -749,6 +749,12 @@ impl<const BLOCK_SIZE: usize> From<BitVec> for BpTree<BLOCK_SIZE> {
     }
 }
 
+impl<const BLOCK_SIZE: usize> From<BpTree<BLOCK_SIZE>> for BitVec {
+    fn from(value: BpTree<BLOCK_SIZE>) -> Self {
+        value.vec.into()
+    }
+}
+
 /// An iterator over the children of a node.
 /// Calls to `next` return the next child node handle in the order they appear in the parenthesis
 /// expression.

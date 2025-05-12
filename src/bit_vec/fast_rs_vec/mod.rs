@@ -542,6 +542,15 @@ impl From<BitVec> for RsVec {
     }
 }
 
+impl From<RsVec> for BitVec {
+    fn from(value: RsVec) -> Self {
+        BitVec {
+            data: value.data,
+            len: value.len,
+        }
+    }
+}
+
 // iter code in here to keep it more organized
 mod iter;
 // select code in here to keep it more organized

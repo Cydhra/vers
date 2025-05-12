@@ -736,6 +736,19 @@ impl BitVec {
         self.len += len;
     }
 
+    /// Append the bits of another bit vector to the vector.
+    pub fn extend_bitvec(&mut self, other: &Self) {
+        let full_limbs = other.len() / WORD_SIZE;
+        for i in 0..full_limbs {
+            self.append_bits(other.data[i], WORD_SIZE);
+        }
+
+        let partial_bits = other.len % WORD_SIZE;
+        if partial_bits > 0 {
+            self.append_bits(other.data[full_limbs], partial_bits);
+        }
+    }
+
     /// Return the length of the bit vector. The length is measured in bits.
     #[must_use]
     pub fn len(&self) -> usize {
@@ -1192,6 +1205,56 @@ impl BitVec {
     pub fn heap_size(&self) -> usize {
         self.data.len() * size_of::<u64>()
     }
+
+    /// Split the vector in two at the specified index. The left half contains bits `0..at` and the
+    /// right half the remaining bits `at..`. If the split index is larger than the length of the
+    /// vector, the vector is returned unmodified in an `Err` variant.
+    ///
+    /// See also: [`split_at_unchecked`]
+    pub fn split_at(self, at: usize) -> Result<(Self, Self), Self> {
+        if at >= self.len {
+            Err(self)
+        } else {
+            Ok(self.split_at_unchecked(at))
+        }
+    }
+
+    /// Split the vector in two at the specified index. The left half contains bits `0..at` and the
+    /// right half the remaining bits `at..`.
+    ///
+    /// # Panics
+    /// If the index is larger than the length of the vector the function will panic or return
+    /// unpredictable data. Use [`split_at`] to properly handle this case.
+    #[must_use]
+    pub fn split_at_unchecked(self, at: usize) -> (Self, Self) {
+        let other_len = self.len - at;
+        let mut other = Self::with_capacity(other_len);
+
+        let first_limb = at / WORD_SIZE;
+        let full_limbs = self.len / WORD_SIZE;
+
+        let leading_partial = at % WORD_SIZE;
+        let iter_limbs = if leading_partial > 0 {
+            other.append_bits_unchecked(
+                self.data[first_limb] >> (WORD_SIZE - leading_partial),
+                leading_partial,
+            );
+            first_limb + 1..full_limbs
+        } else {
+            first_limb..full_limbs
+        };
+
+        for i in iter_limbs {
+            other.append_bits_unchecked(self.data[i], WORD_SIZE);
+        }
+
+        let trailing_partial = self.len % WORD_SIZE;
+        if trailing_partial > 0 {
+            other.append_bits_unchecked(self.data[full_limbs], trailing_partial);
+        }
+
+        (self, other)
+    }
 }
 
 impl_vector_iterator! { BitVec, BitVecIter, BitVecRefIter }
@@ -1213,6 +1276,22 @@ impl From<&[u64]> for BitVec {
 impl From<Vec<u64>> for BitVec {
     fn from(data: Vec<u64>) -> Self {
         BitVec::from_limbs(&data)
+    }
+}
+
+impl Extend<BitVec> for BitVec {
+    fn extend<T: IntoIterator<Item = BitVec>>(&mut self, iter: T) {
+        for v in iter {
+            self.extend_bitvec(&v)
+        }
+    }
+}
+
+impl<'t> Extend<&'t BitVec> for BitVec {
+    fn extend<T: IntoIterator<Item = &'t BitVec>>(&mut self, iter: T) {
+        for v in iter {
+            self.extend_bitvec(v)
+        }
     }
 }
 
