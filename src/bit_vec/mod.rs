@@ -1244,6 +1244,10 @@ impl BitVec {
         let other_len = self.len - at;
         let mut other = Self::with_capacity(other_len);
 
+        if other_len == 0 {
+            return (self, other);
+        }
+
         let first_limb = at / WORD_SIZE;
         let last_limb = self.len / WORD_SIZE;
 
