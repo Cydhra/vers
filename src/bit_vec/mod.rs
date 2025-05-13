@@ -1226,7 +1226,7 @@ impl BitVec {
     ///
     /// See also: [`split_at_unchecked`]
     pub fn split_at(self, at: usize) -> Result<(Self, Self), Self> {
-        if at >= self.len {
+        if at > self.len {
             Err(self)
         } else {
             Ok(self.split_at_unchecked(at))
@@ -1245,33 +1245,42 @@ impl BitVec {
         let mut other = Self::with_capacity(other_len);
 
         let first_limb = at / WORD_SIZE;
-        let full_limbs = self.len / WORD_SIZE;
+        let last_limb = self.len / WORD_SIZE;
 
-        // if we start in the middle of a limb, we need to copy the leading partial limb.
-        // however, we limit the range to the size of the other vector, since we could be starting
-        // in the last limb of the original vector
-        let leading_partial = min((WORD_SIZE - (at % WORD_SIZE)) % WORD_SIZE, other_len);
+        // First, we figure out the number of bits from the first limb to retain in this vector:
+        let leading_partial = at % WORD_SIZE;
 
-        let iter_limbs = if leading_partial > 0 {
-            other.append_bits_unchecked(
-                self.data[first_limb] >> (WORD_SIZE - leading_partial),
-                leading_partial,
-            );
-            first_limb + 1..full_limbs
+        // If the split point is in the last limb, and the vector ends before the last bit, first_limb
+        // and last_limb will be equal, and the other half is simply other_len bits off the limb
+        // right shifted by the number of bits to retain in this vector.
+        if first_limb == last_limb {
+            other.append_bits_unchecked(self.data[first_limb] >> leading_partial, other_len);
         } else {
-            first_limb..full_limbs
-        };
+            // Otherwise, some range n..last_limb should be copied in their entirety to the other half,
+            // with n=first_limb+1 if the split point is inside the first limb (leading_partial > 0), or
+            // n=first_limb if the entire first limb belongs in the other half.
+            let full_limbs = if leading_partial > 0 {
+                // If the split point is inside the first limb, we also have to remember to copy over
+                // the trailing bits to the new vector.
+                other.append_bits_unchecked(
+                    self.data[first_limb] >> leading_partial,
+                    WORD_SIZE - leading_partial,
+                );
+                first_limb + 1..last_limb
+            } else {
+                first_limb..last_limb
+            };
 
-        for i in iter_limbs {
-            other.append_bits_unchecked(self.data[i], WORD_SIZE);
-        }
+            // Copy over any full limbs.
+            for i in full_limbs {
+                other.append_bits_unchecked(self.data[i], WORD_SIZE);
+            }
 
-        // if we did not start in the last limb, and there are bits left we didn't copy,
-        // we need to copy the remaining incomplete limb
-        if full_limbs > first_limb {
-            let trailing_partial = self.len - full_limbs * WORD_SIZE;
+            // Finally, if the vector has a partially filled last limb, we need to put those bits
+            // in the other half.
+            let trailing_partial = self.len % WORD_SIZE;
             if trailing_partial > 0 {
-                other.append_bits_unchecked(self.data[full_limbs], trailing_partial);
+                other.append_bits_unchecked(self.data[last_limb], trailing_partial);
             }
         }
 

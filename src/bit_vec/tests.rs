@@ -746,4 +746,58 @@ fn test_split_at_result() {
     let bv = BitVec::from_zeros(2);
     let result = bv.split_at(3);
     assert!(result.is_err());
+
+    // check splitting inside a limb, with the end inside the next limb
+    let mut bv = BitVec::from_zeros(68);
+    bv.flip_bit(60);
+    let (left, right) = bv.split_at(60).expect("failed to split");
+    assert_eq!(left.len, 60);
+    assert_eq!(right.len, 8);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+
+    // check splitting inside a limb, with the complete next limb being the final limb
+    let mut bv = BitVec::from_zeros(128);
+    bv.flip_bit(60);
+    let (left, right) = bv.split_at(60).expect("failed to split");
+    assert_eq!(left.len, 60);
+    assert_eq!(right.len, 68);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+
+    // check splitting inside a limb, with a complete and then partial limb following
+    let mut bv = BitVec::from_zeros(140);
+    bv.flip_bit(60);
+    let (left, right) = bv.split_at(60).expect("failed to split");
+    assert_eq!(left.len, 60);
+    assert_eq!(right.len, 80);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+
+    // check splitting at the beginning of a limb, with the end inside the next limb
+    let mut bv = BitVec::from_zeros(144);
+    bv.flip_bit(64);
+    let (left, right) = bv.split_at(64).expect("failed to split");
+    assert_eq!(left.len, 64);
+    assert_eq!(right.len, 80);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+
+    // check splitting at the beginning of a limb, with the complete next limb being the final limb
+    let mut bv = BitVec::from_zeros(192);
+    bv.flip_bit(64);
+    let (left, right) = bv.split_at(64).expect("failed to split");
+    assert_eq!(left.len, 64);
+    assert_eq!(right.len, 128);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+
+    // check splitting at the beginning of a limb, with a complete and then partial limb following
+    let mut bv = BitVec::from_zeros(200);
+    bv.flip_bit(64);
+    let (left, right) = bv.split_at(64).expect("failed to split");
+    assert_eq!(left.len, 64);
+    assert_eq!(right.len, 136);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
 }
