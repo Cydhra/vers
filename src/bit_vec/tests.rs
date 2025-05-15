@@ -747,6 +747,18 @@ fn test_split_at_result() {
     let result = bv.split_at(3);
     assert!(result.is_err());
 
+    // check splitting empty vec
+    let bv = BitVec::default();
+    let (left, right) = bv.split_at(0).expect("failed to split");
+    assert!(left.is_empty());
+    assert!(right.is_empty());
+}
+
+#[test]
+fn test_splitting_limbs() {
+    // this test might overlap with test_split_at.
+    // we test all variations of splitting in limbs of bit vecs
+
     // check splitting inside a limb, with the end inside the next limb
     let mut bv = BitVec::from_zeros(68);
     bv.flip_bit(60);
