@@ -1237,8 +1237,9 @@ impl BitVec {
     /// right half the remaining bits `at..`.
     ///
     /// # Panics
-    /// If the index is larger than the length of the vector the function will panic or return
-    /// unpredictable data. Use [`split_at`] to properly handle this case.
+    /// If the index is larger than the length of the vector the function will panic or run
+    /// out of memory.
+    /// Use [`split_at`] to properly handle this case.
     #[must_use]
     pub fn split_at_unchecked(mut self, at: usize) -> (Self, Self) {
         let other_len = self.len - at;
