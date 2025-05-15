@@ -626,3 +626,190 @@ fn test_unpack() {
     assert_eq!(bv.unpack_element(8, 10), None);
     assert_eq!(bv.unpack_element(1000, 10), None);
 }
+
+#[test]
+fn test_extend() {
+    // test bitvec extend
+    let mut bv = BitVec::from_zeros(10);
+    let bv_ones = BitVec::from_ones(10);
+    bv.extend_bitvec(&bv_ones);
+    assert_eq!(bv.len, 20);
+    assert_eq!(bv.get_bits(0, 20), Some(0b11111111110000000000));
+
+    // extend with an empty bitvec
+    let mut bv = BitVec::from_zeros(10);
+    bv.extend_bitvec(&BitVec::default());
+    assert_eq!(bv.len, 10);
+    assert_eq!(bv.get_bits(0, 10), Some(0));
+
+    // test extend of empty bitvec
+    let mut bv = BitVec::default();
+    let bv_ones = BitVec::from_ones(10);
+    bv.extend_bitvec(&bv_ones);
+    assert_eq!(bv.len, 10);
+    assert_eq!(bv.get_bits(0, 10), Some(0b1111111111));
+
+    // test large vectors
+    let mut bv = BitVec::from_zeros(1000);
+    let bv_ones = BitVec::from_ones(1000);
+    bv.extend_bitvec(&bv_ones);
+    assert_eq!(bv.len, 2000);
+    // sanity check:
+    assert_eq!(bv.get_bits(64, 64), Some(0));
+    assert_eq!(bv.get_bits(1064, 64), Some(u64::MAX));
+
+    // test aligned vectors
+    let mut bv = BitVec::from_zeros(64);
+    let bv_ones = BitVec::from_ones(64);
+    bv.extend_bitvec(&bv_ones);
+    assert_eq!(bv.len, 128);
+    assert_eq!(bv.get_bits(0, 64), Some(0));
+    assert_eq!(bv.get_bits(64, 64), Some(u64::MAX));
+}
+
+#[test]
+fn test_split_at() {
+    // test the split_at(_unchecked) function
+    let mut bv = BitVec::from_zeros(64);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+
+    // check splitting at 1
+    let (left, right) = bv.split_at_unchecked(2);
+    assert_eq!(left.len, 2);
+    assert_eq!(right.len, 62);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(left.get(1), Some(1));
+    assert_eq!(right.get(0), Some(0));
+    assert_eq!(right.get(1), Some(1));
+    assert_eq!(right.get_bits(2, 60), Some(0));
+
+    // check splitting at 0
+    let bv = BitVec::from_zeros(1000);
+    let (left, right) = bv.split_at_unchecked(0);
+    assert_eq!(left.len, 0);
+    assert_eq!(right.len, 1000);
+    assert_eq!(right.get(999), Some(0));
+
+    // check splitting at the end
+    let bv = BitVec::from_zeros(1000);
+    let (left, right) = bv.split_at_unchecked(1000);
+    assert_eq!(left.len, 1000);
+    assert_eq!(right.len, 0);
+    assert_eq!(left.get(999), Some(0));
+
+    // check splitting aligned
+    let bv = BitVec::from_ones(128);
+    let (left, right) = bv.split_at_unchecked(64);
+    assert_eq!(left.len, 64);
+    assert_eq!(right.len, 64);
+    assert_eq!(left.get_bits(0, 64), Some(u64::MAX));
+    assert_eq!(right.get_bits(0, 64), Some(u64::MAX));
+
+    // check splitting in single limb
+    let bv = BitVec::from_ones(20);
+    let (left, right) = bv.split_at_unchecked(10);
+    assert_eq!(left.len, 10);
+    assert_eq!(right.len, 10);
+
+    // check splitting empty vector
+    let bv = BitVec::default();
+    let (left, right) = bv.split_at_unchecked(0);
+    assert_eq!(left.len, 0);
+    assert_eq!(right.len, 0);
+}
+
+#[test]
+fn test_split_at_result() {
+    // check splitting at 1
+    let mut bv = BitVec::from_zeros(2);
+    bv.flip_bit(1);
+    let (left, right) = bv.split_at(1).expect("failed to split");
+    assert_eq!(left.len, 1);
+    assert_eq!(right.len, 1);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+
+    // check splitting at 0
+    let bv = BitVec::from_zeros(2);
+    let (left, right) = bv.split_at(0).expect("failed to split");
+    assert_eq!(left.len, 0);
+    assert_eq!(right.len, 2);
+
+    // check splitting at the end
+    let bv = BitVec::from_zeros(2);
+    let (left, right) = bv.split_at(2).expect("failed to split");
+    assert_eq!(left.len, 2);
+    assert_eq!(right.len, 0);
+
+    // check splitting past the end
+    let bv = BitVec::from_zeros(2);
+    let result = bv.split_at(3);
+    assert!(result.is_err());
+
+    // check splitting empty vec
+    let bv = BitVec::default();
+    let (left, right) = bv.split_at(0).expect("failed to split");
+    assert!(left.is_empty());
+    assert!(right.is_empty());
+}
+
+#[test]
+fn test_splitting_limbs() {
+    // this test might overlap with test_split_at.
+    // we test all variations of splitting in limbs of bit vecs
+
+    // check splitting inside a limb, with the end inside the next limb
+    let mut bv = BitVec::from_zeros(68);
+    bv.flip_bit(60);
+    let (left, right) = bv.split_at(60).expect("failed to split");
+    assert_eq!(left.len, 60);
+    assert_eq!(right.len, 8);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+
+    // check splitting inside a limb, with the complete next limb being the final limb
+    let mut bv = BitVec::from_zeros(128);
+    bv.flip_bit(60);
+    let (left, right) = bv.split_at(60).expect("failed to split");
+    assert_eq!(left.len, 60);
+    assert_eq!(right.len, 68);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+
+    // check splitting inside a limb, with a complete and then partial limb following
+    let mut bv = BitVec::from_zeros(140);
+    bv.flip_bit(60);
+    let (left, right) = bv.split_at(60).expect("failed to split");
+    assert_eq!(left.len, 60);
+    assert_eq!(right.len, 80);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+
+    // check splitting at the beginning of a limb, with the end inside the next limb
+    let mut bv = BitVec::from_zeros(144);
+    bv.flip_bit(64);
+    let (left, right) = bv.split_at(64).expect("failed to split");
+    assert_eq!(left.len, 64);
+    assert_eq!(right.len, 80);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+
+    // check splitting at the beginning of a limb, with the complete next limb being the final limb
+    let mut bv = BitVec::from_zeros(192);
+    bv.flip_bit(64);
+    let (left, right) = bv.split_at(64).expect("failed to split");
+    assert_eq!(left.len, 64);
+    assert_eq!(right.len, 128);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+
+    // check splitting at the beginning of a limb, with a complete and then partial limb following
+    let mut bv = BitVec::from_zeros(200);
+    bv.flip_bit(64);
+    let (left, right) = bv.split_at(64).expect("failed to split");
+    assert_eq!(left.len, 64);
+    assert_eq!(right.len, 136);
+    assert_eq!(left.get(0), Some(0));
+    assert_eq!(right.get(0), Some(1));
+}

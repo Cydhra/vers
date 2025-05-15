@@ -736,6 +736,26 @@ impl BitVec {
         self.len += len;
     }
 
+    /// Append the bits of another bit vector to the end of this vector.
+    /// If this vector does not contain a multiple of 64 bits, the appended limbs need to be
+    /// shifted to the left.
+    /// This function is guaranteed to reallocate the underlying vector at most once.
+    pub fn extend_bitvec(&mut self, other: &Self) {
+        // reserve space for the new bits, ensuring at most one re-allocation
+        self.data
+            .reserve((self.len + other.len).div_ceil(WORD_SIZE) - self.data.len());
+
+        let full_limbs = other.len() / WORD_SIZE;
+        for i in 0..full_limbs {
+            self.append_bits(other.data[i], WORD_SIZE);
+        }
+
+        let partial_bits = other.len % WORD_SIZE;
+        if partial_bits > 0 {
+            self.append_bits(other.data[full_limbs], partial_bits);
+        }
+    }
+
     /// Return the length of the bit vector. The length is measured in bits.
     #[must_use]
     pub fn len(&self) -> usize {
@@ -912,6 +932,9 @@ impl BitVec {
     /// If the position at the end of the query is larger than the length of the vector,
     /// None is returned (even if the query partially overlaps with the vector).
     /// If the length of the query is larger than 64, None is returned.
+    ///
+    /// The first bit at `pos` is the most significant bit of the return value
+    /// limited to `len` bits.
     #[must_use]
     pub fn get_bits(&self, pos: usize, len: usize) -> Option<u64> {
         if len > WORD_SIZE || len == 0 {
@@ -1192,6 +1215,85 @@ impl BitVec {
     pub fn heap_size(&self) -> usize {
         self.data.len() * size_of::<u64>()
     }
+
+    /// Split the vector in two at the specified index. The left half contains bits `0..at` and the
+    /// right half the remaining bits `at..`. If the split index is larger than the length of the
+    /// vector, the vector is returned unmodified in an `Err` variant.
+    ///
+    /// # Errors
+    /// If the index is out of bounds, the function will return an error
+    /// containing the original vector.
+    ///
+    /// See also: [`split_at_unchecked`]
+    pub fn split_at(self, at: usize) -> Result<(Self, Self), Self> {
+        if at > self.len {
+            Err(self)
+        } else {
+            Ok(self.split_at_unchecked(at))
+        }
+    }
+
+    /// Split the vector in two at the specified index. The left half contains bits `0..at` and the
+    /// right half the remaining bits `at..`.
+    ///
+    /// # Panics
+    /// If the index is larger than the length of the vector the function will panic or run
+    /// out of memory.
+    /// Use [`split_at`] to properly handle this case.
+    #[must_use]
+    pub fn split_at_unchecked(mut self, at: usize) -> (Self, Self) {
+        let other_len = self.len - at;
+        let mut other = Self::with_capacity(other_len);
+
+        if other_len == 0 {
+            return (self, other);
+        }
+
+        let first_limb = at / WORD_SIZE;
+        let last_limb = self.len / WORD_SIZE;
+
+        // First, we figure out the number of bits from the first limb to retain in this vector:
+        let leading_partial = at % WORD_SIZE;
+
+        // If the split point is in the last limb, and the vector ends before the last bit, first_limb
+        // and last_limb will be equal, and the other half is simply other_len bits off the limb
+        // right shifted by the number of bits to retain in this vector.
+        if first_limb == last_limb {
+            other.append_bits_unchecked(self.data[first_limb] >> leading_partial, other_len);
+        } else {
+            // Otherwise, some range n..last_limb should be copied in their entirety to the other half,
+            // with n=first_limb+1 if the split point is inside the first limb (leading_partial > 0), or
+            // n=first_limb if the entire first limb belongs in the other half.
+            let full_limbs = if leading_partial > 0 {
+                // If the split point is inside the first limb, we also have to remember to copy over
+                // the trailing bits to the new vector.
+                other.append_bits_unchecked(
+                    self.data[first_limb] >> leading_partial,
+                    WORD_SIZE - leading_partial,
+                );
+                first_limb + 1..last_limb
+            } else {
+                first_limb..last_limb
+            };
+
+            // Copy over any full limbs.
+            for i in full_limbs {
+                other.append_bits_unchecked(self.data[i], WORD_SIZE);
+            }
+
+            // Finally, if the vector has a partially filled last limb, we need to put those bits
+            // in the other half.
+            let trailing_partial = self.len % WORD_SIZE;
+            if trailing_partial > 0 {
+                other.append_bits_unchecked(self.data[last_limb], trailing_partial);
+            }
+        }
+
+        // remove the copied bits from the original vector
+        self.drop_last(other_len);
+
+        (self, other)
+    }
 }
 
 impl_vector_iterator! { BitVec, BitVecIter, BitVecRefIter }
@@ -1213,6 +1315,22 @@ impl From<&[u64]> for BitVec {
 impl From<Vec<u64>> for BitVec {
     fn from(data: Vec<u64>) -> Self {
         BitVec::from_limbs(&data)
+    }
+}
+
+impl Extend<BitVec> for BitVec {
+    fn extend<T: IntoIterator<Item = BitVec>>(&mut self, iter: T) {
+        for v in iter {
+            self.extend_bitvec(&v)
+        }
+    }
+}
+
+impl<'t> Extend<&'t BitVec> for BitVec {
+    fn extend<T: IntoIterator<Item = &'t BitVec>>(&mut self, iter: T) {
+        for v in iter {
+            self.extend_bitvec(v)
+        }
     }
 }
 
