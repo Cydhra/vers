@@ -13,8 +13,13 @@ pub mod sparse;
 
 pub mod mask;
 
+/// The type we index bits with. Since we can have more bits than valid addresses on 32-bit platforms,
+/// we use [u64] for now. The index tye is exposed in functions that take bit indices, so changing
+/// it is considered a breaking change.
+pub(crate) type BitIndex = u64;
+
 /// Size of a word in bitvectors. All vectors operate on 64-bit words.
-const WORD_SIZE: usize = 64;
+const WORD_SIZE: BitIndex = 64;
 
 /// Type alias for masked bitvectors that implement a simple bitwise binary operation.
 /// The first lifetime is for the bit vector that is being masked, the second lifetime is for the
@@ -60,7 +65,7 @@ pub type BitMask<'s, 'b> = MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BitVec {
     data: Vec<u64>,
-    len: usize,
+    len: BitIndex,
 }
 
 impl BitVec {

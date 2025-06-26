@@ -17,10 +17,10 @@ pub use iter::*;
 use crate::util::impl_vector_iterator;
 use crate::BitVec;
 
-use super::WORD_SIZE;
+use super::{BitIndex, WORD_SIZE};
 
 /// Size of a block in the bitvector.
-const BLOCK_SIZE: usize = 512;
+const BLOCK_SIZE: BitIndex = 512;
 
 /// Size of a super block in the bitvector. Super-blocks exist to decrease the memory overhead
 /// of block descriptors.
@@ -30,12 +30,12 @@ const BLOCK_SIZE: usize = 512;
 /// impact on the performance of select queries. The larger the super block size, the deeper will
 /// a binary search be. We found 2^13 to be a good compromise between memory overhead and
 /// performance.
-const SUPER_BLOCK_SIZE: usize = 1 << 13;
+const SUPER_BLOCK_SIZE: BitIndex = 1 << 13;
 
 /// Size of a select block. The select block is used to speed up select queries. The select block
 /// contains the indices of every `SELECT_BLOCK_SIZE`'th 1-bit and 0-bit in the bitvector.
 /// The smaller this block-size, the faster are select queries, but the more memory is used.
-const SELECT_BLOCK_SIZE: usize = 1 << 13;
+const SELECT_BLOCK_SIZE: BitIndex = 1 << 13;
 
 /// Meta-data for a block. The `zeros` field stores the number of zeros up to the block,
 /// beginning from the last super-block boundary. This means the first block in a super-block
@@ -53,7 +53,7 @@ struct BlockDescriptor {
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct SuperBlockDescriptor {
-    zeros: usize,
+    zeros: BitIndex,
 }
 
 /// Meta-data for the select query. Each entry i in the select vector contains the indices to find
@@ -86,12 +86,12 @@ struct SelectSuperBlockDescriptor {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RsVec {
     data: Vec<u64>,
-    len: usize,
+    len: BitIndex,
     blocks: Vec<BlockDescriptor>,
     super_blocks: Vec<SuperBlockDescriptor>,
     select_blocks: Vec<SelectSuperBlockDescriptor>,
-    pub(crate) rank0: usize,
-    pub(crate) rank1: usize,
+    pub(crate) rank0: BitIndex,
+    pub(crate) rank1: BitIndex,
 }
 
 impl RsVec {
@@ -106,8 +106,8 @@ impl RsVec {
     pub fn from_bit_vec(vec: BitVec) -> RsVec {
         // Construct the block descriptor meta data. Each block descriptor contains the number of
         // zeros in the super-block, up to but excluding the block.
-        let mut blocks = Vec::with_capacity(vec.len() / BLOCK_SIZE + 1);
-        let mut super_blocks = Vec::with_capacity(vec.len() / SUPER_BLOCK_SIZE + 1);
+        let mut blocks = Vec::with_capacity(vec.len() / BLOCK_SIZE as usize + 1);
+        let mut super_blocks = Vec::with_capacity(vec.len() / SUPER_BLOCK_SIZE as usize + 1);
         let mut select_blocks = Vec::new();
 
         // sentinel value
@@ -116,16 +116,16 @@ impl RsVec {
             index_1: 0,
         });
 
-        let mut total_zeros: usize = 0;
-        let mut current_zeros: usize = 0;
+        let mut total_zeros: BitIndex = 0;
+        let mut current_zeros: BitIndex = 0;
         let mut last_zero_select_block: usize = 0;
         let mut last_one_select_block: usize = 0;
 
-        for (idx, &word) in vec.data.iter().enumerate() {
+        for (word_idx, &word) in vec.data.iter().enumerate() {
             // if we moved past a block boundary, append the block information for the previous
             // block and reset the counter if we moved past a super-block boundary.
-            if idx % (BLOCK_SIZE / WORD_SIZE) == 0 {
-                if idx % (SUPER_BLOCK_SIZE / WORD_SIZE) == 0 {
+            if word_idx as BitIndex % (BLOCK_SIZE / WORD_SIZE) == 0 {
+                if word_idx as BitIndex % (SUPER_BLOCK_SIZE / WORD_SIZE) == 0 {
                     total_zeros += current_zeros;
                     current_zeros = 0;
                     super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
@@ -141,40 +141,43 @@ impl RsVec {
             // count the zeros in the current word and add them to the counter
             // the last word may contain padding zeros, which should not be counted,
             // but since we do not append the last block descriptor, this is not a problem
-            let mut new_zeros = word.count_zeros() as usize;
+            let mut new_zeros = word.count_zeros() as BitIndex;
 
             // in the last block, remove remaining zeros of limb that aren't part of the vector
-            if idx == vec.data.len() - 1 && vec.len % WORD_SIZE > 0 {
+            if word_idx == vec.data.len() - 1 && vec.len % WORD_SIZE > 0 {
                 let mask = (1 << (vec.len % WORD_SIZE)) - 1;
-                new_zeros -= (word | mask).count_zeros() as usize;
+                new_zeros -= (word | mask).count_zeros() as BitIndex;
             }
 
             let all_zeros = total_zeros + current_zeros + new_zeros;
             if all_zeros / SELECT_BLOCK_SIZE > (total_zeros + current_zeros) / SELECT_BLOCK_SIZE {
-                if all_zeros / SELECT_BLOCK_SIZE == select_blocks.len() {
+                if (all_zeros / SELECT_BLOCK_SIZE) as usize == select_blocks.len() {
                     select_blocks.push(SelectSuperBlockDescriptor {
                         index_0: super_blocks.len() - 1,
                         index_1: 0,
                     });
                 } else {
-                    select_blocks[all_zeros / SELECT_BLOCK_SIZE].index_0 = super_blocks.len() - 1;
+                    select_blocks[(all_zeros / SELECT_BLOCK_SIZE) as usize].index_0 =
+                        super_blocks.len() - 1;
                 }
 
                 last_zero_select_block += 1;
             }
 
-            let total_bits = (idx + 1) * WORD_SIZE;
+            let total_bits = (word_idx as BitIndex + 1) * WORD_SIZE;
             let all_ones = total_bits - all_zeros;
             if all_ones / SELECT_BLOCK_SIZE
-                > (idx * WORD_SIZE - total_zeros - current_zeros) / SELECT_BLOCK_SIZE
+                > (word_idx as BitIndex * WORD_SIZE - total_zeros - current_zeros)
+                    / SELECT_BLOCK_SIZE
             {
-                if all_ones / SELECT_BLOCK_SIZE == select_blocks.len() {
+                if (all_ones / SELECT_BLOCK_SIZE) as usize == select_blocks.len() {
                     select_blocks.push(SelectSuperBlockDescriptor {
                         index_0: 0,
                         index_1: super_blocks.len() - 1,
                     });
                 } else {
-                    select_blocks[all_ones / SELECT_BLOCK_SIZE].index_1 = super_blocks.len() - 1;
+                    select_blocks[(all_ones / SELECT_BLOCK_SIZE) as usize].index_1 =
+                        super_blocks.len() - 1;
                 }
 
                 last_one_select_block += 1;
@@ -230,7 +233,7 @@ impl RsVec {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     #[must_use]
-    pub fn rank0(&self, pos: usize) -> usize {
+    pub fn rank0(&self, pos: BitIndex) -> BitIndex {
         self.rank(true, pos)
     }
 
@@ -242,7 +245,7 @@ impl RsVec {
     /// # Parameters
     /// - `pos`: The position of the bit to return the rank of.
     #[must_use]
-    pub fn rank1(&self, pos: usize) -> usize {
+    pub fn rank1(&self, pos: BitIndex) -> BitIndex {
         self.rank(false, pos)
     }
 
@@ -250,7 +253,7 @@ impl RsVec {
     // branch elimination profits alone should make it worth it.
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    fn rank(&self, zero: bool, pos: usize) -> usize {
+    fn rank(&self, zero: bool, pos: BitIndex) -> BitIndex {
         #[allow(clippy::collapsible_else_if)]
         // readability and more obvious where dead branch elimination happens
         if zero {
@@ -263,39 +266,40 @@ impl RsVec {
             }
         }
 
-        let index = pos / WORD_SIZE;
-        let block_index = pos / BLOCK_SIZE;
-        let super_block_index = pos / SUPER_BLOCK_SIZE;
+        let index = (pos / WORD_SIZE) as usize;
+        let block_index = (pos / BLOCK_SIZE) as usize;
+        let super_block_index = (pos / SUPER_BLOCK_SIZE) as usize;
         let mut rank = 0;
 
         // at first add the number of zeros/ones before the current super block
         rank += if zero {
             self.super_blocks[super_block_index].zeros
         } else {
-            (super_block_index * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_index].zeros
+            (super_block_index as BitIndex * SUPER_BLOCK_SIZE)
+                - self.super_blocks[super_block_index].zeros
         };
 
         // then add the number of zeros/ones before the current block
         rank += if zero {
-            self.blocks[block_index].zeros as usize
+            self.blocks[block_index].zeros as BitIndex
         } else {
-            ((block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
-                - self.blocks[block_index].zeros as usize
+            ((block_index as BitIndex % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
+                - self.blocks[block_index].zeros as BitIndex
         };
 
         // naive popcount of blocks
-        for &i in &self.data[(block_index * BLOCK_SIZE) / WORD_SIZE..index] {
+        for &i in &self.data[((block_index as BitIndex * BLOCK_SIZE) / WORD_SIZE) as usize..index] {
             rank += if zero {
-                i.count_zeros() as usize
+                i.count_zeros() as BitIndex
             } else {
-                i.count_ones() as usize
+                i.count_ones() as BitIndex
             };
         }
 
         rank += if zero {
-            (!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
+            (!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as BitIndex
         } else {
-            (self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as usize
+            (self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as BitIndex
         };
 
         rank
@@ -303,7 +307,7 @@ impl RsVec {
 
     /// Return the length of the vector, i.e. the number of bits it contains.
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub fn len(&self) -> BitIndex {
         self.len
     }
 
@@ -317,7 +321,7 @@ impl RsVec {
     /// bit of the returned u64 word.
     /// If the position is larger than the length of the vector, `None` is returned.
     #[must_use]
-    pub fn get(&self, pos: usize) -> Option<u64> {
+    pub fn get(&self, pos: BitIndex) -> Option<u64> {
         if pos >= self.len() {
             None
         } else {
@@ -331,8 +335,8 @@ impl RsVec {
     /// # Panics
     /// This function may panic if `pos >= self.len()` (alternatively, it may return garbage).
     #[must_use]
-    pub fn get_unchecked(&self, pos: usize) -> u64 {
-        (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
+    pub fn get_unchecked(&self, pos: BitIndex) -> u64 {
+        (self.data[(pos / WORD_SIZE) as usize] >> (pos % WORD_SIZE)) & 1
     }
 
     /// Return multiple bits at the given position. The number of bits to return is given by `len`.
@@ -341,7 +345,7 @@ impl RsVec {
     /// None is returned (even if the query partially overlaps with the vector).
     /// If the length of the query is larger than 64, None is returned.
     #[must_use]
-    pub fn get_bits(&self, pos: usize, len: usize) -> Option<u64> {
+    pub fn get_bits(&self, pos: BitIndex, len: u64) -> Option<u64> {
         if len > WORD_SIZE {
             return None;
         }
@@ -370,13 +374,14 @@ impl RsVec {
     #[must_use]
     #[allow(clippy::comparison_chain)] // readability
     #[allow(clippy::cast_possible_truncation)] // parameter must be out of scope for this to happen
-    pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
+    pub fn get_bits_unchecked(&self, pos: BitIndex, len: u64) -> u64 {
         debug_assert!(len <= WORD_SIZE);
-        let partial_word = self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE);
+        let partial_word = self.data[(pos / WORD_SIZE) as usize] >> (pos % WORD_SIZE);
         if pos % WORD_SIZE + len <= WORD_SIZE {
             partial_word & 1u64.checked_shl(len as u32).unwrap_or(0).wrapping_sub(1)
         } else {
-            (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
+            (partial_word
+                | (self.data[(pos / WORD_SIZE + 1) as usize] << (WORD_SIZE - pos % WORD_SIZE)))
                 & 1u64.checked_shl(len as u32).unwrap_or(0).wrapping_sub(1)
         }
     }
@@ -437,12 +442,16 @@ impl RsVec {
 
         let iter: SelectIter<ZERO> = self.select_iter();
 
-        for (rank, bit_index) in iter.enumerate() {
+        // we need to manually enumerate() the iter, because the number of set bits could exceed
+        // the size of usize.
+        let mut bit_index = 0;
+        for rank in iter {
             // since rank is inlined, we get dead code elimination depending on ZERO
             if (other.get_unchecked(bit_index) == 0) != ZERO || other.rank(ZERO, bit_index) != rank
             {
                 return false;
             }
+            bit_index += 1;
         }
 
         true
@@ -468,9 +477,9 @@ impl RsVec {
             return false;
         }
 
-        if self.data[..self.len / 64]
+        if self.data[..(self.len / WORD_SIZE) as usize]
             .iter()
-            .zip(other.data[..other.len / 64].iter())
+            .zip(other.data[..(other.len / 64) as usize].iter())
             .any(|(a, b)| a != b)
         {
             return false;
@@ -478,8 +487,9 @@ impl RsVec {
 
         // if last incomplete block exists, test it without junk data
         if self.len % 64 > 0
-            && self.data[self.len / 64] & ((1 << (self.len % 64)) - 1)
-                != other.data[self.len / 64] & ((1 << (other.len % 64)) - 1)
+            && self.data[(self.len / WORD_SIZE) as usize] & ((1 << (self.len % WORD_SIZE)) - 1)
+                != other.data[(self.len / WORD_SIZE) as usize]
+                    & ((1 << (other.len % WORD_SIZE)) - 1)
         {
             return false;
         }
