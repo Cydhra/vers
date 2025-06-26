@@ -80,9 +80,9 @@ impl BitVec {
     /// The bit vector will be able to hold at least `capacity` bits without reallocating.
     /// More memory may be allocated according to the underlying allocation strategy.
     #[must_use]
-    pub fn with_capacity(capacity: usize) -> Self {
+    pub fn with_capacity(capacity: BitIndex) -> Self {
         Self {
-            data: Vec::with_capacity(capacity / WORD_SIZE + 1),
+            data: Vec::with_capacity((capacity / WORD_SIZE + 1) as usize),
             len: 0,
         }
     }
@@ -90,22 +90,17 @@ impl BitVec {
     /// Create a new bit vector with all zeros and the given length.
     /// The length is measured in bits.
     #[must_use]
-    pub fn from_zeros(len: usize) -> Self {
-        let mut data = vec![0; len / WORD_SIZE];
-        if len % WORD_SIZE != 0 {
-            data.push(0);
-        }
+    pub fn from_zeros(len: BitIndex) -> Self {
+        let data = vec![0; len.div_ceil(WORD_SIZE) as usize];
         Self { data, len }
     }
 
     /// Create a new bit vector with all ones and the given length.
     /// The length is measured in bits.
     #[must_use]
-    pub fn from_ones(len: usize) -> Self {
-        let mut data = vec![u64::MAX; len / WORD_SIZE];
-        if len % WORD_SIZE != 0 {
-            data.push((1 << (len % WORD_SIZE)) - 1);
-        }
+    pub fn from_ones(len: BitIndex) -> Self {
+        // junk data is allowed to be any bit
+        let data = vec![u64::MAX; len.div_ceil(WORD_SIZE) as usize];
         Self { data, len }
     }
 
@@ -133,7 +128,7 @@ impl BitVec {
     /// [`from_bits_iter`]: BitVec::from_bits_iter
     #[must_use]
     pub fn from_bits(bits: &[u8]) -> Self {
-        let mut bv = Self::with_capacity(bits.len());
+        let mut bv = Self::with_capacity(bits.len() as BitIndex);
         bits.iter().for_each(|&b| bv.append_bit(b.into()));
         bv
     }
@@ -151,7 +146,7 @@ impl BitVec {
     /// [`from_bits_iter`]: BitVec::from_bits_iter
     #[must_use]
     pub fn from_bits_u16(bits: &[u16]) -> Self {
-        let mut bv = Self::with_capacity(bits.len());
+        let mut bv = Self::with_capacity(bits.len() as BitIndex);
         bits.iter().for_each(|&b| bv.append_bit_u16(b));
         bv
     }
@@ -169,7 +164,7 @@ impl BitVec {
     /// [`from_bits_iter`]: BitVec::from_bits_iter
     #[must_use]
     pub fn from_bits_u32(bits: &[u32]) -> Self {
-        let mut bv = Self::with_capacity(bits.len());
+        let mut bv = Self::with_capacity(bits.len() as BitIndex);
         bits.iter().for_each(|&b| bv.append_bit_u32(b));
         bv
     }
@@ -187,7 +182,7 @@ impl BitVec {
     /// [`from_bits_iter`]: BitVec::from_bits_iter
     #[must_use]
     pub fn from_bits_u64(bits: &[u64]) -> Self {
-        let mut bv = Self::with_capacity(bits.len());
+        let mut bv = Self::with_capacity(bits.len() as BitIndex);
         bits.iter().for_each(|&b| bv.append_bit(b));
         bv
     }
@@ -226,7 +221,7 @@ impl BitVec {
         I: IntoIterator<Item = E>,
     {
         let iter = iter.into_iter();
-        let mut bv = Self::with_capacity(iter.size_hint().0);
+        let mut bv = Self::with_capacity(iter.size_hint().0 as BitIndex);
         for bit in iter {
             bv.append_bit(bit.into());
         }
@@ -258,7 +253,7 @@ impl BitVec {
     /// [`from_limbs_iter`]: BitVec::from_limbs_iter
     #[must_use]
     pub fn from_limbs(words: &[u64]) -> Self {
-        let len = words.len() * WORD_SIZE;
+        let len = words.len() as BitIndex * WORD_SIZE;
         Self {
             data: words.to_vec(),
             len,
@@ -323,15 +318,15 @@ impl BitVec {
     /// [`from_limbs_iter`]: BitVec::from_limbs_iter
     #[must_use]
     pub fn from_vec(data: Vec<u64>) -> Self {
-        let len = data.len() * WORD_SIZE;
+        let len = data.len() as BitIndex * WORD_SIZE;
         Self { data, len }
     }
 
-    fn pack_bits<T, const MAX_BITS: usize>(sequence: &[T], bits_per_element: usize) -> Self
+    fn pack_bits<T, const MAX_BITS: u64>(sequence: &[T], bits_per_element: u64) -> Self
     where
         T: Into<u64> + Copy,
     {
-        let mut bv = Self::with_capacity(sequence.len() * bits_per_element);
+        let mut bv = Self::with_capacity(sequence.len() as BitIndex * bits_per_element);
         for &word in sequence {
             if bits_per_element <= MAX_BITS {
                 bv.append_bits(word.into(), bits_per_element);
@@ -377,7 +372,7 @@ impl BitVec {
     /// [`pack_sequence_u16`]: BitVec::pack_sequence_u16
     /// [`pack_sequence_u8`]: BitVec::pack_sequence_u8
     #[must_use]
-    pub fn pack_sequence_u64(sequence: &[u64], bits_per_element: usize) -> Self {
+    pub fn pack_sequence_u64(sequence: &[u64], bits_per_element: u64) -> Self {
         Self::pack_bits::<_, 64>(sequence, bits_per_element)
     }
 
@@ -411,7 +406,7 @@ impl BitVec {
     /// [`pack_sequence_u16`]: BitVec::pack_sequence_u16
     /// [`pack_sequence_u8`]: BitVec::pack_sequence_u8
     #[must_use]
-    pub fn pack_sequence_u32(sequence: &[u32], bits_per_element: usize) -> Self {
+    pub fn pack_sequence_u32(sequence: &[u32], bits_per_element: u64) -> Self {
         Self::pack_bits::<_, 32>(sequence, bits_per_element)
     }
 
@@ -445,7 +440,7 @@ impl BitVec {
     /// [`pack_sequence_u32`]: BitVec::pack_sequence_u32
     /// [`pack_sequence_u8`]: BitVec::pack_sequence_u8
     #[must_use]
-    pub fn pack_sequence_u16(sequence: &[u16], bits_per_element: usize) -> Self {
+    pub fn pack_sequence_u16(sequence: &[u16], bits_per_element: u64) -> Self {
         Self::pack_bits::<_, 16>(sequence, bits_per_element)
     }
 
@@ -479,7 +474,7 @@ impl BitVec {
     /// [`pack_sequence_u32`]: BitVec::pack_sequence_u32
     /// [`pack_sequence_u16`]: BitVec::pack_sequence_u16
     #[must_use]
-    pub fn pack_sequence_u8(sequence: &[u8], bits_per_element: usize) -> Self {
+    pub fn pack_sequence_u8(sequence: &[u8], bits_per_element: u64) -> Self {
         Self::pack_bits::<_, 8>(sequence, bits_per_element)
     }
 
@@ -509,9 +504,9 @@ impl BitVec {
             self.data.push(0);
         }
         if bit {
-            self.data[self.len / WORD_SIZE] |= 1 << (self.len % WORD_SIZE);
+            self.data[(self.len / WORD_SIZE) as usize] |= 1 << (self.len % WORD_SIZE);
         } else {
-            self.data[self.len / WORD_SIZE] &= !(1 << (self.len % WORD_SIZE));
+            self.data[(self.len / WORD_SIZE) as usize] &= !(1 << (self.len % WORD_SIZE));
         }
         self.len += 1;
     }
@@ -534,14 +529,14 @@ impl BitVec {
     ///
     /// assert!(bv.is_empty());
     /// ```
-    pub fn drop_last(&mut self, n: usize) {
+    pub fn drop_last(&mut self, n: BitIndex) {
         if n > self.len {
             self.data.clear();
             self.len = 0;
             return;
         }
 
-        let new_limb_count = (self.len - n).div_ceil(WORD_SIZE);
+        let new_limb_count = (self.len - n).div_ceil(WORD_SIZE) as usize;
 
         // cut off limbs that we no longer need
         if new_limb_count < self.data.len() {
@@ -583,9 +578,9 @@ impl BitVec {
             self.data.push(0);
         }
         if bit % 2 == 1 {
-            self.data[self.len / WORD_SIZE] |= 1 << (self.len % WORD_SIZE);
+            self.data[(self.len / WORD_SIZE) as usize] |= 1 << (self.len % WORD_SIZE);
         } else {
-            self.data[self.len / WORD_SIZE] &= !(1 << (self.len % WORD_SIZE));
+            self.data[(self.len / WORD_SIZE) as usize] &= !(1 << (self.len % WORD_SIZE));
         }
 
         self.len += 1;
@@ -662,8 +657,8 @@ impl BitVec {
             self.data.push(word);
         } else {
             // zero out the unused bits before or-ing the new one, to ensure no garbage data remains
-            self.data[self.len / WORD_SIZE] &= !(u64::MAX << (self.len % WORD_SIZE));
-            self.data[self.len / WORD_SIZE] |= word << (self.len % WORD_SIZE);
+            self.data[(self.len / WORD_SIZE) as usize] &= !(u64::MAX << (self.len % WORD_SIZE));
+            self.data[(self.len / WORD_SIZE) as usize] |= word << (self.len % WORD_SIZE);
 
             self.data.push(word >> (WORD_SIZE - self.len % WORD_SIZE));
         }
@@ -690,15 +685,15 @@ impl BitVec {
     ///
     /// # Panics
     /// Panics if `len` is larger than 64.
-    pub fn append_bits(&mut self, bits: u64, len: usize) {
+    pub fn append_bits(&mut self, bits: u64, len: u64) {
         assert!(len <= 64, "Cannot append more than 64 bits");
 
         if self.len % WORD_SIZE == 0 {
             self.data.push(bits);
         } else {
             // zero out the unused bits before or-ing the new one, to ensure no garbage data remains
-            self.data[self.len / WORD_SIZE] &= !(u64::MAX << (self.len % WORD_SIZE));
-            self.data[self.len / WORD_SIZE] |= bits << (self.len % WORD_SIZE);
+            self.data[(self.len / WORD_SIZE) as usize] &= !(u64::MAX << (self.len % WORD_SIZE));
+            self.data[(self.len / WORD_SIZE) as usize] |= bits << (self.len % WORD_SIZE);
 
             if self.len % WORD_SIZE + len > WORD_SIZE {
                 self.data.push(bits >> (WORD_SIZE - self.len % WORD_SIZE));
@@ -729,11 +724,11 @@ impl BitVec {
     ///
     /// [`append_bits`]: BitVec::append_bits
     /// [`drop_last`]: BitVec::drop_last
-    pub fn append_bits_unchecked(&mut self, bits: u64, len: usize) {
+    pub fn append_bits_unchecked(&mut self, bits: u64, len: u64) {
         if self.len % WORD_SIZE == 0 {
             self.data.push(bits);
         } else {
-            self.data[self.len / WORD_SIZE] |= bits << (self.len % WORD_SIZE);
+            self.data[(self.len / WORD_SIZE) as usize] |= bits << (self.len % WORD_SIZE);
 
             if self.len % WORD_SIZE + len > WORD_SIZE {
                 self.data.push(bits >> (WORD_SIZE - self.len % WORD_SIZE));
@@ -749,9 +744,9 @@ impl BitVec {
     pub fn extend_bitvec(&mut self, other: &Self) {
         // reserve space for the new bits, ensuring at most one re-allocation
         self.data
-            .reserve((self.len + other.len).div_ceil(WORD_SIZE) - self.data.len());
+            .reserve((self.len + other.len).div_ceil(WORD_SIZE) as usize - self.data.len());
 
-        let full_limbs = other.len() / WORD_SIZE;
+        let full_limbs = (other.len() / WORD_SIZE) as usize;
         for i in 0..full_limbs {
             self.append_bits(other.data[i], WORD_SIZE);
         }
@@ -764,7 +759,7 @@ impl BitVec {
 
     /// Return the length of the bit vector. The length is measured in bits.
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub fn len(&self) -> BitIndex {
         self.len
     }
 
@@ -790,7 +785,7 @@ impl BitVec {
     ///
     /// # Panics
     /// If the position is larger than the length of the vector, the function panics.
-    pub fn flip_bit(&mut self, pos: usize) {
+    pub fn flip_bit(&mut self, pos: BitIndex) {
         assert!(pos < self.len, "Index out of bounds");
         self.flip_bit_unchecked(pos);
     }
@@ -805,8 +800,8 @@ impl BitVec {
     /// This will not corrupt memory.
     ///
     /// [`flip_bit`]: BitVec::flip_bit
-    pub fn flip_bit_unchecked(&mut self, pos: usize) {
-        self.data[pos / WORD_SIZE] ^= 1 << (pos % WORD_SIZE);
+    pub fn flip_bit_unchecked(&mut self, pos: BitIndex) {
+        self.data[(pos / WORD_SIZE) as usize] ^= 1 << (pos % WORD_SIZE);
     }
 
     /// Return the bit at the given position.
@@ -826,7 +821,7 @@ impl BitVec {
     /// assert_eq!(bv.get(2), Some(1));
     /// ```
     #[must_use]
-    pub fn get(&self, pos: usize) -> Option<u64> {
+    pub fn get(&self, pos: BitIndex) -> Option<u64> {
         if pos >= self.len {
             None
         } else {
@@ -844,8 +839,8 @@ impl BitVec {
     ///
     /// [`get`]: BitVec::get
     #[must_use]
-    pub fn get_unchecked(&self, pos: usize) -> u64 {
-        (self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE)) & 1
+    pub fn get_unchecked(&self, pos: BitIndex) -> u64 {
+        (self.data[(pos / WORD_SIZE) as usize] >> (pos % WORD_SIZE)) & 1
     }
 
     /// Set the bit at the given position.
@@ -870,7 +865,7 @@ impl BitVec {
     /// otherwise it will return an empty `Ok`.
     ///
     /// [`set_unchecked`]: BitVec::set_unchecked
-    pub fn set(&mut self, pos: usize, value: u64) -> Result<(), &str> {
+    pub fn set(&mut self, pos: BitIndex, value: u64) -> Result<(), &str> {
         if pos >= self.len {
             Err("out of range")
         } else {
@@ -888,8 +883,9 @@ impl BitVec {
     /// Use [`set`] to properly handle this case with a `Result`.
     ///
     /// [`set`]: BitVec::set
-    pub fn set_unchecked(&mut self, pos: usize, value: u64) {
-        self.data[pos / WORD_SIZE] = (self.data[pos / WORD_SIZE] & !(0x1 << (pos % WORD_SIZE)))
+    pub fn set_unchecked(&mut self, pos: BitIndex, value: u64) {
+        self.data[(pos / WORD_SIZE) as usize] = (self.data[(pos / WORD_SIZE) as usize]
+            & !(0x1 << (pos % WORD_SIZE)))
             | ((value & 0x1) << (pos % WORD_SIZE));
     }
 
@@ -911,7 +907,7 @@ impl BitVec {
     ///
     /// [`is_bit_set_unchecked`]: BitVec::is_bit_set_unchecked
     #[must_use]
-    pub fn is_bit_set(&self, pos: usize) -> Option<bool> {
+    pub fn is_bit_set(&self, pos: BitIndex) -> Option<bool> {
         if pos >= self.len {
             None
         } else {
@@ -928,7 +924,7 @@ impl BitVec {
     ///
     /// [`is_bit_set`]: BitVec::is_bit_set
     #[must_use]
-    pub fn is_bit_set_unchecked(&self, pos: usize) -> bool {
+    pub fn is_bit_set_unchecked(&self, pos: BitIndex) -> bool {
         self.get_unchecked(pos) != 0
     }
 
@@ -942,7 +938,7 @@ impl BitVec {
     /// The first bit at `pos` is the most significant bit of the return value
     /// limited to `len` bits.
     #[must_use]
-    pub fn get_bits(&self, pos: usize, len: usize) -> Option<u64> {
+    pub fn get_bits(&self, pos: BitIndex, len: u64) -> Option<u64> {
         if len > WORD_SIZE || len == 0 {
             return None;
         }
@@ -974,13 +970,14 @@ impl BitVec {
     #[allow(clippy::comparison_chain)] // readability
     #[inline(always)] // inline to gain loop optimization and pipeline advantages for elias fano
     #[allow(clippy::cast_possible_truncation)] // parameter must be out of scope for this to happen
-    pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
+    pub fn get_bits_unchecked(&self, pos: BitIndex, len: u64) -> u64 {
         debug_assert!(len <= WORD_SIZE);
-        let partial_word = self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE);
+        let partial_word = self.data[(pos / WORD_SIZE) as usize] >> (pos % WORD_SIZE);
         if pos % WORD_SIZE + len <= WORD_SIZE {
             partial_word & 1u64.checked_shl(len as u32).unwrap_or(0).wrapping_sub(1)
         } else {
-            (partial_word | (self.data[pos / WORD_SIZE + 1] << (WORD_SIZE - pos % WORD_SIZE)))
+            (partial_word
+                | (self.data[(pos / WORD_SIZE + 1) as usize] << (WORD_SIZE - pos % WORD_SIZE)))
                 & 1u64.checked_shl(len as u32).unwrap_or(0).wrapping_sub(1)
         }
     }
@@ -1011,7 +1008,7 @@ impl BitVec {
     #[must_use]
     #[allow(clippy::inline_always)]
     #[inline(always)] // to gain optimization if n is constant
-    pub fn unpack_element(&self, index: usize, n: usize) -> Option<u64> {
+    pub fn unpack_element(&self, index: BitIndex, n: u64) -> Option<u64> {
         self.get_bits(index * n, n)
     }
 
@@ -1033,7 +1030,7 @@ impl BitVec {
     #[must_use]
     #[allow(clippy::inline_always)]
     #[inline(always)] // to gain optimization if n is constant
-    pub fn unpack_element_unchecked(&self, index: usize, n: usize) -> u64 {
+    pub fn unpack_element_unchecked(&self, index: BitIndex, n: u64) -> u64 {
         self.get_bits_unchecked(index * n, n)
     }
 
@@ -1044,7 +1041,7 @@ impl BitVec {
     #[must_use]
     #[allow(clippy::missing_panics_doc)] // can't panic because of manual bounds check
     pub fn count_ones(&self) -> u64 {
-        let mut ones: u64 = self.data[0..self.len / WORD_SIZE]
+        let mut ones: u64 = self.data[0..(self.len / WORD_SIZE) as usize]
             .iter()
             .map(|limb| u64::from(limb.count_ones()))
             .sum();
@@ -1231,7 +1228,7 @@ impl BitVec {
     /// containing the original vector.
     ///
     /// See also: [`split_at_unchecked`]
-    pub fn split_at(self, at: usize) -> Result<(Self, Self), Self> {
+    pub fn split_at(self, at: BitIndex) -> Result<(Self, Self), Self> {
         if at > self.len {
             Err(self)
         } else {
@@ -1247,7 +1244,7 @@ impl BitVec {
     /// out of memory.
     /// Use [`split_at`] to properly handle this case.
     #[must_use]
-    pub fn split_at_unchecked(mut self, at: usize) -> (Self, Self) {
+    pub fn split_at_unchecked(mut self, at: BitIndex) -> (Self, Self) {
         let other_len = self.len - at;
         let mut other = Self::with_capacity(other_len);
 
@@ -1255,8 +1252,8 @@ impl BitVec {
             return (self, other);
         }
 
-        let first_limb = at / WORD_SIZE;
-        let last_limb = self.len / WORD_SIZE;
+        let first_limb = (at / WORD_SIZE) as usize;
+        let last_limb = (self.len / WORD_SIZE) as usize;
 
         // First, we figure out the number of bits from the first limb to retain in this vector:
         let leading_partial = at % WORD_SIZE;
