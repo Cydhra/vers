@@ -1,7 +1,7 @@
 // Select code is in here to keep it more organized.
 
 use crate::bit_vec::fast_rs_vec::{BLOCK_SIZE, SELECT_BLOCK_SIZE, SUPER_BLOCK_SIZE};
-use crate::bit_vec::WORD_SIZE;
+use crate::bit_vec::{BitIndex, WORD_SIZE};
 use crate::util::pdep::Pdep;
 use crate::util::unroll;
 
@@ -17,12 +17,12 @@ impl super::RsVec {
     /// If the rank is larger than the number of 0-bits in the vector, the vector length is returned.
     #[must_use]
     #[allow(clippy::assertions_on_constants)]
-    pub fn select0(&self, mut rank: usize) -> usize {
+    pub fn select0(&self, mut rank: BitIndex) -> BitIndex {
         if rank >= self.rank0 {
             return self.len;
         }
 
-        let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_0;
+        let mut super_block = self.select_blocks[(rank / SELECT_BLOCK_SIZE) as usize].index_0;
 
         if self.super_blocks.len() > (super_block + 1)
             && self.super_blocks[super_block + 1].zeros <= rank
@@ -32,10 +32,10 @@ impl super::RsVec {
 
         rank -= self.super_blocks[super_block].zeros;
 
-        let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+        let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize;
         self.search_block0(rank, &mut block_index);
 
-        rank -= self.blocks[block_index].zeros as usize;
+        rank -= self.blocks[block_index].zeros as BitIndex;
 
         self.search_word_in_block0(rank, block_index)
     }
@@ -56,7 +56,7 @@ impl super::RsVec {
         target_feature = "avx512bw",
     ))]
     #[inline(always)]
-    pub(super) fn search_block0(&self, rank: usize, block_index: &mut usize) {
+    pub(super) fn search_block0(&self, rank: BitIndex, block_index: &mut usize) {
         use std::arch::x86_64::{_mm256_cmpgt_epu16_mask, _mm256_loadu_epi16, _mm256_set1_epi16};
 
         if self.blocks.len() > *block_index + (SUPER_BLOCK_SIZE / BLOCK_SIZE) {
@@ -93,25 +93,25 @@ impl super::RsVec {
         target_feature = "avx512bw",
     )))]
     #[inline(always)]
-    pub(super) fn search_block0(&self, rank: usize, block_index: &mut usize) {
+    pub(super) fn search_block0(&self, rank: BitIndex, block_index: &mut usize) {
         self.search_block0_naive(rank, block_index);
     }
 
     #[inline(always)]
-    fn search_block0_naive(&self, rank: usize, block_index: &mut usize) {
+    fn search_block0_naive(&self, rank: BitIndex, block_index: &mut usize) {
         // full binary search for block that contains the rank, manually loop-unrolled, because
         // LLVM doesn't do it for us, but it gains just under 20% performance
 
         // this code relies on the fact that BLOCKS_PER_SUPERBLOCK blocks are in one superblock
         debug_assert!(
-            SUPER_BLOCK_SIZE / BLOCK_SIZE == BLOCKS_PER_SUPERBLOCK,
+            (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize == BLOCKS_PER_SUPERBLOCK,
             "change unroll constant to {}",
             64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
         );
         unroll!(4,
-            |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
+            |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize / 2}|
                 // do not use select_unpredictable here, it degrades performance
-                if self.blocks.len() > *block_index + boundary && rank >= self.blocks[*block_index + boundary].zeros as usize {
+                if self.blocks.len() > *block_index + boundary && rank >= self.blocks[*block_index + boundary].zeros as BitIndex {
                     *block_index += boundary;
                 },
             boundary /= 2);
@@ -126,7 +126,7 @@ impl super::RsVec {
     /// * `block_index` - the index of the block to search in, this is the block in the blocks
     ///   vector that contains the rank
     #[inline(always)]
-    pub(super) fn search_word_in_block0(&self, mut rank: usize, block_index: usize) -> usize {
+    pub(super) fn search_word_in_block0(&self, mut rank: BitIndex, block_index: usize) -> BitIndex {
         // linear search for word that contains the rank. Binary search is not possible here,
         // because we don't have accumulated popcounts for the words. We use pdep to find the
         // position of the rank-th zero bit in the word, if the word contains enough zeros, otherwise
@@ -134,24 +134,24 @@ impl super::RsVec {
         let mut index_counter = 0;
         debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
         unroll!(7, |n = {0}| {
-                    let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
-                    if (word.count_zeros() as usize) <= rank {
-                        rank -= word.count_zeros() as usize;
+                    let word = self.data[block_index * (BLOCK_SIZE / WORD_SIZE) as usize + n];
+                    if (word.count_zeros() as BitIndex) <= rank {
+                        rank -= word.count_zeros() as BitIndex;
                         index_counter += WORD_SIZE;
                     } else {
-                        return block_index * BLOCK_SIZE
+                        return block_index as BitIndex * BLOCK_SIZE
                             + index_counter
-                            + (1 << rank).pdep(!word).trailing_zeros() as usize;
+                            + (1 << rank).pdep(!word).trailing_zeros() as BitIndex;
                     }
                 }, n += 1);
 
         // the last word must contain the rank-th zero bit, otherwise the rank is outside the
         // block, and thus outside the bitvector
-        block_index * BLOCK_SIZE
+        block_index as BitIndex * BLOCK_SIZE
             + index_counter
             + (1 << rank)
-                .pdep(!self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
-                .trailing_zeros() as usize
+                .pdep(!self.data[block_index * (BLOCK_SIZE / WORD_SIZE) as usize + 7])
+                .trailing_zeros() as BitIndex
     }
 
     /// Search for the superblock that contains the rank.
@@ -162,8 +162,8 @@ impl super::RsVec {
     ///   superblock in the ``select_blocks`` vector that contains the rank
     /// * `rank` - the rank to search for
     #[inline(always)]
-    pub(super) fn search_super_block0(&self, mut super_block: usize, rank: usize) -> usize {
-        let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0;
+    pub(super) fn search_super_block0(&self, mut super_block: usize, rank: BitIndex) -> usize {
+        let mut upper_bound = self.select_blocks[(rank / SELECT_BLOCK_SIZE + 1) as usize].index_0;
 
         while upper_bound - super_block > 8 {
             let middle = super_block + ((upper_bound - super_block) >> 1);
@@ -192,31 +192,31 @@ impl super::RsVec {
     /// If the rank is larger than the number of 1-bits in the bit-vector, the vector length is returned.
     #[must_use]
     #[allow(clippy::assertions_on_constants)]
-    pub fn select1(&self, mut rank: usize) -> usize {
+    pub fn select1(&self, mut rank: BitIndex) -> BitIndex {
         if rank >= self.rank1 {
             return self.len;
         }
 
-        let mut super_block =
-            self.select_blocks[rank / crate::bit_vec::fast_rs_vec::SELECT_BLOCK_SIZE].index_1;
+        let mut super_block = self.select_blocks[(rank / SELECT_BLOCK_SIZE) as usize].index_1;
 
         if self.super_blocks.len() > (super_block + 1)
-            && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
+            && ((super_block + 1) as BitIndex * SUPER_BLOCK_SIZE
+                - self.super_blocks[super_block + 1].zeros)
                 <= rank
         {
             super_block = self.search_super_block1(super_block, rank);
         }
 
-        rank -= (super_block) * SUPER_BLOCK_SIZE - self.super_blocks[super_block].zeros;
+        rank -= super_block as BitIndex * SUPER_BLOCK_SIZE - self.super_blocks[super_block].zeros;
 
         // full binary search for block that contains the rank, manually loop-unrolled, because
         // LLVM doesn't do it for us, but it gains just under 20% performance
-        let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+        let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize;
         let mut block_index = block_at_super_block;
         self.search_block1(rank, block_at_super_block, &mut block_index);
 
-        rank -= (block_index - block_at_super_block) * BLOCK_SIZE
-            - self.blocks[block_index].zeros as usize;
+        rank -= (block_index - block_at_super_block) as BitIndex * BLOCK_SIZE
+            - self.blocks[block_index].zeros as BitIndex;
 
         self.search_word_in_block1(rank, block_index)
     }
@@ -240,7 +240,7 @@ impl super::RsVec {
     #[inline(always)]
     pub(super) fn search_block1(
         &self,
-        rank: usize,
+        rank: BitIndex,
         block_at_super_block: usize,
         block_index: &mut usize,
     ) {
@@ -307,7 +307,7 @@ impl super::RsVec {
     #[inline(always)]
     pub(super) fn search_block1(
         &self,
-        rank: usize,
+        rank: BitIndex,
         block_at_super_block: usize,
         block_index: &mut usize,
     ) {
@@ -317,7 +317,7 @@ impl super::RsVec {
     #[inline(always)]
     fn search_block1_naive(
         &self,
-        rank: usize,
+        rank: BitIndex,
         block_at_super_block: usize,
         block_index: &mut usize,
     ) {
@@ -326,14 +326,14 @@ impl super::RsVec {
 
         // this code relies on the fact that BLOCKS_PER_SUPERBLOCK blocks are in one superblock
         debug_assert!(
-            SUPER_BLOCK_SIZE / BLOCK_SIZE == BLOCKS_PER_SUPERBLOCK,
+            (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize == BLOCKS_PER_SUPERBLOCK,
             "change unroll constant to {}",
             64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
         );
         unroll!(4,
-            |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
+            |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize / 2}|
                 // do not use select_unpredictable here, it degrades performance
-                if self.blocks.len() > *block_index + boundary && rank >= (*block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.blocks[*block_index + boundary].zeros as usize {
+                if self.blocks.len() > *block_index + boundary && rank >= (*block_index + boundary - block_at_super_block) as BitIndex * BLOCK_SIZE - self.blocks[*block_index + boundary].zeros as BitIndex {
                     *block_index += boundary;
                 },
             boundary /= 2);
@@ -348,7 +348,7 @@ impl super::RsVec {
     /// * `block_index` - the index of the block to search in, this is the block in the blocks
     ///   vector that contains the rank
     #[inline(always)]
-    pub(super) fn search_word_in_block1(&self, mut rank: usize, block_index: usize) -> usize {
+    pub(super) fn search_word_in_block1(&self, mut rank: BitIndex, block_index: usize) -> BitIndex {
         // linear search for word that contains the rank. Binary search is not possible here,
         // because we don't have accumulated popcounts for the words. We use pdep to find the
         // position of the rank-th zero bit in the word, if the word contains enough zeros, otherwise
@@ -356,24 +356,24 @@ impl super::RsVec {
         let mut index_counter = 0;
         debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
         unroll!(7, |n = {0}| {
-            let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
-            if (word.count_ones() as usize) <= rank {
-                rank -= word.count_ones() as usize;
+            let word = self.data[block_index * (BLOCK_SIZE / WORD_SIZE) as usize + n];
+            if (word.count_ones() as BitIndex) <= rank {
+                rank -= word.count_ones() as BitIndex;
                 index_counter += WORD_SIZE;
             } else {
-                return block_index * BLOCK_SIZE
+                return block_index as BitIndex * BLOCK_SIZE
                     + index_counter
-                    + (1 << rank).pdep(word).trailing_zeros() as usize;
+                    + (1 << rank).pdep(word).trailing_zeros() as BitIndex;
             }
         }, n += 1);
 
         // the last word must contain the rank-th zero bit, otherwise the rank is outside of the
         // block, and thus outside of the bitvector
-        block_index * BLOCK_SIZE
+        block_index as BitIndex * BLOCK_SIZE
             + index_counter
             + (1 << rank)
-                .pdep(self.data[block_index * BLOCK_SIZE / WORD_SIZE + 7])
-                .trailing_zeros() as usize
+                .pdep(self.data[block_index * (BLOCK_SIZE / WORD_SIZE) as usize + 7])
+                .trailing_zeros() as BitIndex
     }
 
     /// Search for the superblock that contains the rank.
@@ -384,14 +384,16 @@ impl super::RsVec {
     ///   superblock in the ``select_blocks`` vector that contains the rank
     /// * `rank` - the rank to search for
     #[inline(always)]
-    pub(super) fn search_super_block1(&self, mut super_block: usize, rank: usize) -> usize {
-        let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
+    pub(super) fn search_super_block1(&self, mut super_block: usize, rank: BitIndex) -> usize {
+        let mut upper_bound = self.select_blocks[(rank / SELECT_BLOCK_SIZE + 1) as usize].index_1;
 
         // binary search for superblock that contains the rank
         while upper_bound - super_block > 8 {
             let middle = super_block + ((upper_bound - super_block) >> 1);
             // using select_unpredictable does nothing here, likely because the search isn't hot
-            if ((middle + 1) * SUPER_BLOCK_SIZE - self.super_blocks[middle].zeros) <= rank {
+            if ((middle + 1) as BitIndex * SUPER_BLOCK_SIZE - self.super_blocks[middle].zeros)
+                <= rank
+            {
                 super_block = middle;
             } else {
                 upper_bound = middle;
@@ -399,7 +401,8 @@ impl super::RsVec {
         }
         // linear search for superblock that contains the rank
         while self.super_blocks.len() > (super_block + 1)
-            && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
+            && ((super_block + 1) as BitIndex * SUPER_BLOCK_SIZE
+                - self.super_blocks[super_block + 1].zeros)
                 <= rank
         {
             super_block += 1;
