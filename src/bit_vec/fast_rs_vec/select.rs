@@ -110,6 +110,7 @@ impl super::RsVec {
         );
         unroll!(4,
             |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
+                // do not use select_unpredictable here, it degrades performance
                 if self.blocks.len() > *block_index + boundary && rank >= self.blocks[*block_index + boundary].zeros as usize {
                     *block_index += boundary;
                 },
@@ -153,12 +154,12 @@ impl super::RsVec {
                 .trailing_zeros() as usize
     }
 
-    /// Search for the super block that contains the rank.
+    /// Search for the superblock that contains the rank.
     /// This function is called by the ``select0``, ``iter::select_next_0`` and ``iter::select_next_0_back`` functions.
     ///
     /// # Arguments
-    /// * `super_block` - the index of the super block to start the search from, this is the
-    ///   super block in the ``select_blocks`` vector that contains the rank
+    /// * `super_block` - the index of the superblock to start the search from, this is the
+    ///   superblock in the ``select_blocks`` vector that contains the rank
     /// * `rank` - the rank to search for
     #[inline(always)]
     pub(super) fn search_super_block0(&self, mut super_block: usize, rank: usize) -> usize {
@@ -166,6 +167,7 @@ impl super::RsVec {
 
         while upper_bound - super_block > 8 {
             let middle = super_block + ((upper_bound - super_block) >> 1);
+            // using select_unpredictable does nothing here, likely because the search isn't hot
             if self.super_blocks[middle].zeros <= rank {
                 super_block = middle;
             } else {
@@ -173,7 +175,7 @@ impl super::RsVec {
             }
         }
 
-        // linear search for super block that contains the rank
+        // linear search for superblock that contains the rank
         while self.super_blocks.len() > (super_block + 1)
             && self.super_blocks[super_block + 1].zeros <= rank
         {
@@ -330,6 +332,7 @@ impl super::RsVec {
         );
         unroll!(4,
             |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
+                // do not use select_unpredictable here, it degrades performance
                 if self.blocks.len() > *block_index + boundary && rank >= (*block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.blocks[*block_index + boundary].zeros as usize {
                     *block_index += boundary;
                 },
@@ -373,27 +376,28 @@ impl super::RsVec {
                 .trailing_zeros() as usize
     }
 
-    /// Search for the super block that contains the rank.
+    /// Search for the superblock that contains the rank.
     /// This function is called by the ``select1``, ``iter::select_next_1`` and ``iter::select_next_1_back`` functions.
     ///
     /// # Arguments
-    /// * `super_block` - the index of the super block to start the search from, this is the
-    ///   super block in the ``select_blocks`` vector that contains the rank
+    /// * `super_block` - the index of the superblock to start the search from, this is the
+    ///   superblock in the ``select_blocks`` vector that contains the rank
     /// * `rank` - the rank to search for
     #[inline(always)]
     pub(super) fn search_super_block1(&self, mut super_block: usize, rank: usize) -> usize {
         let mut upper_bound = self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1;
 
-        // binary search for super block that contains the rank
+        // binary search for superblock that contains the rank
         while upper_bound - super_block > 8 {
             let middle = super_block + ((upper_bound - super_block) >> 1);
+            // using select_unpredictable does nothing here, likely because the search isn't hot
             if ((middle + 1) * SUPER_BLOCK_SIZE - self.super_blocks[middle].zeros) <= rank {
                 super_block = middle;
             } else {
                 upper_bound = middle;
             }
         }
-        // linear search for super block that contains the rank
+        // linear search for superblock that contains the rank
         while self.super_blocks.len() > (super_block + 1)
             && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
                 <= rank
