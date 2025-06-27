@@ -23,7 +23,7 @@ fn test_random_data_rank() {
         6, 7,
     ]);
     let sample = Uniform::new(0, 2);
-    static LENGTH: BitIndex = 4 * SUPER_BLOCK_SIZE;
+    static LENGTH: u64 = 4 * SUPER_BLOCK_SIZE;
 
     for _ in 0..LENGTH {
         bv.append_bit(sample.sample(&mut rng));
@@ -46,13 +46,13 @@ fn test_random_data_rank() {
         let bit_index = rnd_index % WORD_SIZE;
 
         for v in data.iter().take(data_index) {
-            expected_rank1 += v.count_ones() as BitIndex;
-            expected_rank0 += v.count_zeros() as BitIndex;
+            expected_rank1 += v.count_ones() as u64;
+            expected_rank0 += v.count_zeros() as u64;
         }
 
         if bit_index > 0 {
-            expected_rank1 += (data[data_index] & ((1 << bit_index) - 1)).count_ones() as BitIndex;
-            expected_rank0 += (!data[data_index] & ((1 << bit_index) - 1)).count_ones() as BitIndex;
+            expected_rank1 += (data[data_index] & ((1 << bit_index) - 1)).count_ones() as u64;
+            expected_rank0 += (!data[data_index] & ((1 << bit_index) - 1)).count_ones() as u64;
         }
 
         assert_eq!(actual_rank1, expected_rank1);
@@ -205,7 +205,7 @@ fn test_only_ones_select() {
 
 #[test]
 fn random_data_select0() {
-    static LENGTH: BitIndex = 4 * SUPER_BLOCK_SIZE;
+    static LENGTH: u64 = 4 * SUPER_BLOCK_SIZE;
     let mut bv = BitVec::with_capacity(LENGTH);
     let mut rng = StdRng::from_seed([
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
@@ -231,7 +231,7 @@ fn random_data_select0() {
 
         let mut index = 0;
         loop {
-            let zeros = data[index].count_zeros() as BitIndex;
+            let zeros = data[index].count_zeros() as u64;
             if rank_counter + zeros > rnd_rank0 {
                 break;
             } else {
@@ -260,7 +260,7 @@ fn random_data_select0() {
 
 #[test]
 fn random_data_select1() {
-    static LENGTH: BitIndex = 4 * SUPER_BLOCK_SIZE;
+    static LENGTH: u64 = 4 * SUPER_BLOCK_SIZE;
     let mut bv = BitVec::with_capacity(LENGTH);
     let mut rng = StdRng::from_seed([
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
@@ -286,7 +286,7 @@ fn random_data_select1() {
 
         let mut index = 0;
         loop {
-            let ones = data[index].count_ones() as BitIndex;
+            let ones = data[index].count_ones() as u64;
             if rank_counter + ones > rnd_rank1 {
                 break;
             } else {
@@ -1254,7 +1254,7 @@ fn test_random_data_iter_both_ends() {
 // test a randomly generated bit vector for correct values in blocks
 #[test]
 fn test_block_layout() {
-    static LENGTH: BitIndex = 4 * SUPER_BLOCK_SIZE;
+    static LENGTH: u64 = 4 * SUPER_BLOCK_SIZE;
     let mut bv = BitVec::with_capacity(LENGTH);
     let mut rng = StdRng::from_seed([
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
@@ -1293,7 +1293,7 @@ fn test_block_layout() {
 // Github issue https://github.com/Cydhra/vers/issues/6 regression test
 #[test]
 fn test_iter1_regression_i6() {
-    static LENGTH: BitIndex = 4 * SUPER_BLOCK_SIZE;
+    static LENGTH: u64 = 4 * SUPER_BLOCK_SIZE;
     let mut bv = BitVec::with_capacity(LENGTH);
     let mut rng = StdRng::from_seed([
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,

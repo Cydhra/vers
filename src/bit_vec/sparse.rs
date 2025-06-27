@@ -4,7 +4,6 @@
 //! The vector is constructed from a sorted list of indices of 1-bits, or from an existing
 //! [`BitVec`](crate::BitVec).
 
-use crate::bit_vec::BitIndex;
 use crate::{BitVec, EliasFanoVec};
 
 /// A succinct representation of a sparse vector with rank and select support.
@@ -47,7 +46,7 @@ use crate::{BitVec, EliasFanoVec};
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SparseRSVec {
     vec: EliasFanoVec,
-    len: BitIndex,
+    len: u64,
 }
 
 impl SparseRSVec {
@@ -254,7 +253,6 @@ impl<'a> From<&'a BitVec> for SparseRSVec {
 #[cfg(test)]
 mod tests {
     use super::SparseRSVec;
-    use crate::bit_vec::BitIndex;
     use crate::BitVec;
     use rand::prelude::StdRng;
     use rand::{Rng, SeedableRng};
@@ -385,7 +383,7 @@ mod tests {
 
     #[test]
     fn test_fuzzy() {
-        const L: BitIndex = 100_000;
+        const L: u64 = 100_000;
         let mut bv = BitVec::from_zeros(L);
         let mut rng = StdRng::from_seed([0; 32]);
 
@@ -397,9 +395,9 @@ mod tests {
 
         let mut ones = 0;
         for i in 0..L {
-            assert_eq!(bv.get(i), sparse.get(i as u64));
-            assert_eq!(ones, sparse.rank1(i as u64));
-            assert_eq!(i as u64 - ones, sparse.rank0(i as u64));
+            assert_eq!(bv.get(i), sparse.get(i));
+            assert_eq!(ones, sparse.rank1(i));
+            assert_eq!(i - ones, sparse.rank0(i));
             if bv.get(i) == Some(1) {
                 assert_eq!(i, sparse.select1(ones as usize).try_into().unwrap());
                 ones += 1;

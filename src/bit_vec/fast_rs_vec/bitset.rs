@@ -3,7 +3,7 @@
 //! It only exists with the `simd` feature enabled, and since it is slower for sparse vectors,
 //! it is not used as a replacement for the `iter1`/`iter0` methods.
 
-use crate::bit_vec::BitIndex;
+use crate::bit_vec::u64;
 use crate::RsVec;
 use std::mem::size_of;
 
@@ -76,7 +76,7 @@ impl RsVec {
 /// [`SelectIter`]: super::SelectIter
 pub struct BitSetIter<'a, const ZERO: bool> {
     vec: &'a RsVec,
-    base: BitIndex,
+    base: u64,
     offsets: [u32; VECTOR_SIZE as usize],
     content_len: u8,
     cursor: u8,
@@ -130,7 +130,7 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
 }
 
 impl<const ZERO: bool> Iterator for BitSetIter<'_, ZERO> {
-    type Item = BitIndex;
+    type Item = u64;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.base >= self.vec.len() {

@@ -2,7 +2,7 @@
 //! of `BitVec` but applies a bit-mask during the operation. The struct is created through
 //! [`BitVec::mask_xor`], [`BitVec::mask_and`], [`BitVec::mask_or`], or [`BitVec::mask_custom`].
 
-use super::{BitIndex, WORD_SIZE};
+use super::WORD_SIZE;
 use crate::BitVec;
 
 /// A bit vector that is masked with another bit vector via a masking function. Offers the same
@@ -48,7 +48,7 @@ where
     /// If the position is larger than the length of the vector, None is returned.
     #[inline]
     #[must_use]
-    pub fn get(&self, pos: BitIndex) -> Option<u64> {
+    pub fn get(&self, pos: u64) -> Option<u64> {
         if pos >= self.vec.len {
             None
         } else {
@@ -67,7 +67,7 @@ where
     /// [`get`]: MaskedBitVec::get
     #[inline]
     #[must_use]
-    pub fn get_unchecked(&self, pos: BitIndex) -> u64 {
+    pub fn get_unchecked(&self, pos: u64) -> u64 {
         ((self.bin_op)(
             self.vec.data[(pos / WORD_SIZE) as usize],
             self.mask.data[(pos / WORD_SIZE) as usize],
@@ -79,7 +79,7 @@ where
     /// If the position is larger than the length of the vector, None is returned.
     #[inline]
     #[must_use]
-    pub fn is_bit_set(&self, pos: BitIndex) -> Option<bool> {
+    pub fn is_bit_set(&self, pos: u64) -> Option<bool> {
         if pos >= self.vec.len {
             None
         } else {
@@ -97,7 +97,7 @@ where
     /// [`is_bit_set`]: MaskedBitVec::is_bit_set
     #[inline]
     #[must_use]
-    pub fn is_bit_set_unchecked(&self, pos: BitIndex) -> bool {
+    pub fn is_bit_set_unchecked(&self, pos: u64) -> bool {
         self.get_unchecked(pos) != 0
     }
 
@@ -108,7 +108,7 @@ where
     /// If the length of the query is larger than 64, None is returned.
     #[inline]
     #[must_use]
-    pub fn get_bits(&self, pos: BitIndex, len: u64) -> Option<u64> {
+    pub fn get_bits(&self, pos: u64, len: u64) -> Option<u64> {
         if len > WORD_SIZE || len == 0 {
             return None;
         }
@@ -139,7 +139,7 @@ where
     #[allow(clippy::inline_always)]
     #[allow(clippy::comparison_chain)] // rust-clippy #5354
     #[inline]
-    pub fn get_bits_unchecked(&self, pos: BitIndex, len: u64) -> u64 {
+    pub fn get_bits_unchecked(&self, pos: u64, len: u64) -> u64 {
         debug_assert!(len <= WORD_SIZE);
         let partial_word = (self.bin_op)(
             self.vec.data[(pos / WORD_SIZE) as usize],
@@ -174,7 +174,7 @@ where
     #[inline]
     #[must_use]
     #[allow(clippy::missing_panics_doc)] // can't panic because of bounds check
-    pub fn count_ones(&self) -> BitIndex {
+    pub fn count_ones(&self) -> u64 {
         let mut ones = self
             .iter_limbs()
             .take((self.vec.len / WORD_SIZE) as usize)
