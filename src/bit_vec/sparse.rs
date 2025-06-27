@@ -4,6 +4,7 @@
 //! The vector is constructed from a sorted list of indices of 1-bits, or from an existing
 //! [`BitVec`](crate::BitVec).
 
+use crate::bit_vec::BitIndex;
 use crate::{BitVec, EliasFanoVec};
 
 /// A succinct representation of a sparse vector with rank and select support.
@@ -46,7 +47,7 @@ use crate::{BitVec, EliasFanoVec};
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SparseRSVec {
     vec: EliasFanoVec,
-    len: u64,
+    len: BitIndex,
 }
 
 impl SparseRSVec {
@@ -253,6 +254,7 @@ impl<'a> From<&'a BitVec> for SparseRSVec {
 #[cfg(test)]
 mod tests {
     use super::SparseRSVec;
+    use crate::bit_vec::BitIndex;
     use crate::BitVec;
     use rand::prelude::StdRng;
     use rand::{Rng, SeedableRng};
@@ -383,7 +385,7 @@ mod tests {
 
     #[test]
     fn test_fuzzy() {
-        const L: usize = 100_000;
+        const L: BitIndex = 100_000;
         let mut bv = BitVec::from_zeros(L);
         let mut rng = StdRng::from_seed([0; 32]);
 
