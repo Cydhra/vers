@@ -158,8 +158,8 @@ fn test_lookup_extreme_pop() {
 #[test]
 fn test_fwd_fuzzy() {
     // we're fuzzing forward search a bit
-    const L: usize = 1000;
-    const L_BITS: usize = L * size_of::<u64>() * 8;
+    const L: u64 = 1000;
+    const L_BITS: u64 = L * size_of::<u64>() * 8;
 
     // we generate a vector using a seeded random generator and check that every query works as expected
     let mut rng = StdRng::from_seed([0; 32]);
@@ -170,7 +170,7 @@ fn test_fwd_fuzzy() {
     }
 
     // pre-calculate all absolute excess values
-    let mut excess_values = vec![0i16; L_BITS];
+    let mut excess_values = vec![0i16; L_BITS as usize];
     let mut excess = 0;
     for (idx, bit) in bit_vec.iter().enumerate() {
         if bit == 1 {
@@ -188,7 +188,7 @@ fn test_fwd_fuzzy() {
     for relative_excess in [-3, -2, -1, 0, 1, 2, 3] {
         for node_handle in bp.vec.iter1() {
             let absolute_excess = bp.excess(node_handle) + relative_excess;
-            let expected = excess_values[node_handle + 1..]
+            let expected = excess_values[(node_handle + 1) as usize..]
                 .iter()
                 .position(|&excess| excess as i64 == absolute_excess)
                 .map(|i| i + node_handle + 1);

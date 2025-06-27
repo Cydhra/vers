@@ -26,7 +26,7 @@ impl<const BLOCK_SIZE: usize> BpBuilder<BLOCK_SIZE> {
     pub fn with_capacity(capacity: u64) -> Self {
         Self {
             excess: 0,
-            bit_vec: BitVec::with_capacity((capacity * 2) as usize),
+            bit_vec: BitVec::with_capacity(capacity * 2),
         }
     }
 }

@@ -41,12 +41,12 @@ pub(crate) struct MinMaxTree {
 }
 
 impl MinMaxTree {
-    pub(crate) fn excess_tree(bit_vec: &BitVec, block_size: usize) -> Self {
+    pub(crate) fn excess_tree(bit_vec: &BitVec, block_size: u64) -> Self {
         if bit_vec.is_empty() {
             return Self::default();
         }
 
-        let num_leaves = bit_vec.len().div_ceil(block_size);
+        let num_leaves = bit_vec.len().div_ceil(block_size) as usize;
         let num_internal_nodes = max(1, (1 << (num_leaves as f64).log2().ceil() as usize) - 1);
 
         let mut nodes = vec![ExcessNode::default(); num_leaves + num_internal_nodes];
@@ -57,7 +57,7 @@ impl MinMaxTree {
         // bottom up construction
         for i in 0..bit_vec.len() {
             if i > 0 && i % block_size == 0 {
-                nodes[num_internal_nodes + i / block_size - 1] = ExcessNode {
+                nodes[num_internal_nodes + (i / block_size) as usize - 1] = ExcessNode {
                     total: total_excess,
                     min: min_excess,
                     max: max_excess,
