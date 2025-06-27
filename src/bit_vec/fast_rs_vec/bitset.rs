@@ -3,11 +3,12 @@
 //! It only exists with the `simd` feature enabled, and since it is slower for sparse vectors,
 //! it is not used as a replacement for the `iter1`/`iter0` methods.
 
+use crate::bit_vec::BitIndex;
 use crate::RsVec;
 use std::mem::size_of;
 
 /// The number of bits in a RsVec that can be processed by AVX instructions at once.
-const VECTOR_SIZE: usize = 16;
+const VECTOR_SIZE: u64 = 16;
 
 // add iterator functions to RsVec
 impl RsVec {
@@ -75,8 +76,8 @@ impl RsVec {
 /// [`SelectIter`]: super::SelectIter
 pub struct BitSetIter<'a, const ZERO: bool> {
     vec: &'a RsVec,
-    base: usize,
-    offsets: [u32; VECTOR_SIZE],
+    base: BitIndex,
+    offsets: [u32; VECTOR_SIZE as usize],
     content_len: u8,
     cursor: u8,
 }
@@ -86,7 +87,7 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
         let mut iter = Self {
             vec,
             base: 0,
-            offsets: [0; VECTOR_SIZE],
+            offsets: [0; VECTOR_SIZE as usize],
             content_len: 0,
             cursor: 0,
         };
@@ -129,7 +130,7 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
 }
 
 impl<const ZERO: bool> Iterator for BitSetIter<'_, ZERO> {
-    type Item = usize;
+    type Item = BitIndex;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.base >= self.vec.len() {
