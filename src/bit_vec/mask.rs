@@ -167,7 +167,7 @@ where
     #[inline]
     #[must_use]
     pub fn count_zeros(&self) -> u64 {
-        self.vec.len as u64 - self.count_ones()
+        self.vec.len - self.count_ones()
     }
 
     /// Return the number of ones in the masked bit vector.

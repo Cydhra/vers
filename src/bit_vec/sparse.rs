@@ -80,7 +80,7 @@ impl SparseRSVec {
     /// - `input`: The input `BitVec` to compress.
     #[must_use]
     pub fn from_bitvec(input: &BitVec) -> Self {
-        let len = input.len() as u64;
+        let len = input.len();
         Self::new(
             input
                 .iter()
@@ -127,7 +127,7 @@ impl SparseRSVec {
     /// [`get`]: #method.get
     #[must_use]
     pub fn from_bitvec_inverted(input: &BitVec) -> Self {
-        let len = input.len() as u64;
+        let len = input.len();
         Self::new(
             input
                 .iter()

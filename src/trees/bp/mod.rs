@@ -336,7 +336,7 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
                     .unwrap(),
                 relative_excess,
             ) {
-                return Ok(block_boundary + i as u64 + idx as u64);
+                return Ok(block_boundary + i as u64 + idx);
             }
         }
 

@@ -1056,7 +1056,7 @@ impl BitVec {
     /// [`count_ones`]: BitVec::count_ones
     #[must_use]
     pub fn count_zeros(&self) -> u64 {
-        self.len as u64 - self.count_ones()
+        self.len - self.count_ones()
     }
 
     /// Mask this bit vector with another bitvector using bitwise or. The mask is applied lazily

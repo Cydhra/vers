@@ -298,10 +298,10 @@ impl EliasFanoVec {
                     if cursor.unsigned_abs() == BIN_SEARCH_THRESHOLD {
                         let block_end = if UPWARD {
                             self.upper_vec.select0((query_upper as i64 + 1) as u64)
-                                - query_upper as u64
+                                - query_upper
                                 - 2
                         } else {
-                            self.upper_vec.select0((query_upper as i64) as u64) - query_upper as u64
+                            self.upper_vec.select0((query_upper as i64) as u64) - query_upper
                         };
 
                         let mut upper_bound;
@@ -387,7 +387,7 @@ impl EliasFanoVec {
                     // the loop ended because the element at cursor has a larger upper index,
                     // so we return the previous element count
                     // (element at curser - 1, +1 because count is not 0 based)
-                    start_index_lower as u64 + cursor as u64
+                    start_index_lower + cursor as u64
                 } else {
                     (query_masked_upper | lower_candidate) + self.universe_zero
                 };
@@ -398,7 +398,7 @@ impl EliasFanoVec {
             // all elements in the 1-block are larger than the query,
             // so we return the last element count
             // (start_index_lower - 1, +1 because count is not 0 based)
-            start_index_lower as u64
+            start_index_lower
         } else {
             self.get_unchecked((start_index_lower as i64 - direction) as u64)
         }
@@ -582,7 +582,7 @@ impl EliasFanoVec {
         let upper = value >> self.lower_len;
         let lower = value & ((1 << self.lower_len) - 1);
         let query_begin = self.upper_vec.select0(upper);
-        let lower_index = query_begin as u64 - upper;
+        let lower_index = query_begin - upper;
 
         self.search_element_in_block::<true, true>(
             query_begin,
