@@ -37,9 +37,10 @@ fn test_wavelet_encoding_randomized() {
         let wavelet_prefix_counting =
             WaveletMatrix::from_bit_vec_pc(&BitVec::pack_sequence_u8(&data, 8), 8);
 
-        assert_eq!(wavelet.len(), data.len());
+        assert_eq!(wavelet.len(), data.len() as u64);
 
         for (i, v) in data.iter().enumerate() {
+            let i = i as u64;
             assert_eq!(wavelet.get_u64_unchecked(i), *v as u64);
             assert_eq!(wavelet_from_slice.get_u64_unchecked(i), *v as u64);
             assert_eq!(wavelet_prefix_counting.get_u64_unchecked(i), *v as u64);
@@ -138,7 +139,7 @@ fn test_rank_randomized() {
         let symbol_bit_vec = BitVec::pack_sequence_u8(&[symbol], 8);
         let mut rank = 0;
         for (i, v) in data.iter().enumerate() {
-            assert_eq!(wavelet.rank_unchecked(i, &symbol_bit_vec), rank);
+            assert_eq!(wavelet.rank_unchecked(i as u64, &symbol_bit_vec), rank);
             if *v == symbol {
                 rank += 1;
             }
@@ -230,10 +231,10 @@ fn test_quantile() {
 
     for (i, v) in sequence.iter().enumerate() {
         assert_eq!(
-            wavelet.quantile(0..10, i),
+            wavelet.quantile(0..10, i as u64),
             Some(BitVec::pack_sequence_u8(&[*v as u8], 4))
         );
-        assert_eq!(wavelet.quantile_u64(0..10, i), Some(*v));
+        assert_eq!(wavelet.quantile_u64(0..10, i as u64), Some(*v));
     }
 
     assert_eq!(wavelet.quantile(0..10, 10), None);
@@ -269,8 +270,8 @@ fn test_quantile_randomized() {
     let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
 
     for _ in 0..1000 {
-        let range_i = rng.gen_range(0..data.len());
-        let range_j = rng.gen_range(0..data.len());
+        let range_i = rng.gen_range(0..data.len() as u64);
+        let range_j = rng.gen_range(0..data.len() as u64);
         let range = min(range_i, range_j)..max(range_i, range_j);
 
         let k = if range.is_empty() {
@@ -279,7 +280,7 @@ fn test_quantile_randomized() {
             rng.gen_range(range.clone()) - range.start
         };
 
-        let mut range_data = data[range.clone()].to_vec();
+        let mut range_data = data[range.start as usize..range.end as usize].to_vec();
         range_data.sort_unstable();
 
         assert_eq!(
@@ -287,7 +288,7 @@ fn test_quantile_randomized() {
             if range.is_empty() {
                 None
             } else {
-                Some(range_data[k] as u64)
+                Some(range_data[k as usize] as u64)
             }
         );
         assert_eq!(
