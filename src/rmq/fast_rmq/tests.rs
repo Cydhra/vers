@@ -45,7 +45,7 @@ fn test_fast_rmq() {
         numbers_vec.push(i as u64);
     }
 
-    let rmq = FastRmq::from_vec(numbers_vec.clone());
+    let rmq = SmallRmq::from_vec(numbers_vec.clone());
 
     for i in 0..L {
         for j in i..L {
@@ -70,7 +70,7 @@ fn test_fast_rmq_unsorted() {
         numbers_vec.push(rng.next_u64());
     }
 
-    let rmq = FastRmq::from_vec(numbers_vec.clone());
+    let rmq = SmallRmq::from_vec(numbers_vec.clone());
 
     for i in 0..L {
         for j in i..L {
@@ -88,7 +88,7 @@ fn test_fast_rmq_unsorted() {
 
 #[test]
 fn test_iter() {
-    let rmq = FastRmq::from_vec(vec![1, 2, 3, 4, 5]);
+    let rmq = SmallRmq::from_vec(vec![1, 2, 3, 4, 5]);
     let mut iter = rmq.iter();
     assert_eq!(iter.next(), Some(&1));
     assert_eq!(iter.next(), Some(&2));
@@ -100,7 +100,7 @@ fn test_iter() {
 
 #[test]
 fn test_range_operators() {
-    let rmq = FastRmq::from_vec(vec![5, 4, 3, 2, 1]);
+    let rmq = SmallRmq::from_vec(vec![5, 4, 3, 2, 1]);
     assert_eq!(rmq.range_min(0, 3), 3);
     assert_eq!(rmq.range_min_with_range(0..3), 2);
     assert_eq!(rmq.range_min_with_range(0..=3), 3);
@@ -108,7 +108,7 @@ fn test_range_operators() {
 
 #[test]
 fn test_empty_rmq() {
-    let _rmq = FastRmq::from_vec(Vec::<u64>::new());
+    let _rmq = SmallRmq::from_vec(Vec::<u64>::new());
     // calling functions on an empty rmq will panic because the upper bound is inclusive, but there
     // is no valid index in an empty array, so we can't test anything else
 }
