@@ -1374,7 +1374,7 @@ impl Eq for BitVec {}
 
 impl Hash for BitVec {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_usize(self.len);
+        state.write_u64(self.len);
         if self.len > 0 {
             self.data[0..self.data.len() - 1]
                 .iter()
