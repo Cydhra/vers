@@ -35,7 +35,7 @@ fn select_worst_case(b: &mut Criterion) {
         // construct a vector with only one select block and put its last one bit at the end
         // of the vector
 
-        let mut bit_vec = BitVec::with_capacity(length / 64);
+        let mut bit_vec = BitVec::with_capacity(length as u64 / 64);
         for _ in 0..(1usize << 13) / 64 - 1 {
             bit_vec.append_word(u64::MAX);
         }

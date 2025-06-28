@@ -11,7 +11,7 @@ use vers_vecs::trees::{Tree, TreeBuilder};
 
 mod common;
 
-const BLOCK_SIZE: usize = 1024;
+const BLOCK_SIZE: u64 = 1024;
 
 // TODO this function has nlogn runtime, which is a bit too much for the largest trees
 fn generate_tree<R: Rng>(rng: &mut R, nodes: u64) -> BpTree<BLOCK_SIZE> {
@@ -107,7 +107,7 @@ fn bench_navigation(b: &mut Criterion) {
         let mut rng = StdRng::from_seed([0; 32]);
 
         let bp = generate_tree(&mut rng, l as u64);
-        let node_handles = (0..l).map(|i| bp.node_handle(i)).collect::<Vec<_>>();
+        let node_handles = (0..l as u64).map(|i| bp.node_handle(i)).collect::<Vec<_>>();
 
         group.bench_with_input(BenchmarkId::new("parent", l), &l, |b, _| {
             b.iter_batched(

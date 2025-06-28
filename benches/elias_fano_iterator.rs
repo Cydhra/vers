@@ -29,7 +29,7 @@ fn bench_ef(b: &mut Criterion) {
 
                 let start = Instant::now();
                 while i < iters {
-                    black_box(ef_vec.get_unchecked(i as usize % l));
+                    black_box(ef_vec.get_unchecked(i % l as u64));
                     i += 1;
                 }
                 time += start.elapsed();
