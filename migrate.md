@@ -8,3 +8,4 @@ The following structures and functions were renamed
 - `SparseRSVec` to `SparseRsVec`
 - `FastRmq` to `SmallRmq`
 - `BinaryRmq` to `SparseRmq`
+- `BitVec::from_bits` to `BitVec::from_bits_u8`

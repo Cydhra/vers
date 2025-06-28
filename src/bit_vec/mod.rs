@@ -29,7 +29,7 @@ pub type BitMask<'s, 'b> = MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>;
 /// The bit vector has a wide range of constructors that allow for easy creation from various
 /// sources.
 /// Among them are constructors for creating an empty vector ([`BitVec::new`]),
-/// creating one from single bits of various integer types ([`BitVec::from_bits`] and variations),
+/// creating one from single bits of various integer types ([`BitVec::from_bits_u8`] and variations),
 /// creating limbs from u64 values directly ([`BitVec::from_limbs`] and variations),
 /// or packing a sequence of numerical values into a dense bit sequence
 /// ([`BitVec::pack_sequence_u64`] and variations).
@@ -114,7 +114,7 @@ impl BitVec {
     /// use vers_vecs::BitVec;
     ///
     /// let bits: &[u8] = &[1, 0, 1, 1, 1, 1];
-    /// let bv = BitVec::from_bits(&bits);
+    /// let bv = BitVec::from_bits_u8(&bits);
     ///
     /// assert_eq!(bv.len(), 6);
     /// assert_eq!(bv.get_bits(0, 6), Some(0b111101u64));
@@ -125,7 +125,7 @@ impl BitVec {
     /// [`from_bits_u64`]: BitVec::from_bits_u64
     /// [`from_bits_iter`]: BitVec::from_bits_iter
     #[must_use]
-    pub fn from_bits(bits: &[u8]) -> Self {
+    pub fn from_bits_u8(bits: &[u8]) -> Self {
         let mut bv = Self::with_capacity(bits.len() as u64);
         bits.iter().for_each(|&b| bv.append_bit(b.into()));
         bv
@@ -136,9 +136,9 @@ impl BitVec {
     /// bit vector.
     /// All other bits are ignored.
     ///
-    /// See also: [`from_bits`], [`from_bits_u32`], [`from_bits_u64`], [`from_bits_iter`]
+    /// See also: [`from_bits_u8`], [`from_bits_u32`], [`from_bits_u64`], [`from_bits_iter`]
     ///
-    /// [`from_bits`]: BitVec::from_bits
+    /// [`from_bits_u8`]: BitVec::from_bits_u8
     /// [`from_bits_u32`]: BitVec::from_bits_u32
     /// [`from_bits_u64`]: BitVec::from_bits_u64
     /// [`from_bits_iter`]: BitVec::from_bits_iter
@@ -154,9 +154,9 @@ impl BitVec {
     /// bit vector.
     /// All other bits are ignored.
     ///
-    /// See also: [`from_bits`], [`from_bits_u16`], [`from_bits_u64`], [`from_bits_iter`]
+    /// See also: [`from_bits_u8`], [`from_bits_u16`], [`from_bits_u64`], [`from_bits_iter`]
     ///
-    /// [`from_bits`]: BitVec::from_bits
+    /// [`from_bits_u8`]: BitVec::from_bits_u8
     /// [`from_bits_u16`]: BitVec::from_bits_u16
     /// [`from_bits_u64`]: BitVec::from_bits_u64
     /// [`from_bits_iter`]: BitVec::from_bits_iter
@@ -172,9 +172,9 @@ impl BitVec {
     /// bit vector.
     /// All other bits are ignored.
     ///
-    /// See also: [`from_bits`], [`from_bits_u16`], [`from_bits_u32`], [`from_bits_iter`]
+    /// See also: [`from_bits_u8`], [`from_bits_u16`], [`from_bits_u32`], [`from_bits_iter`]
     ///
-    /// [`from_bits`]: BitVec::from_bits
+    /// [`from_bits_u8`]: BitVec::from_bits_u8
     /// [`from_bits_u16`]: BitVec::from_bits_u16
     /// [`from_bits_u32`]: BitVec::from_bits_u32
     /// [`from_bits_iter`]: BitVec::from_bits_iter
@@ -191,7 +191,7 @@ impl BitVec {
     /// All other bits are ignored.
     /// The iterator must yield values that can be converted into u64 values.
     ///
-    /// See also: [`from_bits`], [`from_bits_u16`], [`from_bits_u32`], [`from_bits_u64`]
+    /// See also: [`from_bits_u8`], [`from_bits_u16`], [`from_bits_u32`], [`from_bits_u64`]
     ///
     /// # Example
     /// ```rust
@@ -208,7 +208,7 @@ impl BitVec {
     /// assert_eq!(bv, bv2);
     /// ```
     ///
-    /// [`from_bits`]: BitVec::from_bits
+    /// [`from_bits_u8`]: BitVec::from_bits_u8
     /// [`from_bits_u16`]: BitVec::from_bits_u16
     /// [`from_bits_u32`]: BitVec::from_bits_u32
     /// [`from_bits_u64`]: BitVec::from_bits_u64
@@ -517,7 +517,7 @@ impl BitVec {
     /// ```rust
     /// use vers_vecs::BitVec;
     ///
-    /// let mut bv = BitVec::from_bits(&[1, 0, 1, 1, 1, 1]);
+    /// let mut bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
     /// bv.drop_last(3);
     ///
     /// assert_eq!(bv.len(), 3);
@@ -776,7 +776,7 @@ impl BitVec {
     /// ```rust
     /// use vers_vecs::BitVec;
     ///
-    /// let mut bv = BitVec::from_bits(&[1, 0, 1, 1, 1, 1]);
+    /// let mut bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
     /// bv.flip_bit(1);
     ///
     /// assert_eq!(bv.len(), 6);
@@ -815,7 +815,7 @@ impl BitVec {
     /// ```rust
     /// use vers_vecs::BitVec;
     ///
-    /// let bv = BitVec::from_bits(&[1, 0, 1, 1, 1, 1]);
+    /// let bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
     ///
     /// assert_eq!(bv.get(1), Some(0));
     /// assert_eq!(bv.get(2), Some(1));
@@ -853,7 +853,7 @@ impl BitVec {
     /// ```rust
     /// use vers_vecs::BitVec;
     ///
-    /// let mut bv = BitVec::from_bits(&[1, 0, 1, 1, 1, 1]);
+    /// let mut bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
     /// bv.set(1, 1).unwrap();
     ///
     /// assert_eq!(bv.len(), 6);
@@ -899,7 +899,7 @@ impl BitVec {
     /// ```rust
     /// use vers_vecs::BitVec;
     ///
-    /// let bv = BitVec::from_bits(&[1, 0, 1, 1, 1, 1]);
+    /// let bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
     ///
     /// assert!(!bv.is_bit_set(1).unwrap());
     /// assert!(bv.is_bit_set(2).unwrap());
