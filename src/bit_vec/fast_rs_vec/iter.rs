@@ -162,7 +162,7 @@ macro_rules! gen_iter_impl {
                     return None;
                 }
 
-                let mut super_block = self.vec.select_blocks[rank / SELECT_BLOCK_SIZE].index_0;
+                let mut super_block = self.vec.select_blocks[(rank / SELECT_BLOCK_SIZE) as usize].index_0;
                 let mut block_index = 0;
 
                 if (self.vec.super_blocks[self.last_super_block_back].zeros as u64) < rank
@@ -188,7 +188,7 @@ macro_rules! gen_iter_impl {
 
                 // if the block index is not zero, we already found the block, and need only update the word
                 if block_index == 0 {
-                    block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+                    block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize;
                     self.vec.search_block0(rank, &mut block_index);
 
                     self.last_block_back = block_index;
@@ -208,54 +208,54 @@ macro_rules! gen_iter_impl {
                     return None;
                 }
 
-                let mut super_block = self.vec.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
+                let mut super_block = self.vec.select_blocks[(rank / SELECT_BLOCK_SIZE) as usize].index_1;
                 let mut block_index = 0;
 
                 // check if the last super block still contains the rank, and if yes, we don't need to search
                 if self.vec.super_blocks.len() > (self.last_super_block + 1)
-                    && (self.last_super_block + 1) * SUPER_BLOCK_SIZE
+                    && (self.last_super_block + 1) as u64 * SUPER_BLOCK_SIZE
                         - self.vec.super_blocks[self.last_super_block + 1].zeros as u64
                         > rank
                 {
                     // instantly jump to the last searched position
                     super_block = self.last_super_block;
-                    let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
-                    rank -= super_block * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
+                    let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize;
+                    rank -= super_block as u64 * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
 
                     // check if current block contains the one and if yes, we don't need to search
                     // this is true IF the last_block is either the last block in a super block,
                     // in which case it must be this block, because we know the rank is within the super block,
                     // OR if the next block has a rank higher than the current rank
-                    if self.last_block % (SUPER_BLOCK_SIZE / BLOCK_SIZE) == 15
+                    if self.last_block as u64 % (SUPER_BLOCK_SIZE / BLOCK_SIZE) == 15
                         || self.vec.blocks.len() > self.last_block + 1
-                            && (self.last_block + 1 - block_at_super_block) * BLOCK_SIZE
+                            && (self.last_block + 1 - block_at_super_block) as u64 * BLOCK_SIZE
                                 - self.vec.blocks[self.last_block + 1].zeros as u64
                                 > rank
                     {
                         // instantly jump to the last searched position
                         block_index = self.last_block;
-                        let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
-                        rank -= (block_index - block_at_super_block) * BLOCK_SIZE
+                        let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize;
+                        rank -= (block_index - block_at_super_block) as u64 * BLOCK_SIZE
                             - self.vec.blocks[block_index].zeros as u64;
                     }
                 } else {
                     super_block = self.vec.search_super_block1(super_block, rank);
 
                     self.last_super_block = super_block;
-                    rank -= super_block * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
+                    rank -= super_block as u64 * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
                 }
 
                 // if the block index is not zero, we already found the block, and need only update the word
                 if block_index == 0 {
                     // full binary search for block that contains the rank, manually loop-unrolled, because
                     // LLVM doesn't do it for us, but it gains just under 20% performance
-                    let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+                    let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize;
                     block_index = block_at_super_block;
                     self.vec
                         .search_block1(rank, block_at_super_block, &mut block_index);
 
                     self.last_block = block_index;
-                    rank -= (block_index - block_at_super_block) * BLOCK_SIZE
+                    rank -= (block_index - block_at_super_block) as u64 * BLOCK_SIZE
                         - self.vec.blocks[block_index].zeros as u64;
                 }
 
@@ -272,50 +272,50 @@ macro_rules! gen_iter_impl {
                     return None;
                 }
 
-                let mut super_block = self.vec.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
+                let mut super_block = self.vec.select_blocks[(rank / SELECT_BLOCK_SIZE) as usize].index_1;
                 let mut block_index = 0;
 
                 // check if the last super block still contains the rank, and if yes, we don't need to search
-                if (self.last_super_block_back) * SUPER_BLOCK_SIZE
+                if self.last_super_block_back as u64 * SUPER_BLOCK_SIZE
                         - (self.vec.super_blocks[self.last_super_block_back].zeros as u64)
                         < rank
                 {
                     // instantly jump to the last searched position
                     super_block = self.last_super_block_back;
-                    let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
-                    rank -= super_block * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
+                    let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize;
+                    rank -= super_block as u64 * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
 
                     // check if current block contains the one and if yes, we don't need to search
                     // this is true IF the ones before the last block are less than the rank,
                     // since the block before then can't contain it
-                    if (self.last_block_back - block_at_super_block) * BLOCK_SIZE
+                    if (self.last_block_back - block_at_super_block) as u64 * BLOCK_SIZE
                         - self.vec.blocks[self.last_block_back].zeros as u64
                             <= rank
                     {
                         // instantly jump to the last searched position
                         block_index = self.last_block_back;
-                        let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
-                        rank -= (block_index - block_at_super_block) * BLOCK_SIZE
+                        let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize;
+                        rank -= (block_index - block_at_super_block) as u64 * BLOCK_SIZE
                             - self.vec.blocks[block_index].zeros as u64;
                     }
                 } else {
                     super_block = self.vec.search_super_block1(super_block, rank);
 
                     self.last_super_block_back = super_block;
-                    rank -= super_block * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
+                    rank -= super_block as u64 * SUPER_BLOCK_SIZE - self.vec.super_blocks[super_block].zeros;
                 }
 
                 // if the block index is not zero, we already found the block, and need only update the word
                 if block_index == 0 {
                     // full binary search for block that contains the rank, manually loop-unrolled, because
                     // LLVM doesn't do it for us, but it gains just under 20% performance
-                    let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+                    let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize;
                     block_index = block_at_super_block;
                     self.vec
                         .search_block1(rank, block_at_super_block, &mut block_index);
 
                     self.last_block_back = block_index;
-                    rank -= (block_index - block_at_super_block) * BLOCK_SIZE
+                    rank -= (block_index - block_at_super_block) as u64 * BLOCK_SIZE
                         - self.vec.blocks[block_index].zeros as u64;
                 }
 
@@ -331,11 +331,11 @@ macro_rules! gen_iter_impl {
             /// implementation in the iterator impl.
             pub(super) fn advance_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
                 if self.len() >= n {
-                    self.next_rank += n;
+                    self.next_rank += n as u64;
                     Ok(())
                 } else {
                     let len = self.len();
-                    self.next_rank += len;
+                    self.next_rank += len as u64;
                     Err(NonZeroUsize::new(n - len).unwrap())
                 }
             }
@@ -347,12 +347,13 @@ macro_rules! gen_iter_impl {
             /// As soon as it is stabilized, this method will be removed and replaced with a custom
             /// implementation in the double ended iterator impl.
             pub(super) fn advance_back_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
+                // TODO self.len() cannot work if sizeof(usize) < sizeof(u64)
                 if self.len() >= n {
-                    self.next_rank_back = self.next_rank_back.map(|x| x - n);
+                    self.next_rank_back = self.next_rank_back.map(|x| x - n as u64);
                     Ok(())
                 } else {
                     let len = self.len();
-                    self.next_rank_back = self.next_rank_back.map(|x| x - len);
+                    self.next_rank_back = self.next_rank_back.map(|x| x - len as u64);
                     Err(NonZeroUsize::new(n - len).unwrap())
                 }
             }

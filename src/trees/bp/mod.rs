@@ -323,18 +323,20 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
             }
         }
 
-        for i in (block_boundary..lookup_boundary)
+        // lookup_boundary - block_boundary is smaller than a block, so casting to usize cannot
+        // truncate
+        for i in (0..(lookup_boundary - block_boundary) as usize)
             .step_by(LOOKUP_BLOCK_SIZE as usize)
             .rev()
         {
             if let Ok(idx) = process_block_bwd(
                 self.vec
-                    .get_bits_unchecked(i, LOOKUP_BLOCK_SIZE)
+                    .get_bits_unchecked(block_boundary + i as u64, LOOKUP_BLOCK_SIZE)
                     .try_into()
                     .unwrap(),
                 relative_excess,
             ) {
-                return Ok(i + idx as u64);
+                return Ok(block_boundary + i as u64 + idx as u64);
             }
         }
 
@@ -809,7 +811,7 @@ impl<'a, const BLOCK_SIZE: u64, const FORWARD: bool> ChildrenIter<'a, BLOCK_SIZE
 impl<const BLOCK_SIZE: u64, const FORWARD: bool> Iterator
     for ChildrenIter<'_, BLOCK_SIZE, FORWARD>
 {
-    type Item = usize;
+    type Item = u64;
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current_sibling?;

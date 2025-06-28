@@ -6,12 +6,12 @@ use crate::BitVec;
 /// [`TreeBuilder`].
 ///
 /// [`BpTree`]: BpTree
-pub struct BpBuilder<const BLOCK_SIZE: usize = DEFAULT_BLOCK_SIZE> {
+pub struct BpBuilder<const BLOCK_SIZE: u64 = DEFAULT_BLOCK_SIZE> {
     excess: i64,
     bit_vec: BitVec,
 }
 
-impl<const BLOCK_SIZE: usize> BpBuilder<BLOCK_SIZE> {
+impl<const BLOCK_SIZE: u64> BpBuilder<BLOCK_SIZE> {
     /// Create new empty `DfsTreeBuilder`
     #[must_use]
     pub fn new() -> Self {
@@ -31,13 +31,13 @@ impl<const BLOCK_SIZE: usize> BpBuilder<BLOCK_SIZE> {
     }
 }
 
-impl<const BLOCK_SIZE: usize> Default for BpBuilder<BLOCK_SIZE> {
+impl<const BLOCK_SIZE: u64> Default for BpBuilder<BLOCK_SIZE> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const BLOCK_SIZE: usize> TreeBuilder for BpBuilder<BLOCK_SIZE> {
+impl<const BLOCK_SIZE: u64> TreeBuilder for BpBuilder<BLOCK_SIZE> {
     type Tree = BpTree<BLOCK_SIZE>;
 
     fn enter_node(&mut self) {

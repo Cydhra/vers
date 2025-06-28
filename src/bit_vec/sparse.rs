@@ -188,7 +188,7 @@ impl SparseRSVec {
     ///
     /// If the rank is larger than the number of sparse bits in the vector, the vector length is returned.
     #[must_use]
-    pub fn select1(&self, i: usize) -> u64 {
+    pub fn select1(&self, i: u64) -> u64 {
         self.vec.get(i).unwrap_or(self.len)
     }
 
@@ -399,7 +399,7 @@ mod tests {
             assert_eq!(ones, sparse.rank1(i));
             assert_eq!(i - ones, sparse.rank0(i));
             if bv.get(i) == Some(1) {
-                assert_eq!(i, sparse.select1(ones as usize).try_into().unwrap());
+                assert_eq!(i, sparse.select1(ones).try_into().unwrap());
                 ones += 1;
             }
         }

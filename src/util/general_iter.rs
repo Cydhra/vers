@@ -32,14 +32,14 @@ macro_rules! gen_vector_iter_impl {
                     return Ok(());
                 }
 
-                if Some(self.index + n - 1) > self.back_index {
+                if Some(self.index + n as u64 - 1) > self.back_index {
                     if Some(self.index) > self.back_index {
                         Err(std::num::NonZeroUsize::new(n).unwrap())
                     } else {
                         Err(std::num::NonZeroUsize::new(n - (self.back_index.as_ref().unwrap_or(&u64::MAX).wrapping_sub(self.index).wrapping_add(1)) as usize).unwrap())
                     }
                 } else {
-                    self.index += n;
+                    self.index += n as u64;
                     Ok(())
                 }
             }
