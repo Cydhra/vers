@@ -77,6 +77,7 @@ impl BitVec {
     #[must_use]
     pub fn with_capacity(capacity: u64) -> Self {
         Self {
+            #[allow(clippy::cast_possible_truncation)] // safe due to the division
             data: Vec::with_capacity((capacity / WORD_SIZE + 1) as usize),
             len: 0,
         }
@@ -86,6 +87,7 @@ impl BitVec {
     /// The length is measured in bits.
     #[must_use]
     pub fn from_zeros(len: u64) -> Self {
+        #[allow(clippy::cast_possible_truncation)] // safe due to the division
         let data = vec![0; len.div_ceil(WORD_SIZE) as usize];
         Self { data, len }
     }
@@ -95,6 +97,7 @@ impl BitVec {
     #[must_use]
     pub fn from_ones(len: u64) -> Self {
         // junk data is allowed to be any bit
+        #[allow(clippy::cast_possible_truncation)] // safe due to the division
         let data = vec![u64::MAX; len.div_ceil(WORD_SIZE) as usize];
         Self { data, len }
     }
@@ -531,6 +534,7 @@ impl BitVec {
             return;
         }
 
+        #[allow(clippy::cast_possible_truncation)] // safe due to the division
         let new_limb_count = (self.len - n).div_ceil(WORD_SIZE) as usize;
 
         // cut off limbs that we no longer need
@@ -738,6 +742,7 @@ impl BitVec {
     /// This function is guaranteed to reallocate the underlying vector at most once.
     pub fn extend_bitvec(&mut self, other: &Self) {
         // reserve space for the new bits, ensuring at most one re-allocation
+        #[allow(clippy::cast_possible_truncation)] // safe due to the division
         self.data
             .reserve((self.len + other.len).div_ceil(WORD_SIZE) as usize - self.data.len());
 

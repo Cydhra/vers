@@ -46,6 +46,7 @@ impl MinMaxTree {
             return Self::default();
         }
 
+        #[allow(clippy::cast_possible_truncation)] // safe due to the division
         let num_leaves = bit_vec.len().div_ceil(block_size) as usize;
         #[allow(clippy::cast_possible_truncation)] // only happens if available memory already exceeded
         #[allow(clippy::cast_sign_loss)]
@@ -59,6 +60,7 @@ impl MinMaxTree {
 
         // bottom up construction
         for i in 0..bit_vec.len() {
+            #[allow(clippy::cast_possible_truncation)] // safe due to the division
             if i > 0 && i % block_size == 0 {
                 nodes[num_internal_nodes + (i / block_size) as usize - 1] = ExcessNode {
                     total: total_excess,

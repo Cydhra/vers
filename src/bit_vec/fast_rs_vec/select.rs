@@ -162,6 +162,7 @@ impl super::RsVec {
     ///   superblock in the ``select_blocks`` vector that contains the rank
     /// * `rank` - the rank to search for
     #[inline(always)]
+    #[allow(clippy::cast_possible_truncation)] // safe due to the division
     pub(super) fn search_super_block0(&self, mut super_block: usize, rank: u64) -> usize {
         let mut upper_bound = self.select_blocks[(rank / SELECT_BLOCK_SIZE + 1) as usize].index_0;
 
@@ -379,6 +380,7 @@ impl super::RsVec {
     ///   superblock in the ``select_blocks`` vector that contains the rank
     /// * `rank` - the rank to search for
     #[inline(always)]
+    #[allow(clippy::cast_possible_truncation)] // safe due to the division
     pub(super) fn search_super_block1(&self, mut super_block: usize, rank: u64) -> usize {
         let mut upper_bound = self.select_blocks[(rank / SELECT_BLOCK_SIZE + 1) as usize].index_1;
 

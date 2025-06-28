@@ -138,6 +138,7 @@ where
     #[must_use]
     #[allow(clippy::inline_always)]
     #[allow(clippy::comparison_chain)] // rust-clippy #5354
+    #[allow(clippy::cast_possible_truncation)] // safe due to the division
     #[inline]
     pub fn get_bits_unchecked(&self, pos: u64, len: u64) -> u64 {
         debug_assert!(len <= WORD_SIZE);

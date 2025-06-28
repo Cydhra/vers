@@ -168,6 +168,7 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
             return None;
         }
 
+        #[allow(clippy::cast_possible_truncation)] // safe due to the division
         let block_index = ((index + 1) / BLOCK_SIZE) as usize;
         self.fwd_search_block(index, block_index, &mut relative_excess)
             .map_or_else(
@@ -224,6 +225,7 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
             (block_boundary / LOOKUP_BLOCK_SIZE) * LOOKUP_BLOCK_SIZE,
         );
 
+        // TODO truncation
         for i in (lookup_boundary..upper_lookup_boundary).step_by(LOOKUP_BLOCK_SIZE as usize) {
             if let Ok(idx) = process_block_fwd(
                 self.vec
@@ -271,6 +273,7 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
 
         // calculate the block we start searching in. It starts at index - 1, so we don't accidentally
         // search the mM tree and immediately find `index` as the position
+        #[allow(clippy::cast_possible_truncation)] // safe due to the division
         let block_index = ((index - 1) / BLOCK_SIZE) as usize;
 
         // check the current block
@@ -325,6 +328,7 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
 
         // lookup_boundary - block_boundary is smaller than a block, so casting to usize cannot
         // truncate
+        // TODO truncation
         for i in (0..(lookup_boundary - block_boundary) as usize)
             .step_by(LOOKUP_BLOCK_SIZE as usize)
             .rev()
@@ -459,6 +463,7 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
         let subtree_size = self.vec.rank1(close) - index;
 
         // we accept if this truncates, since we cannot change the definition of iterator traits
+        // TODO truncation
         self.vec
             .iter1()
             .skip(index as usize)
@@ -492,6 +497,7 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
         let subtree_size = self.vec.rank0(close) + 1 - index;
 
         // we accept if this truncates, since we cannot change the definition of iterator traits
+        // TODO truncation
         self.vec
             .iter0()
             .skip(index as usize)
