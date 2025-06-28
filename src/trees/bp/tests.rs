@@ -144,22 +144,22 @@ fn test_lookup_extreme_pop() {
     let tree = BpTree::<512>::from_bit_vector(bv);
 
     for excess in 1..64 {
-        assert_eq!(tree.fwd_search(0, excess), Some(excess as usize));
+        assert_eq!(tree.fwd_search(0, excess), Some(excess as u64));
     }
 
     let bv = BitVec::from_bits(&[0; 64]);
     let tree = BpTree::<512>::from_bit_vector(bv);
 
     for excess in 1..64 {
-        assert_eq!(tree.fwd_search(0, -excess), Some(excess as usize));
+        assert_eq!(tree.fwd_search(0, -excess), Some(excess as u64));
     }
 }
 
 #[test]
 fn test_fwd_fuzzy() {
     // we're fuzzing forward search a bit
-    const L: usize = 1000;
-    const L_BITS: usize = L * size_of::<u64>() * 8;
+    const L: u64 = 1000;
+    const L_BITS: u64 = L * size_of::<u64>() as u64 * 8;
 
     // we generate a vector using a seeded random generator and check that every query works as expected
     let mut rng = StdRng::from_seed([0; 32]);
@@ -170,7 +170,7 @@ fn test_fwd_fuzzy() {
     }
 
     // pre-calculate all absolute excess values
-    let mut excess_values = vec![0i16; L_BITS];
+    let mut excess_values = vec![0i16; L_BITS as usize];
     let mut excess = 0;
     for (idx, bit) in bit_vec.iter().enumerate() {
         if bit == 1 {
@@ -188,10 +188,10 @@ fn test_fwd_fuzzy() {
     for relative_excess in [-3, -2, -1, 0, 1, 2, 3] {
         for node_handle in bp.vec.iter1() {
             let absolute_excess = bp.excess(node_handle) + relative_excess;
-            let expected = excess_values[node_handle + 1..]
+            let expected = excess_values[(node_handle + 1) as usize..]
                 .iter()
                 .position(|&excess| excess as i64 == absolute_excess)
-                .map(|i| i + node_handle + 1);
+                .map(|i| i as u64 + node_handle + 1);
             let actual = bp.fwd_search(node_handle, relative_excess);
             assert_eq!(
                 expected,
@@ -320,8 +320,8 @@ fn test_bwd_block_traversal() {
 #[test]
 fn test_bwd_fuzzy() {
     // we're fuzzing forward search a bit
-    const L: usize = 1000;
-    const L_BITS: usize = L * size_of::<u64>() * 8;
+    const L: u64 = 1000;
+    const L_BITS: u64 = L * size_of::<u64>() as u64 * 8;
 
     // we generate a vector using a seeded random generator and check that every query works as expected
     let mut rng = StdRng::from_seed([0; 32]);
@@ -332,7 +332,7 @@ fn test_bwd_fuzzy() {
     }
 
     // pre-calculate all absolute excess values
-    let mut excess_values = vec![0i16; L_BITS + 1];
+    let mut excess_values = vec![0i16; (L_BITS + 1) as usize];
     let mut excess = 0;
     for (idx, bit) in bit_vec.iter().enumerate() {
         if bit == 1 {
@@ -354,9 +354,10 @@ fn test_bwd_fuzzy() {
             } else {
                 bp.excess(node_handle - 1) + relative_excess
             };
-            let expected = excess_values[..node_handle]
+            let expected = excess_values[..node_handle as usize]
                 .iter()
-                .rposition(|&excess| excess as i64 == absolute_excess);
+                .rposition(|&excess| excess as i64 == absolute_excess)
+                .map(|idx| idx as u64);
 
             let actual = bp.bwd_search(node_handle, relative_excess);
             assert_eq!(
@@ -443,13 +444,13 @@ fn test_parent() {
     for (idx, bit) in bv.iter().enumerate() {
         if bit == 1 {
             assert_eq!(
-                tree.parent(idx),
+                tree.parent(idx as u64),
                 head,
                 "parent of node {} is incorrect",
                 idx
             );
             stack.push(head);
-            head = Some(idx);
+            head = Some(idx as u64);
         } else {
             head = stack.pop().expect("stack underflow despite balanced tree");
         }
@@ -496,8 +497,8 @@ fn test_contiguous_index() {
     let rs: RsVec = bv.into();
 
     for (rank, index_in_bv) in rs.iter1().enumerate() {
-        assert_eq!(tree.node_index(index_in_bv), rank);
-        assert_eq!(tree.node_handle(rank), index_in_bv);
+        assert_eq!(tree.node_index(index_in_bv), rank as u64);
+        assert_eq!(tree.node_handle(rank as u64), index_in_bv);
     }
 }
 
@@ -535,7 +536,7 @@ fn test_is_leaf() {
     for (idx, is_leaf) in leaves.iter().enumerate() {
         // if the bit is 1, check if that node is a leaf. If it's 0, it's not a valid node handle.
         if bits[idx] == 1 {
-            assert_eq!(tree.is_leaf(idx), *is_leaf);
+            assert_eq!(tree.is_leaf(idx as u64), *is_leaf);
         }
     }
 }
@@ -756,8 +757,8 @@ fn fuzz_tree_navigation() {
     // fuzzing the tree navigation operations on an unbalanced tree
     // because those are easier to generate uniformly.
 
-    const L: usize = 1 << 14;
-    const L_BITS: usize = L * size_of::<u64>() * 8;
+    const L: u64 = 1 << 14;
+    const L_BITS: u64 = L * size_of::<u64>() as u64 * 8;
 
     // we generate a vector using a seeded random generator and check that every query works as expected
     let mut rng = StdRng::from_seed([0; 32]);
@@ -778,6 +779,7 @@ fn fuzz_tree_navigation() {
     let mut sibling_count_stack = Vec::new();
 
     tree.vec.iter().enumerate().for_each(|(idx, bit)| {
+        let idx = idx as u64;
         if bit == OPEN_PAREN {
             assert_eq!(tree.parent(idx), parent_stack.last().copied());
             assert_eq!(

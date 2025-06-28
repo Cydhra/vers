@@ -62,10 +62,10 @@ fn test_randomized_elias_fano() {
 
     let ef = EliasFanoVec::from_slice(&seq);
 
-    assert_eq!(ef.len(), seq.len());
+    assert_eq!(ef.len(), seq.len() as u64);
 
     for (i, &v) in seq.iter().enumerate() {
-        assert_eq!(ef.get_unchecked(i), v);
+        assert_eq!(ef.get_unchecked(i as u64), v);
     }
 
     for _ in 0..1000 {
@@ -110,7 +110,7 @@ fn test_clustered_ef() {
 
     let ef = EliasFanoVec::from_slice(&seq);
     for (i, &x) in seq.iter().enumerate() {
-        assert_eq!(ef.get_unchecked(i), x, "expected {:b}", x);
+        assert_eq!(ef.get_unchecked(i as u64), x, "expected {:b}", x);
         assert_eq!(ef.predecessor_unchecked(x), x);
         assert_eq!(ef.successor_unchecked(x), x);
     }
@@ -398,10 +398,10 @@ fn test_randomized_elias_fano_successor() {
 
     let ef = EliasFanoVec::from_slice(&seq);
 
-    assert_eq!(ef.len(), seq.len());
+    assert_eq!(ef.len(), seq.len() as u64);
 
     for (i, &v) in seq.iter().enumerate() {
-        assert_eq!(ef.get_unchecked(i), v);
+        assert_eq!(ef.get_unchecked(i as u64), v);
     }
 
     for _ in 0..1000 {
