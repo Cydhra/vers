@@ -441,16 +441,16 @@ impl RsVec {
 
         let iter: SelectIter<ZERO> = self.select_iter();
 
+        let len = if ZERO { self.rank0 } else { self.rank1 };
+
         // we need to manually enumerate() the iter, because the number of set bits could exceed
         // the size of usize.
-        let mut rank = 0;
-        for bit_index in iter {
+        for (rank, bit_index) in (0..len).zip(iter) {
             // since rank is inlined, we get dead code elimination depending on ZERO
             if (other.get_unchecked(bit_index) == 0) != ZERO || other.rank(ZERO, bit_index) != rank
             {
                 return false;
             }
-            rank += 1;
         }
 
         true
