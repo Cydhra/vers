@@ -7,7 +7,7 @@ use std::cmp::min_by;
 use std::mem::size_of;
 use std::ops::{Bound, Deref, RangeBounds};
 
-use crate::rmq::binary_rmq::BinaryRmq;
+use crate::rmq::binary_rmq::SparseRmq;
 use crate::util::pdep::Pdep;
 
 /// Size of the blocks the data is split into. One block is indexable with a u8, hence its size.
@@ -79,7 +79,7 @@ struct Block {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SmallRmq {
     data: Vec<u64>,
-    block_minima: BinaryRmq,
+    block_minima: SparseRmq,
     block_min_indices: Vec<u8>,
     blocks: Vec<Block>,
 }
@@ -142,7 +142,7 @@ impl SmallRmq {
 
         Self {
             data,
-            block_minima: BinaryRmq::from_vec(block_minima),
+            block_minima: SparseRmq::from_vec(block_minima),
             block_min_indices,
             blocks,
         }

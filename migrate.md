@@ -7,3 +7,4 @@ The following structures and functions were renamed
 - `BitVec::from_bit_vector` to `BitVec::from_bit_vec`
 - `SparseRSVec` to `SparseRsVec`
 - `FastRmq` to `SmallRmq`
+- `BinaryRmq` to `SparseRmq`
