@@ -390,6 +390,7 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
     /// The excess is the number of open parentheses minus the number of closing parentheses.
     /// If `index` is out of bounds, the total excess of the parentheses expression is returned.
     #[must_use]
+    #[allow(clippy::cast_possible_wrap)] // only happens if the tree is unbalanced and has more than 2^62 nodes
     pub fn excess(&self, index: u64) -> i64 {
         debug_assert!(index < self.vec.len(), "Index out of bounds");
         self.vec.rank1(index + 1) as i64 - self.vec.rank0(index + 1) as i64

@@ -47,6 +47,9 @@ impl MinMaxTree {
         }
 
         let num_leaves = bit_vec.len().div_ceil(block_size) as usize;
+        #[allow(clippy::cast_possible_truncation)] // only happens if available memory already exceeded
+        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_precision_loss)]
         let num_internal_nodes = max(1, (1 << (num_leaves as f64).log2().ceil() as usize) - 1);
 
         let mut nodes = vec![ExcessNode::default(); num_leaves + num_internal_nodes];

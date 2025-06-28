@@ -1319,7 +1319,7 @@ impl From<Vec<u64>> for BitVec {
 impl Extend<BitVec> for BitVec {
     fn extend<T: IntoIterator<Item = BitVec>>(&mut self, iter: T) {
         for v in iter {
-            self.extend_bitvec(&v)
+            self.extend_bitvec(&v);
         }
     }
 }
@@ -1327,7 +1327,7 @@ impl Extend<BitVec> for BitVec {
 impl<'t> Extend<&'t BitVec> for BitVec {
     fn extend<T: IntoIterator<Item = &'t BitVec>>(&mut self, iter: T) {
         for v in iter {
-            self.extend_bitvec(v)
+            self.extend_bitvec(v);
         }
     }
 }
