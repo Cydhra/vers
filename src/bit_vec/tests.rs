@@ -813,3 +813,16 @@ fn test_splitting_limbs() {
     assert_eq!(left.get(0), Some(0));
     assert_eq!(right.get(0), Some(1));
 }
+
+#[test]
+fn test_equals_junk() {
+    // verify that junk data does not affect equality
+    let mut bv1 = BitVec::from_zeros(100);
+    let mut bv2 = BitVec::from_zeros(100);
+    bv2.flip_bit(99);
+
+    bv1.drop_last(4);
+    bv2.drop_last(4);
+
+    assert_eq!(bv1, bv2);
+}

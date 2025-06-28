@@ -55,7 +55,7 @@ pub type BitMask<'s, 'b> = MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>;
 /// assert_eq!(bit_vec.get(0), Some(0u64));
 /// assert_eq!(bit_vec.get(1), Some(1u64));
 /// ```
-#[derive(Clone, Debug, Default, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Default, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BitVec {
     data: Vec<u64>,
@@ -1343,6 +1343,36 @@ impl FromIterator<u64> for BitVec {
         BitVec::from_limbs_iter(iter)
     }
 }
+
+impl PartialEq for BitVec {
+    // unlike the auto-derived implementation, this custom implementation ignores junk data at
+    // the end of the bit vector
+    fn eq(&self, other: &Self) -> bool {
+        if self.len != other.len {
+            return false;
+        }
+
+        if self.len == 0 {
+            return true;
+        }
+
+        for i in 0..self.data.len() - 1 {
+            if self.data[i] != other.data[i] {
+                return false;
+            }
+        }
+
+        // in last limb, ignore junk data
+        let mask = (1 << (self.len % WORD_SIZE)) - 1;
+        if self.data[self.data.len() - 1] & mask != other.data[self.data.len() - 1] & mask {
+            return false;
+        }
+
+        true
+    }
+}
+
+impl Eq for BitVec {}
 
 #[cfg(test)]
 mod tests;
