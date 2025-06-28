@@ -66,7 +66,7 @@
 //!   tree data structure. This is faster, but requires 128 KiB instead of 4 KiB.
 
 pub use bit_vec::fast_rs_vec::RsVec;
-pub use bit_vec::sparse::SparseRSVec;
+pub use bit_vec::sparse::SparseRsVec;
 pub use bit_vec::BitVec;
 pub use elias_fano::EliasFanoVec;
 pub use rmq::binary_rmq::BinaryRmq;
