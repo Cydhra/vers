@@ -7,7 +7,7 @@ use crate::util::unroll;
 
 /// A safety constant for assertions to make sure that the block size doesn't change without
 /// adjusting the code.
-const BLOCKS_PER_SUPERBLOCK: usize = 16;
+const BLOCKS_PER_SUPERBLOCK: u64 = 16;
 
 impl super::RsVec {
     /// Return the position of the 0-bit with the given rank. See `rank0`.
@@ -59,7 +59,7 @@ impl super::RsVec {
     pub(super) fn search_block0(&self, rank: u64, block_index: &mut usize) {
         use std::arch::x86_64::{_mm256_cmpgt_epu16_mask, _mm256_loadu_epi16, _mm256_set1_epi16};
 
-        if self.blocks.len() > *block_index + (SUPER_BLOCK_SIZE / BLOCK_SIZE) {
+        if self.blocks.len() > *block_index + (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize {
             debug_assert!(
                 SUPER_BLOCK_SIZE / BLOCK_SIZE == BLOCKS_PER_SUPERBLOCK,
                 "change unroll constant to {}",
@@ -104,7 +104,7 @@ impl super::RsVec {
 
         // this code relies on the fact that BLOCKS_PER_SUPERBLOCK blocks are in one superblock
         debug_assert!(
-            (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize == BLOCKS_PER_SUPERBLOCK,
+            (SUPER_BLOCK_SIZE / BLOCK_SIZE) == BLOCKS_PER_SUPERBLOCK,
             "change unroll constant to {}",
             64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
         );
@@ -249,7 +249,7 @@ impl super::RsVec {
             _mm256_sub_epi16,
         };
 
-        if self.blocks.len() > *block_index + BLOCKS_PER_SUPERBLOCK {
+        if self.blocks.len() > *block_index + BLOCKS_PER_SUPERBLOCK as usize {
             debug_assert!(
                 SUPER_BLOCK_SIZE / BLOCK_SIZE == BLOCKS_PER_SUPERBLOCK,
                 "change unroll constant to {}",
@@ -321,7 +321,7 @@ impl super::RsVec {
 
         // this code relies on the fact that BLOCKS_PER_SUPERBLOCK blocks are in one superblock
         debug_assert!(
-            (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize == BLOCKS_PER_SUPERBLOCK,
+            (SUPER_BLOCK_SIZE / BLOCK_SIZE) == BLOCKS_PER_SUPERBLOCK,
             "change unroll constant to {}",
             64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
         );

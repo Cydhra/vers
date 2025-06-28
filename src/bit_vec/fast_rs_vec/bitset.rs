@@ -3,7 +3,6 @@
 //! It only exists with the `simd` feature enabled, and since it is slower for sparse vectors,
 //! it is not used as a replacement for the `iter1`/`iter0` methods.
 
-use crate::bit_vec::u64;
 use crate::RsVec;
 use std::mem::size_of;
 
@@ -104,7 +103,10 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
 
         unsafe {
             let offsets = _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-            assert!(VECTOR_SIZE <= size_of::<u16>() * 8, "change data types");
+            assert!(
+                VECTOR_SIZE <= size_of::<u16>() as u64 * 8,
+                "change data types"
+            );
             let mut mask = __mmask16::from(data);
             if ZERO {
                 mask = !mask;
@@ -160,6 +162,6 @@ impl<const ZERO: bool> Iterator for BitSetIter<'_, ZERO> {
 
         let offset = self.offsets[self.cursor as usize];
         self.cursor += 1;
-        Some(self.base + offset as usize)
+        Some(self.base + offset as u64)
     }
 }
