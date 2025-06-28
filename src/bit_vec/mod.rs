@@ -4,6 +4,7 @@
 use crate::bit_vec::mask::MaskedBitVec;
 use crate::util::impl_vector_iterator;
 use std::cmp::min;
+use std::hash::{Hash, Hasher};
 use std::mem::size_of;
 
 pub mod fast_rs_vec;
@@ -55,7 +56,7 @@ pub type BitMask<'s, 'b> = MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>;
 /// assert_eq!(bit_vec.get(0), Some(0u64));
 /// assert_eq!(bit_vec.get(1), Some(1u64));
 /// ```
-#[derive(Clone, Debug, Default, Hash)]
+#[derive(Clone, Debug, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BitVec {
     data: Vec<u64>,
@@ -1373,6 +1374,19 @@ impl PartialEq for BitVec {
 }
 
 impl Eq for BitVec {}
+
+impl Hash for BitVec {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_usize(self.len);
+        if self.len > 0 {
+            self.data[0..self.data.len() - 1]
+                .iter()
+                .for_each(|x| state.write_u64(*x));
+            let masked_last_limb = self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1);
+            state.write_u64(masked_last_limb);
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests;
