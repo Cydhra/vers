@@ -7,7 +7,7 @@ use crate::RsVec;
 use std::mem::size_of;
 
 /// The number of bits in a RsVec that can be processed by AVX instructions at once.
-const VECTOR_SIZE: usize = 16;
+const VECTOR_SIZE: u64 = 16;
 
 // add iterator functions to RsVec
 impl RsVec {
@@ -75,8 +75,8 @@ impl RsVec {
 /// [`SelectIter`]: super::SelectIter
 pub struct BitSetIter<'a, const ZERO: bool> {
     vec: &'a RsVec,
-    base: usize,
-    offsets: [u32; VECTOR_SIZE],
+    base: u64,
+    offsets: [u32; VECTOR_SIZE as usize],
     content_len: u8,
     cursor: u8,
 }
@@ -86,7 +86,7 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
         let mut iter = Self {
             vec,
             base: 0,
-            offsets: [0; VECTOR_SIZE],
+            offsets: [0; VECTOR_SIZE as usize],
             content_len: 0,
             cursor: 0,
         };
@@ -103,7 +103,10 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
 
         unsafe {
             let offsets = _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-            assert!(VECTOR_SIZE <= size_of::<u16>() * 8, "change data types");
+            assert!(
+                VECTOR_SIZE <= size_of::<u16>() as u64 * 8,
+                "change data types"
+            );
             let mut mask = __mmask16::from(data);
             if ZERO {
                 mask = !mask;
@@ -129,7 +132,7 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
 }
 
 impl<const ZERO: bool> Iterator for BitSetIter<'_, ZERO> {
-    type Item = usize;
+    type Item = u64;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.base >= self.vec.len() {
@@ -159,6 +162,6 @@ impl<const ZERO: bool> Iterator for BitSetIter<'_, ZERO> {
 
         let offset = self.offsets[self.cursor as usize];
         self.cursor += 1;
-        Some(self.base + offset as usize)
+        Some(self.base + offset as u64)
     }
 }

@@ -15,9 +15,9 @@ use crate::{BitVec, EliasFanoVec};
 ///
 /// # Examples
 /// ```
-/// use vers_vecs::SparseRSVec;
+/// use vers_vecs::SparseRsVec;
 ///
-/// let sparse = SparseRSVec::new(&[1, 3, 5, 7, 9], 12);
+/// let sparse = SparseRsVec::new(&[1, 3, 5, 7, 9], 12);
 /// assert_eq!(sparse.get(5), Some(1));
 /// assert_eq!(sparse.get(11), Some(0));
 /// assert_eq!(sparse.get(12), None);
@@ -28,14 +28,14 @@ use crate::{BitVec, EliasFanoVec};
 ///
 /// It cn also be constructed from a `BitVec` directly:
 /// ```
-/// use vers_vecs::SparseRSVec;
+/// use vers_vecs::SparseRsVec;
 /// use vers_vecs::BitVec;
 ///
 /// let mut bv = BitVec::from_zeros(12);
 /// bv.flip_bit(6);
 /// bv.flip_bit(7);
 ///
-/// let sparse = SparseRSVec::from_bitvec(&bv);
+/// let sparse = SparseRsVec::from_bitvec(&bv);
 /// assert_eq!(sparse.rank1(5), 0);
 /// assert_eq!(sparse.select1(0), 6);
 /// ```
@@ -44,12 +44,12 @@ use crate::{BitVec, EliasFanoVec};
 /// [`from_bitvec_inverted`]: #method.from_bitvec_inverted
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct SparseRSVec {
+pub struct SparseRsVec {
     vec: EliasFanoVec,
     len: u64,
 }
 
-impl SparseRSVec {
+impl SparseRsVec {
     /// Creates a new `SparseRSVec` from a sequence of set bits represented as indices.
     /// The input must be sorted in ascending order and free of duplicates.
     ///
@@ -80,7 +80,7 @@ impl SparseRSVec {
     /// - `input`: The input `BitVec` to compress.
     #[must_use]
     pub fn from_bitvec(input: &BitVec) -> Self {
-        let len = input.len() as u64;
+        let len = input.len();
         Self::new(
             input
                 .iter()
@@ -109,7 +109,7 @@ impl SparseRSVec {
     ///
     /// # Example
     /// ```
-    /// use vers_vecs::SparseRSVec;
+    /// use vers_vecs::SparseRsVec;
     /// use vers_vecs::BitVec;
     ///
     /// let mut bv = BitVec::from_ones(12);
@@ -117,7 +117,7 @@ impl SparseRSVec {
     /// bv.flip_bit(6);
     /// bv.flip_bit(7);
     ///
-    /// let sparse = SparseRSVec::from_bitvec_inverted(&bv);
+    /// let sparse = SparseRsVec::from_bitvec_inverted(&bv);
     /// // now select1 gives the position of 0-bits
     /// assert_eq!(sparse.select1(1), 7);
     /// ```
@@ -127,7 +127,7 @@ impl SparseRSVec {
     /// [`get`]: #method.get
     #[must_use]
     pub fn from_bitvec_inverted(input: &BitVec) -> Self {
-        let len = input.len() as u64;
+        let len = input.len();
         Self::new(
             input
                 .iter()
@@ -188,7 +188,7 @@ impl SparseRSVec {
     ///
     /// If the rank is larger than the number of sparse bits in the vector, the vector length is returned.
     #[must_use]
-    pub fn select1(&self, i: usize) -> u64 {
+    pub fn select1(&self, i: u64) -> u64 {
         self.vec.get(i).unwrap_or(self.len)
     }
 
@@ -238,13 +238,13 @@ impl SparseRSVec {
     }
 }
 
-impl From<BitVec> for SparseRSVec {
+impl From<BitVec> for SparseRsVec {
     fn from(input: BitVec) -> Self {
         Self::from_bitvec_inverted(&input)
     }
 }
 
-impl<'a> From<&'a BitVec> for SparseRSVec {
+impl<'a> From<&'a BitVec> for SparseRsVec {
     fn from(input: &'a BitVec) -> Self {
         Self::from_bitvec_inverted(input)
     }
@@ -252,14 +252,14 @@ impl<'a> From<&'a BitVec> for SparseRSVec {
 
 #[cfg(test)]
 mod tests {
-    use super::SparseRSVec;
+    use super::SparseRsVec;
     use crate::BitVec;
     use rand::prelude::StdRng;
     use rand::{Rng, SeedableRng};
 
     #[test]
     fn test_sparse_rank() {
-        let sparse = SparseRSVec::new(&[1, 3, 5, 7, 9], 12);
+        let sparse = SparseRsVec::new(&[1, 3, 5, 7, 9], 12);
         assert_eq!(sparse.rank1(0), 0);
         assert_eq!(sparse.rank1(1), 0);
         assert_eq!(sparse.rank1(2), 1);
@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn test_sparse_select() {
-        let sparse = SparseRSVec::new(&[1, 3, 5, 7, 9], 12);
+        let sparse = SparseRsVec::new(&[1, 3, 5, 7, 9], 12);
         assert_eq!(sparse.select1(0), 1);
         assert_eq!(sparse.select1(1), 3);
         assert_eq!(sparse.select1(2), 5);
@@ -290,7 +290,7 @@ mod tests {
 
     #[test]
     fn test_sparse_rank0() {
-        let sparse = SparseRSVec::new(&[1, 3, 5, 7, 9], 12);
+        let sparse = SparseRsVec::new(&[1, 3, 5, 7, 9], 12);
         assert_eq!(sparse.rank0(0), 0);
         assert_eq!(sparse.rank0(1), 1);
         assert_eq!(sparse.rank0(2), 1);
@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn test_empty_sparse() {
-        let sparse = SparseRSVec::new(&[], 0);
+        let sparse = SparseRsVec::new(&[], 0);
         assert_eq!(sparse.rank1(0), 0);
         assert_eq!(sparse.rank1(1), 0);
         assert_eq!(sparse.rank1(999), 0);
@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_sparse_get() {
-        let sparse = SparseRSVec::new(&[1, 3, 5, 7, 9], 12);
+        let sparse = SparseRsVec::new(&[1, 3, 5, 7, 9], 12);
         assert_eq!(sparse.get(0), Some(0));
         assert_eq!(sparse.get(1), Some(1));
         assert_eq!(sparse.get(2), Some(0));
@@ -348,7 +348,7 @@ mod tests {
         bv.flip_bit(6);
         bv.flip_bit(7);
 
-        let sparse = SparseRSVec::from_bitvec(&bv);
+        let sparse = SparseRsVec::from_bitvec(&bv);
         assert_eq!(sparse.rank1(0), 0);
         assert_eq!(sparse.rank1(1), 1);
         assert_eq!(sparse.rank1(2), 2);
@@ -357,7 +357,7 @@ mod tests {
         assert_eq!(sparse.rank1(9), 7);
         assert_eq!(sparse.rank1(12), 10);
 
-        let sparse = SparseRSVec::from_bitvec_inverted(&bv);
+        let sparse = SparseRsVec::from_bitvec_inverted(&bv);
         assert_eq!(sparse.rank1(0), 0);
         assert_eq!(sparse.rank1(1), 0);
         assert_eq!(sparse.rank1(2), 0);
@@ -370,7 +370,7 @@ mod tests {
     #[test]
     fn test_large_block() {
         // test that the implementation works correctly if the search triggers a binary search
-        let sparse = SparseRSVec::new(
+        let sparse = SparseRsVec::new(
             &[
                 1, 100_000, 100_001, 100_002, 100_003, 100_004, 100_005, 100_006, 100_007, 100_008,
                 100_009, 100_010, 1_000_000,
@@ -383,7 +383,7 @@ mod tests {
 
     #[test]
     fn test_fuzzy() {
-        const L: usize = 100_000;
+        const L: u64 = 100_000;
         let mut bv = BitVec::from_zeros(L);
         let mut rng = StdRng::from_seed([0; 32]);
 
@@ -391,15 +391,15 @@ mod tests {
             bv.flip_bit(rng.gen_range(0..L));
         }
 
-        let sparse = SparseRSVec::from_bitvec(&bv);
+        let sparse = SparseRsVec::from_bitvec(&bv);
 
         let mut ones = 0;
         for i in 0..L {
-            assert_eq!(bv.get(i), sparse.get(i as u64));
-            assert_eq!(ones, sparse.rank1(i as u64));
-            assert_eq!(i as u64 - ones, sparse.rank0(i as u64));
+            assert_eq!(bv.get(i), sparse.get(i));
+            assert_eq!(ones, sparse.rank1(i));
+            assert_eq!(i - ones, sparse.rank0(i));
             if bv.get(i) == Some(1) {
-                assert_eq!(i, sparse.select1(ones as usize).try_into().unwrap());
+                assert_eq!(i, sparse.select1(ones).try_into().unwrap());
                 ones += 1;
             }
         }
@@ -416,7 +416,7 @@ mod tests {
         bv.append_bit(0);
         bv.drop_last(1);
 
-        let sparse = SparseRSVec::from_bitvec(&bv);
+        let sparse = SparseRsVec::from_bitvec(&bv);
         assert_eq!(sparse.len(), 2);
         assert_eq!(sparse.get(0), Some(1));
         assert_eq!(sparse.get(1), Some(0));

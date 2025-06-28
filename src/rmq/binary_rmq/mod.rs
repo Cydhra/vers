@@ -17,10 +17,10 @@ use std::ops::{Deref, RangeBounds};
 ///
 /// # Example
 /// ```rust
-/// use vers_vecs::BinaryRmq;
+/// use vers_vecs::SparseRmq;
 ///
 /// let data = vec![4, 10, 3, 11, 2, 12];
-/// let rmq = BinaryRmq::from_vec(data);
+/// let rmq = SparseRmq::from_vec(data);
 ///
 /// assert_eq!(rmq.range_min(0, 1), 0);
 /// assert_eq!(rmq.range_min(0, 2), 2);
@@ -28,7 +28,7 @@ use std::ops::{Deref, RangeBounds};
 /// ```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct BinaryRmq {
+pub struct SparseRmq {
     data: Vec<u64>,
 
     // store indices relative to start of range. There is no way to have ranges exceeding 2^32 bits
@@ -37,7 +37,7 @@ pub struct BinaryRmq {
     results: Vec<u32>,
 }
 
-impl BinaryRmq {
+impl SparseRmq {
     /// Create a new RMQ data structure for the given data. This uses O(n log n) space and
     /// precalculates the minimum element in intervals 2^k for all k for all elements.
     ///
@@ -105,14 +105,14 @@ impl BinaryRmq {
         Self { data, results }
     }
 
-    /// Convenience function for [`BinaryRmq::range_min`] for using range operators.
+    /// Convenience function for [`SparseRmq::range_min`] for using range operators.
     /// The range is clamped to the length of the data structure, so this function will not panic,
     /// unless called on an empty data structure, because that does not have a valid index.
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BinaryRmq;
-    /// let rmq = BinaryRmq::from_vec(vec![5, 4, 3, 2, 1]);
+    /// use vers_vecs::SparseRmq;
+    /// let rmq = SparseRmq::from_vec(vec![5, 4, 3, 2, 1]);
     /// assert_eq!(rmq.range_min_with_range(0..3), 2);
     /// assert_eq!(rmq.range_min_with_range(0..=3), 3);
     /// ```
@@ -169,7 +169,7 @@ impl BinaryRmq {
 /// Implements Deref to delegate to the underlying data structure. This allows the user to use
 /// indexing syntax on the RMQ data structure to access the underlying data, as well as iterators,
 /// etc.
-impl Deref for BinaryRmq {
+impl Deref for SparseRmq {
     type Target = Vec<u64>;
 
     fn deref(&self) -> &Self::Target {
@@ -177,7 +177,7 @@ impl Deref for BinaryRmq {
     }
 }
 
-impl From<Vec<u64>> for BinaryRmq {
+impl From<Vec<u64>> for SparseRmq {
     fn from(data: Vec<u64>) -> Self {
         Self::from_vec(data)
     }
@@ -188,8 +188,8 @@ impl From<Vec<u64>> for BinaryRmq {
 ///
 /// See [`BinaryRmq::from_vec`] for more information.
 ///
-/// [`BinaryRmq::from_vec`]: BinaryRmq::from_vec
-impl FromIterator<u64> for BinaryRmq {
+/// [`BinaryRmq::from_vec`]: SparseRmq::from_vec
+impl FromIterator<u64> for SparseRmq {
     fn from_iter<T: IntoIterator<Item = u64>>(iter: T) -> Self {
         Self::from_vec(iter.into_iter().collect())
     }

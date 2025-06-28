@@ -23,7 +23,7 @@ fn test_random_data_rank() {
         6, 7,
     ]);
     let sample = Uniform::new(0, 2);
-    static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
+    static LENGTH: u64 = 4 * SUPER_BLOCK_SIZE;
 
     for _ in 0..LENGTH {
         bv.append_bit(sample.sample(&mut rng));
@@ -42,17 +42,17 @@ fn test_random_data_rank() {
         let mut expected_rank1 = 0;
         let mut expected_rank0 = 0;
 
-        let data_index = rnd_index / WORD_SIZE;
+        let data_index = (rnd_index / WORD_SIZE) as usize;
         let bit_index = rnd_index % WORD_SIZE;
 
         for v in data.iter().take(data_index) {
-            expected_rank1 += v.count_ones() as usize;
-            expected_rank0 += v.count_zeros() as usize;
+            expected_rank1 += v.count_ones() as u64;
+            expected_rank0 += v.count_zeros() as u64;
         }
 
         if bit_index > 0 {
-            expected_rank1 += (data[data_index] & ((1 << bit_index) - 1)).count_ones() as usize;
-            expected_rank0 += (!data[data_index] & ((1 << bit_index) - 1)).count_ones() as usize;
+            expected_rank1 += (data[data_index] & ((1 << bit_index) - 1)).count_ones() as u64;
+            expected_rank0 += (!data[data_index] & ((1 << bit_index) - 1)).count_ones() as u64;
         }
 
         assert_eq!(actual_rank1, expected_rank1);
@@ -205,13 +205,13 @@ fn test_only_ones_select() {
 
 #[test]
 fn random_data_select0() {
+    static LENGTH: u64 = 4 * SUPER_BLOCK_SIZE;
     let mut bv = BitVec::with_capacity(LENGTH);
     let mut rng = StdRng::from_seed([
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
     ]);
     let sample = Uniform::new(0, 2);
-    static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
 
     for _ in 0..LENGTH {
         bv.append_bit_u8(sample.sample(&mut rng) as u8);
@@ -231,7 +231,7 @@ fn random_data_select0() {
 
         let mut index = 0;
         loop {
-            let zeros = data[index].count_zeros() as usize;
+            let zeros = data[index].count_zeros() as u64;
             if rank_counter + zeros > rnd_rank0 {
                 break;
             } else {
@@ -260,13 +260,13 @@ fn random_data_select0() {
 
 #[test]
 fn random_data_select1() {
+    static LENGTH: u64 = 4 * SUPER_BLOCK_SIZE;
     let mut bv = BitVec::with_capacity(LENGTH);
     let mut rng = StdRng::from_seed([
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
     ]);
     let sample = Uniform::new(0, 2);
-    static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
 
     for _ in 0..LENGTH {
         bv.append_bit_u8(sample.sample(&mut rng) as u8);
@@ -286,7 +286,7 @@ fn random_data_select1() {
 
         let mut index = 0;
         loop {
-            let ones = data[index].count_ones() as usize;
+            let ones = data[index].count_ones() as u64;
             if rank_counter + ones > rnd_rank1 {
                 break;
             } else {
@@ -1211,8 +1211,8 @@ fn test_random_data_iter_both_ends() {
                 }
                 let bv = RsVec::from_bit_vec(bv);
 
-                let mut zeros = Vec::with_capacity(bv.rank0);
-                let mut ones = Vec::with_capacity(bv.rank1);
+                let mut zeros = Vec::with_capacity(bv.rank0 as usize);
+                let mut ones = Vec::with_capacity(bv.rank1 as usize);
 
                 let mut iter0 = bv.iter0();
                 let mut iter1 = bv.iter1();
@@ -1226,7 +1226,7 @@ fn test_random_data_iter_both_ends() {
                 }
                 zeros.sort();
                 zeros.dedup();
-                assert_eq!(zeros.len(), bv.rank0);
+                assert_eq!(zeros.len() as u64, bv.rank0);
 
                 for _ in 0..bv.rank1 {
                     ones.push(if sample.sample(&mut rng) < 50 {
@@ -1237,7 +1237,7 @@ fn test_random_data_iter_both_ends() {
                 }
                 ones.sort();
                 ones.dedup();
-                assert_eq!(ones.len(), bv.rank1);
+                assert_eq!(ones.len() as u64, bv.rank1);
 
                 for idx in ones {
                     assert_eq!(bv.get(idx), Some(1), "bit {} is not 1", idx);
@@ -1254,7 +1254,7 @@ fn test_random_data_iter_both_ends() {
 // test a randomly generated bit vector for correct values in blocks
 #[test]
 fn test_block_layout() {
-    static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
+    static LENGTH: u64 = 4 * SUPER_BLOCK_SIZE;
     let mut bv = BitVec::with_capacity(LENGTH);
     let mut rng = StdRng::from_seed([
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
@@ -1271,7 +1271,7 @@ fn test_block_layout() {
 
     let mut zero_counter = 0u32;
     for (block_index, block) in bv.blocks.iter().enumerate() {
-        if block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE) == 0 {
+        if block_index % (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize == 0 {
             zero_counter = 0;
         }
         assert_eq!(
@@ -1281,9 +1281,9 @@ fn test_block_layout() {
             block_index,
             bv.blocks.len()
         );
-        for word in bv.data[block_index * BLOCK_SIZE / WORD_SIZE..]
+        for word in bv.data[block_index * (BLOCK_SIZE / WORD_SIZE) as usize..]
             .iter()
-            .take(BLOCK_SIZE / WORD_SIZE)
+            .take((BLOCK_SIZE / WORD_SIZE) as usize)
         {
             zero_counter += word.count_zeros();
         }
@@ -1293,7 +1293,7 @@ fn test_block_layout() {
 // Github issue https://github.com/Cydhra/vers/issues/6 regression test
 #[test]
 fn test_iter1_regression_i6() {
-    static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
+    static LENGTH: u64 = 4 * SUPER_BLOCK_SIZE;
     let mut bv = BitVec::with_capacity(LENGTH);
     let mut rng = StdRng::from_seed([
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
@@ -1319,7 +1319,7 @@ fn test_iter1_regression_i6() {
 
     let mut all_bits: Vec<_> = bv.iter0().chain(bv.iter1()).collect();
     all_bits.sort();
-    assert_eq!(all_bits.len(), LENGTH);
+    assert_eq!(all_bits.len() as u64, LENGTH);
 }
 
 // Github issue https://github.com/Cydhra/vers/issues/8 regression test

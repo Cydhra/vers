@@ -15,11 +15,11 @@ fn bench_select_iter(b: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("select queries", l), &l, |b, _| {
             b.iter_custom(|iters| {
                 let mut time = Duration::new(0, 0);
-                let mut i = 0usize;
+                let mut i = 0;
                 let rank1 = bit_vec.rank1(bit_vec.len());
 
                 let start = Instant::now();
-                while (i as u64) < iters {
+                while (i) < iters {
                     black_box(bit_vec.select1(i % rank1));
                     i += 1;
                 }

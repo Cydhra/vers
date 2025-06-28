@@ -1,9 +1,9 @@
-use crate::rmq::binary_rmq::BinaryRmq;
+use crate::rmq::binary_rmq::SparseRmq;
 use rand::RngCore;
 
 #[test]
 fn small_test() {
-    let rmq = BinaryRmq::from_vec(vec![9, 6, 10, 4, 0, 8, 3, 7, 1, 2, 5]);
+    let rmq = SparseRmq::from_vec(vec![9, 6, 10, 4, 0, 8, 3, 7, 1, 2, 5]);
 
     assert_eq!(rmq.range_min(0, 0), 0);
     assert_eq!(rmq.range_min(0, 1), 1);
@@ -25,7 +25,7 @@ fn randomized_test() {
         numbers_vec.push(rng.next_u64());
     }
 
-    let rmq = BinaryRmq::from_vec(numbers_vec.clone());
+    let rmq = SparseRmq::from_vec(numbers_vec.clone());
 
     for i in 0..L {
         for j in i..L {
@@ -43,7 +43,7 @@ fn randomized_test() {
 
 #[test]
 fn test_iter() {
-    let rmq = BinaryRmq::from_vec(vec![1, 2, 3, 4, 5]);
+    let rmq = SparseRmq::from_vec(vec![1, 2, 3, 4, 5]);
     let mut iter = rmq.iter();
     assert_eq!(iter.next(), Some(&1));
     assert_eq!(iter.next(), Some(&2));
@@ -55,7 +55,7 @@ fn test_iter() {
 
 #[test]
 fn test_range_operators() {
-    let rmq = BinaryRmq::from_vec(vec![5, 4, 3, 2, 1]);
+    let rmq = SparseRmq::from_vec(vec![5, 4, 3, 2, 1]);
     assert_eq!(rmq.range_min(0, 3), 3);
     assert_eq!(rmq.range_min_with_range(0..3), 2);
     assert_eq!(rmq.range_min_with_range(0..=3), 3);
@@ -63,7 +63,7 @@ fn test_range_operators() {
 
 #[test]
 fn test_empty_rmq() {
-    let rmq = BinaryRmq::from_vec(Vec::<u64>::new());
+    let rmq = SparseRmq::from_vec(Vec::<u64>::new());
     assert!(rmq.is_empty());
     // calling functions on an empty rmq will panic because the upper bound is inclusive, but there
     // is no valid index in an empty array, so we can't test anything else

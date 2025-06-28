@@ -6,12 +6,12 @@ use crate::BitVec;
 /// [`TreeBuilder`].
 ///
 /// [`BpTree`]: BpTree
-pub struct BpBuilder<const BLOCK_SIZE: usize = DEFAULT_BLOCK_SIZE> {
+pub struct BpBuilder<const BLOCK_SIZE: u64 = DEFAULT_BLOCK_SIZE> {
     excess: i64,
     bit_vec: BitVec,
 }
 
-impl<const BLOCK_SIZE: usize> BpBuilder<BLOCK_SIZE> {
+impl<const BLOCK_SIZE: u64> BpBuilder<BLOCK_SIZE> {
     /// Create new empty `DfsTreeBuilder`
     #[must_use]
     pub fn new() -> Self {
@@ -26,18 +26,18 @@ impl<const BLOCK_SIZE: usize> BpBuilder<BLOCK_SIZE> {
     pub fn with_capacity(capacity: u64) -> Self {
         Self {
             excess: 0,
-            bit_vec: BitVec::with_capacity((capacity * 2) as usize),
+            bit_vec: BitVec::with_capacity(capacity * 2),
         }
     }
 }
 
-impl<const BLOCK_SIZE: usize> Default for BpBuilder<BLOCK_SIZE> {
+impl<const BLOCK_SIZE: u64> Default for BpBuilder<BLOCK_SIZE> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const BLOCK_SIZE: usize> TreeBuilder for BpBuilder<BLOCK_SIZE> {
+impl<const BLOCK_SIZE: u64> TreeBuilder for BpBuilder<BLOCK_SIZE> {
     type Tree = BpTree<BLOCK_SIZE>;
 
     fn enter_node(&mut self) {
@@ -54,7 +54,7 @@ impl<const BLOCK_SIZE: usize> TreeBuilder for BpBuilder<BLOCK_SIZE> {
         if self.excess != 0 {
             Err(self.excess)
         } else {
-            Ok(BpTree::from_bit_vector(self.bit_vec))
+            Ok(BpTree::from_bit_vec(self.bit_vec))
         }
     }
 }
