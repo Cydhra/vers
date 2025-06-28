@@ -425,7 +425,7 @@ macro_rules! gen_iter_impl {
 
         impl<$($life,)? const ZERO: bool> ExactSizeIterator for $name<$($life,)? ZERO> {
             fn len(&self) -> usize {
-                // this may truncate, but we cannot redefine the trait
+                // TODO this may truncate, but we cannot redefine the trait
                 self.next_rank_back.map(|x| x + 1).unwrap_or_default().saturating_sub(self.next_rank) as usize
             }
         }
