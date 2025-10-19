@@ -180,7 +180,7 @@ where
             .take(self.vec.len / WORD_SIZE)
             .map(|limb| u64::from(limb.count_ones()))
             .sum();
-        if self.vec.len % WORD_SIZE > 0 {
+        if !self.vec.len.is_multiple_of(WORD_SIZE) {
             ones += u64::from(
                 ((self.bin_op)(
                     *self.vec.data.last().unwrap(),

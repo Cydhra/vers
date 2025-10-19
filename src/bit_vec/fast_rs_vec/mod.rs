@@ -144,7 +144,7 @@ impl RsVec {
             let mut new_zeros = word.count_zeros() as usize;
 
             // in the last block, remove remaining zeros of limb that aren't part of the vector
-            if idx == vec.data.len() - 1 && vec.len % WORD_SIZE > 0 {
+            if idx == vec.data.len() - 1 && !vec.len.is_multiple_of(WORD_SIZE) {
                 let mask = (1 << (vec.len % WORD_SIZE)) - 1;
                 new_zeros -= (word | mask).count_zeros() as usize;
             }
@@ -477,9 +477,9 @@ impl RsVec {
         }
 
         // if last incomplete block exists, test it without junk data
-        if self.len % 64 > 0
-            && self.data[self.len / 64] & ((1 << (self.len % 64)) - 1)
-                != other.data[self.len / 64] & ((1 << (other.len % 64)) - 1)
+        if !self.len.is_multiple_of(WORD_SIZE)
+            && self.data[self.len / WORD_SIZE] & ((1 << (self.len % WORD_SIZE)) - 1)
+                != other.data[self.len / WORD_SIZE] & ((1 << (other.len % WORD_SIZE)) - 1)
         {
             return false;
         }

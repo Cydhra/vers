@@ -87,7 +87,7 @@ impl BitVec {
     #[must_use]
     pub fn from_zeros(len: usize) -> Self {
         let mut data = vec![0; len / WORD_SIZE];
-        if len % WORD_SIZE != 0 {
+        if !len.is_multiple_of(WORD_SIZE) {
             data.push(0);
         }
         Self { data, len }
@@ -98,7 +98,7 @@ impl BitVec {
     #[must_use]
     pub fn from_ones(len: usize) -> Self {
         let mut data = vec![u64::MAX; len / WORD_SIZE];
-        if len % WORD_SIZE != 0 {
+        if !len.is_multiple_of(WORD_SIZE) {
             data.push((1 << (len % WORD_SIZE)) - 1);
         }
         Self { data, len }
@@ -500,7 +500,7 @@ impl BitVec {
     /// [`append_bit_u8`]: BitVec::append_bit_u8
     /// [`append_word`]: BitVec::append_word
     pub fn append(&mut self, bit: bool) {
-        if self.len % WORD_SIZE == 0 {
+        if self.len.is_multiple_of(WORD_SIZE) {
             self.data.push(0);
         }
         if bit {
@@ -574,7 +574,7 @@ impl BitVec {
     /// [`append_bit_u8`]: BitVec::append_bit_u8
     /// [`append_word`]: BitVec::append_word
     pub fn append_bit(&mut self, bit: u64) {
-        if self.len % WORD_SIZE == 0 {
+        if self.len.is_multiple_of(WORD_SIZE) {
             self.data.push(0);
         }
         if bit % 2 == 1 {
@@ -653,7 +653,7 @@ impl BitVec {
     /// [`append_bit_u16`]: BitVec::append_bit_u16
     /// [`append_bit_u8`]: BitVec::append_bit_u8
     pub fn append_word(&mut self, word: u64) {
-        if self.len % WORD_SIZE == 0 {
+        if self.len.is_multiple_of(WORD_SIZE) {
             self.data.push(word);
         } else {
             // zero out the unused bits before or-ing the new one, to ensure no garbage data remains
@@ -688,7 +688,7 @@ impl BitVec {
     pub fn append_bits(&mut self, bits: u64, len: usize) {
         assert!(len <= 64, "Cannot append more than 64 bits");
 
-        if self.len % WORD_SIZE == 0 {
+        if self.len.is_multiple_of(WORD_SIZE) {
             self.data.push(bits);
         } else {
             // zero out the unused bits before or-ing the new one, to ensure no garbage data remains
@@ -725,7 +725,7 @@ impl BitVec {
     /// [`append_bits`]: BitVec::append_bits
     /// [`drop_last`]: BitVec::drop_last
     pub fn append_bits_unchecked(&mut self, bits: u64, len: usize) {
-        if self.len % WORD_SIZE == 0 {
+        if self.len.is_multiple_of(WORD_SIZE) {
             self.data.push(bits);
         } else {
             self.data[self.len / WORD_SIZE] |= bits << (self.len % WORD_SIZE);
@@ -1043,7 +1043,7 @@ impl BitVec {
             .iter()
             .map(|limb| u64::from(limb.count_ones()))
             .sum();
-        if self.len % WORD_SIZE > 0 {
+        if !self.len.is_multiple_of(WORD_SIZE) {
             ones += u64::from(
                 (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones(),
             );
