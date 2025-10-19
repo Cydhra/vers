@@ -2,7 +2,7 @@
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::assertions_on_constants)] // for asserts warning about incompatible constant values
 #![allow(clippy::inline_always)] // we actually measure performance increases with most of these
-#![cfg_attr(docsrs, feature(doc_cfg), feature(doc_auto_cfg))] // for conditional compilation in docs
+#![cfg_attr(docsrs, feature(doc_cfg))] // for conditional compilation in docs
 
 //! This crate provides a collection of data structures supported by fast implementations of
 //! rank and select queries. The data structures are static, meaning that they cannot be modified
