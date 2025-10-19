@@ -92,6 +92,10 @@ macro_rules! gen_ef_iter_impl {
 
             /// Returns the exact number of elements that this iterator would iterate over. Does not
             /// call `next` internally.
+            ///
+            /// # Panics
+            /// If the vector contains more than `usize::MAX` elements, calling `count()` on the iterator will
+            /// cause it to panic.
             fn count(self) -> usize
             where
                 Self: Sized,
