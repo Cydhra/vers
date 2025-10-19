@@ -11,3 +11,11 @@ The following structures and functions were renamed
 - `BitVec::from_bits` to `BitVec::from_bits_u8`
 - module `fast_rs_vec` to `rs`
 - module `elias_fano` to `ef`
+
+## Changed Index Type
+All vector types that operate on bits or sub-byte words are now indexed by `u64` instead of `usize`, 
+allowing full utilization of the memory in 32-bit architectures.
+This affects `BitVec`, `RsVec`, `EliasFano`, `SparseRsVec`, `BpTree`, and `WaveletMatrix`
+This changes the parameter and return types of various functions on the affected types from `usize` to `u64`.
+The only adverse effect is that `len()` and `count()` of iterators over these data structures may panic if the
+iterator has more than `usize::MAX` elements.
