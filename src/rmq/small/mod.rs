@@ -7,7 +7,7 @@ use std::cmp::min_by;
 use std::mem::size_of;
 use std::ops::{Bound, Deref, RangeBounds};
 
-use crate::rmq::binary_rmq::SparseRmq;
+use crate::rmq::sparse::SparseRmq;
 use crate::util::pdep::Pdep;
 
 /// Size of the blocks the data is split into. One block is indexable with a u8, hence its size.

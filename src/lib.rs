@@ -1,5 +1,4 @@
 #![warn(missing_docs)]
-#![allow(clippy::module_name_repetitions)]
 #![allow(clippy::assertions_on_constants)] // for asserts warning about incompatible constant values
 #![allow(clippy::inline_always)] // we actually measure performance increases with most of these
 #![allow(clippy::cast_lossless)] // it is often more readable to use `as u64` instead of `u64::from(..)`
@@ -59,8 +58,8 @@ pub use bit_vec::rs::RsVec;
 pub use bit_vec::sparse::SparseRsVec;
 pub use bit_vec::BitVec;
 pub use ef::EliasFanoVec;
-pub use rmq::binary_rmq::SparseRmq;
-pub use rmq::fast_rmq::SmallRmq;
+pub use rmq::small::SmallRmq;
+pub use rmq::sparse::SparseRmq;
 pub use trees::bp::{BpBuilder, BpTree};
 pub use trees::{IsAncestor, LevelTree, SubtreeSize, Tree, TreeBuilder};
 pub use wavelet::WaveletMatrix;

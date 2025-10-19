@@ -1,4 +1,4 @@
-use crate::rmq::binary_rmq::SparseRmq;
+use crate::rmq::sparse::SparseRmq;
 use rand::RngCore;
 
 #[test]

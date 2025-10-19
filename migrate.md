@@ -11,6 +11,8 @@ The following structures and functions were renamed
 - `BitVec::from_bits` to `BitVec::from_bits_u8`
 - module `fast_rs_vec` to `rs`
 - module `elias_fano` to `ef`
+- module `fast_rmq` to `small`
+- module `binary_rmq` to `sparse`
 
 ## Changed Index Type
 All vector types that operate on bits or sub-byte words are now indexed by `u64` instead of `usize`, 

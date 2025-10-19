@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use rand::distributions::{Distribution, Uniform};
 use rand::Rng;
-use vers_vecs::rmq::fast_rmq::SmallRmq;
+use vers_vecs::rmq::small::SmallRmq;
 
 mod common;
 
