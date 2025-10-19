@@ -31,8 +31,6 @@ since the intrinsics speed up both `rank` and `select` operations by a factor of
 - `simd`: Enables the use of SIMD instructions for rank and select operations.
 This feature requires AVX-512 support and uses unsafe code.
 It also enables a special iterator for the rank/select bit vector that uses vectorized operations.
-The feature only works on nightly Rust.
-Enabling it on stable Rust is a no-op, because the required CPU features are not available there.
 - `serde`: Enables serialization and deserialization of the data structures using the `serde` crate.
 - `u16_lookup` Enables a larger lookup table for BP tree queries. The larger table requires 128 KiB instead of 4 KiB.
 
