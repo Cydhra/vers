@@ -175,7 +175,7 @@ impl MinMaxTree {
     /// Get the index of the left sibling of the node at `index` if it exists
     #[allow(clippy::unused_self)] // self is used for consistency with other methods
     pub(crate) fn left_sibling(&self, index: NonZeroUsize) -> Option<NonZeroUsize> {
-        if index.get() % 2 == 0 {
+        if index.get().is_multiple_of(2) {
             // index is at least 2
             NonZeroUsize::new(index.get() - 1)
         } else {

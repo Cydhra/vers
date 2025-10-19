@@ -2,7 +2,7 @@
 //! The vector requires `O(n log u/n) + 2n + o(n)` bits of space, where `n` is the number of bits in the vector
 //! and `u` is the number of 1-bits.
 //! The vector is constructed from a sorted list of indices of 1-bits, or from an existing
-//! [`BitVec`](crate::BitVec).
+//! [`BitVec`].
 
 use crate::{BitVec, EliasFanoVec};
 
@@ -170,6 +170,8 @@ impl SparseRSVec {
     /// # Panics
     /// If `i` is out of bounds the function might panic or produce incorrect results.
     /// Use [`get`] for a checked version.
+    ///
+    /// [`get`]: Self::get
     #[must_use]
     pub fn get_unchecked(&self, i: u64) -> u64 {
         self.is_set_unchecked(i).into()
