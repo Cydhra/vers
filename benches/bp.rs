@@ -1,5 +1,3 @@
-#![allow(long_running_const_eval)]
-
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};

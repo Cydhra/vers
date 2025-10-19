@@ -22,14 +22,14 @@ const LOOKUP_MAX_VALUE: u32 = u8::MAX as u32;
 /// to dual-encode negative excess), and another 51 bits for all 17 queries that may end in this block
 /// (-8 to 8 relative excess).
 #[allow(long_running_const_eval)]
-const PAREN_BLOCK_LOOKUP_FWD: [u64; 1 << LOOKUP_BLOCK_SIZE] = calculate_lookup_table(true);
+static PAREN_BLOCK_LOOKUP_FWD: [u64; 1 << LOOKUP_BLOCK_SIZE] = calculate_lookup_table(true);
 
 /// Encoded bwd query results for all possible 8-bit blocks.
 /// The encoding reserves 10 bits for minimum and maximum excess (shifted by 8 bits so we don't have
 /// to dual-encode negative excess), and another 51 bits for all 17 queries that may end in this block
 /// (-8 to 8 relative excess).
 #[allow(long_running_const_eval)]
-const PAREN_BLOCK_LOOKUP_BWD: [u64; 1 << LOOKUP_BLOCK_SIZE] = calculate_lookup_table(false);
+static PAREN_BLOCK_LOOKUP_BWD: [u64; 1 << LOOKUP_BLOCK_SIZE] = calculate_lookup_table(false);
 
 /// Bitmask for one of the lookup values.
 const ENCODING_MASK: u64 = 0b11111;

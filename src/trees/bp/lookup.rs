@@ -48,7 +48,7 @@ const LOOKUP_MAX_VALUE: u32 = u8::MAX as u32;
 ///
 /// The rest of the bits are zero.
 #[allow(long_running_const_eval)]
-const PAREN_BLOCK_LOOKUP: [EncodedTableType; 1 << LOOKUP_BLOCK_SIZE] = calculate_lookup_table();
+static PAREN_BLOCK_LOOKUP: [EncodedTableType; 1 << LOOKUP_BLOCK_SIZE] = calculate_lookup_table();
 
 /// Offset to add to encoded excess values, so negative numbers are stored as positive integers, reducing
 /// encoding complexity
