@@ -85,11 +85,11 @@ struct SelectSuperBlockDescriptor {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RsVec {
-    data: Vec<u64>,
+    data: Box<[u64]>,
     len: u64,
-    blocks: Vec<BlockDescriptor>,
-    super_blocks: Vec<SuperBlockDescriptor>,
-    select_blocks: Vec<SelectSuperBlockDescriptor>,
+    blocks: Box<[BlockDescriptor]>,
+    super_blocks: Box<[SuperBlockDescriptor]>,
+    select_blocks: Box<[SelectSuperBlockDescriptor]>,
     pub(crate) rank0: u64,
     pub(crate) rank1: u64,
 }
@@ -214,11 +214,11 @@ impl RsVec {
         total_zeros += current_zeros;
 
         RsVec {
-            data: vec.data,
+            data: vec.data.into_boxed_slice(),
             len: vec.len,
-            blocks,
-            super_blocks,
-            select_blocks,
+            blocks: blocks.into_boxed_slice(),
+            super_blocks: super_blocks.into_boxed_slice(),
+            select_blocks: select_blocks.into_boxed_slice(),
             rank0: total_zeros,
             rank1: vec.len - total_zeros,
         }
@@ -409,7 +409,7 @@ impl RsVec {
     #[must_use]
     pub fn into_bit_vec(self) -> BitVec {
         BitVec {
-            data: self.data,
+            data: self.data.into_vec(),
             len: self.len,
         }
     }
