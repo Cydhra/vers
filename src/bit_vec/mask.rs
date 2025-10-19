@@ -48,7 +48,7 @@ where
     /// If the position is larger than the length of the vector, None is returned.
     #[inline]
     #[must_use]
-    pub fn get(&self, pos: usize) -> Option<u64> {
+    pub fn get(&self, pos: u64) -> Option<u64> {
         if pos >= self.vec.len {
             None
         } else {
@@ -67,10 +67,10 @@ where
     /// [`get`]: MaskedBitVec::get
     #[inline]
     #[must_use]
-    pub fn get_unchecked(&self, pos: usize) -> u64 {
+    pub fn get_unchecked(&self, pos: u64) -> u64 {
         ((self.bin_op)(
-            self.vec.data[pos / WORD_SIZE],
-            self.mask.data[pos / WORD_SIZE],
+            self.vec.data[(pos / WORD_SIZE) as usize],
+            self.mask.data[(pos / WORD_SIZE) as usize],
         ) >> (pos % WORD_SIZE))
             & 1
     }
@@ -79,7 +79,7 @@ where
     /// If the position is larger than the length of the vector, None is returned.
     #[inline]
     #[must_use]
-    pub fn is_bit_set(&self, pos: usize) -> Option<bool> {
+    pub fn is_bit_set(&self, pos: u64) -> Option<bool> {
         if pos >= self.vec.len {
             None
         } else {
@@ -97,7 +97,7 @@ where
     /// [`is_bit_set`]: MaskedBitVec::is_bit_set
     #[inline]
     #[must_use]
-    pub fn is_bit_set_unchecked(&self, pos: usize) -> bool {
+    pub fn is_bit_set_unchecked(&self, pos: u64) -> bool {
         self.get_unchecked(pos) != 0
     }
 
@@ -108,7 +108,7 @@ where
     /// If the length of the query is larger than 64, None is returned.
     #[inline]
     #[must_use]
-    pub fn get_bits(&self, pos: usize, len: usize) -> Option<u64> {
+    pub fn get_bits(&self, pos: u64, len: u64) -> Option<u64> {
         if len > WORD_SIZE || len == 0 {
             return None;
         }
@@ -138,12 +138,13 @@ where
     #[must_use]
     #[allow(clippy::inline_always)]
     #[allow(clippy::comparison_chain)] // rust-clippy #5354
+    #[allow(clippy::cast_possible_truncation)] // safe due to the division
     #[inline]
-    pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
+    pub fn get_bits_unchecked(&self, pos: u64, len: u64) -> u64 {
         debug_assert!(len <= WORD_SIZE);
         let partial_word = (self.bin_op)(
-            self.vec.data[pos / WORD_SIZE],
-            self.mask.data[pos / WORD_SIZE],
+            self.vec.data[(pos / WORD_SIZE) as usize],
+            self.mask.data[(pos / WORD_SIZE) as usize],
         ) >> (pos % WORD_SIZE);
 
         if pos % WORD_SIZE + len == WORD_SIZE {
@@ -152,8 +153,8 @@ where
             partial_word & ((1 << (len % WORD_SIZE)) - 1)
         } else {
             let next_half = (self.bin_op)(
-                self.vec.data[pos / WORD_SIZE + 1],
-                self.mask.data[pos / WORD_SIZE + 1],
+                self.vec.data[(pos / WORD_SIZE + 1) as usize],
+                self.mask.data[(pos / WORD_SIZE + 1) as usize],
             ) << (WORD_SIZE - pos % WORD_SIZE);
 
             (partial_word | next_half) & ((1 << (len % WORD_SIZE)) - 1)
@@ -167,7 +168,7 @@ where
     #[inline]
     #[must_use]
     pub fn count_zeros(&self) -> u64 {
-        self.vec.len as u64 - self.count_ones()
+        self.vec.len - self.count_ones()
     }
 
     /// Return the number of ones in the masked bit vector.
@@ -177,10 +178,10 @@ where
     pub fn count_ones(&self) -> u64 {
         let mut ones = self
             .iter_limbs()
-            .take(self.vec.len / WORD_SIZE)
+            .take((self.vec.len / WORD_SIZE) as usize)
             .map(|limb| u64::from(limb.count_ones()))
             .sum();
-        if self.vec.len % WORD_SIZE > 0 {
+        if !self.vec.len.is_multiple_of(WORD_SIZE) {
             ones += u64::from(
                 ((self.bin_op)(
                     *self.vec.data.last().unwrap(),

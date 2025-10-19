@@ -41,12 +41,16 @@ pub(crate) struct MinMaxTree {
 }
 
 impl MinMaxTree {
-    pub(crate) fn excess_tree(bit_vec: &BitVec, block_size: usize) -> Self {
+    pub(crate) fn excess_tree(bit_vec: &BitVec, block_size: u64) -> Self {
         if bit_vec.is_empty() {
             return Self::default();
         }
 
-        let num_leaves = bit_vec.len().div_ceil(block_size);
+        #[allow(clippy::cast_possible_truncation)] // safe due to the division
+        let num_leaves = bit_vec.len().div_ceil(block_size) as usize;
+        #[allow(clippy::cast_possible_truncation)] // only happens if available memory already exceeded
+        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_precision_loss)]
         let num_internal_nodes = max(1, (1 << (num_leaves as f64).log2().ceil() as usize) - 1);
 
         let mut nodes = vec![ExcessNode::default(); num_leaves + num_internal_nodes];
@@ -56,8 +60,9 @@ impl MinMaxTree {
 
         // bottom up construction
         for i in 0..bit_vec.len() {
+            #[allow(clippy::cast_possible_truncation)] // safe due to the division
             if i > 0 && i % block_size == 0 {
-                nodes[num_internal_nodes + i / block_size - 1] = ExcessNode {
+                nodes[num_internal_nodes + (i / block_size) as usize - 1] = ExcessNode {
                     total: total_excess,
                     min: min_excess,
                     max: max_excess,
@@ -170,7 +175,7 @@ impl MinMaxTree {
     /// Get the index of the left sibling of the node at `index` if it exists
     #[allow(clippy::unused_self)] // self is used for consistency with other methods
     pub(crate) fn left_sibling(&self, index: NonZeroUsize) -> Option<NonZeroUsize> {
-        if index.get() % 2 == 0 {
+        if index.get().is_multiple_of(2) {
             // index is at least 2
             NonZeroUsize::new(index.get() - 1)
         } else {

@@ -619,8 +619,8 @@ fn test_unpack() {
     let bv = BitVec::pack_sequence_u64(&sequence, 10);
 
     for (i, &val) in sequence.iter().enumerate() {
-        assert_eq!(bv.unpack_element(i, 10), Some(val));
-        assert_eq!(bv.unpack_element_unchecked(i, 10), val);
+        assert_eq!(bv.unpack_element(i as u64, 10), Some(val));
+        assert_eq!(bv.unpack_element_unchecked(i as u64, 10), val);
     }
 
     assert_eq!(bv.unpack_element(8, 10), None);

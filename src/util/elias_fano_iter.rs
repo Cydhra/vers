@@ -12,14 +12,17 @@ macro_rules! gen_ef_iter_impl {
                     return Ok(());
                 }
 
-                if Some(self.index + n - 1) > self.back_index {
+                if Some(self.index + n as u64 - 1) > self.back_index {
                     if Some(self.index) > self.back_index {
                         Err(std::num::NonZeroUsize::new(n).unwrap())
                     } else {
-                        Err(std::num::NonZeroUsize::new(n - (self.back_index.as_ref().unwrap_or(&usize::MAX).wrapping_sub(self.index).wrapping_add(1))).unwrap())
+                        // the following is limited in size by n, and `back_index` is `None` only if the vector is
+                        // empty, so a truncation is impossible
+                        #[allow(clippy::cast_possible_truncation)]
+                        Err(std::num::NonZeroUsize::new(n - (self.back_index.as_ref().unwrap_or(&u64::MAX).wrapping_sub(self.index).wrapping_add(1)) as usize).unwrap())
                     }
                 } else {
-                    self.index += n;
+                    self.index += n as u64;
                     if n > 0 {
                         // since advance_by is not stable yet, we need to call nth - 1.
                         self.upper_iter.nth(n - 1).expect("upper iterator should not be exhausted");
@@ -46,10 +49,12 @@ macro_rules! gen_ef_iter_impl {
 
                 // since the cursors point to unconsumed items, we need to add 1
                 let remaining = *self.back_index.as_ref().unwrap() - self.index + 1;
-                if remaining < n {
-                    return Err(std::num::NonZeroUsize::new(n - remaining).unwrap());
+                if remaining < n as u64 {
+                    // the following is limited in size by n, so a truncation is impossible
+                    #[allow(clippy::cast_possible_truncation)]
+                    return Err(std::num::NonZeroUsize::new(n - remaining as usize).unwrap());
                 }
-                self.back_index = if self.back_index >= Some(n) { self.back_index.map(|b| b - n) } else { None };
+                self.back_index = if self.back_index >= Some(n as u64) { self.back_index.map(|b| b - n as u64) } else { None };
                 if n > 0 {
                     // since advance_by is not stable yet, we need to call nth - 1.
                     self.upper_iter.nth_back(n - 1).expect("upper iterator should not be exhausted");
@@ -87,6 +92,10 @@ macro_rules! gen_ef_iter_impl {
 
             /// Returns the exact number of elements that this iterator would iterate over. Does not
             /// call `next` internally.
+            ///
+            /// # Panics
+            /// If the vector contains more than `usize::MAX` elements, calling `count()` on the iterator will
+            /// cause it to panic.
             fn count(self) -> usize
             where
                 Self: Sized,
@@ -139,9 +148,17 @@ macro_rules! gen_ef_iter_impl {
         }
 
         impl $(<$life>)? std::iter::ExactSizeIterator for $name $(<$life>)? {
+            // the check and panic guarantees panic on truncation
+            #[allow(clippy::cast_possible_truncation)]
             fn len(&self) -> usize {
+                // this check is hopefully eliminated on 64-bit architectures
+                if (*self.back_index.as_ref().unwrap_or(&u64::MAX)).wrapping_sub(self.index).wrapping_add(1)
+                    > usize::MAX as u64 {
+                    panic!("calling len() on an iterator containing more than usize::MAX elements is forbidden");
+                }
+
                 // intentionally overflowing calculations to avoid branches on empty iterator
-                (*self.back_index.as_ref().unwrap_or(&usize::MAX)).wrapping_sub(self.index).wrapping_add(1)
+                (*self.back_index.as_ref().unwrap_or(&u64::MAX)).wrapping_sub(self.index).wrapping_add(1) as usize
             }
         }
 
@@ -182,11 +199,11 @@ macro_rules! impl_ef_iterator {
         pub struct $own {
             upper_iter: crate::bit_vec::fast_rs_vec::SelectIntoIter<false>,
             vec: crate::bit_vec::BitVec,
-            index: usize,
+            index: u64,
             // back index is none, iff it points to element -1 (i.e. element 0 has been consumed by
             // a call to next_back()). It can be Some(..) even if the iterator is empty
-            back_index: Option<usize>,
-            lower_len: usize,
+            back_index: Option<u64>,
+            lower_len: u64,
             universe_zero: u64,
         }
 
@@ -218,6 +235,7 @@ macro_rules! impl_ef_iterator {
 
         impl EliasFanoVec {
             #[doc = concat!("Returns an iterator over the elements of `", stringify!($type), "`.")]
+            #[doc = "Note, if the iterator length exceeds `usize::MAX`, calling `len()` on it will panic ."]
             #[must_use]
             pub fn iter(&self) -> $bor<'_> {
                 $bor::new(self)
@@ -230,11 +248,11 @@ macro_rules! impl_ef_iterator {
         pub struct $bor<'a> {
             upper_iter: crate::bit_vec::fast_rs_vec::SelectIter<'a, false>,
             vec: &'a crate::bit_vec::BitVec,
-            index: usize,
+            index: u64,
             // back index is none, iff it points to element -1 (i.e. element 0 has been consumed by
             // a call to next_back()). It can be Some(..) even if the iterator is empty
-            back_index: Option<usize>,
-            lower_len: usize,
+            back_index: Option<u64>,
+            lower_len: u64,
             universe_zero: u64,
         }
 

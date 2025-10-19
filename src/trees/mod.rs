@@ -41,14 +41,14 @@ pub trait Tree {
 
     /// Convert a node handle into a contiguous index, allowing associated data to be stored in a vector.
     /// If `node` is not a valid node handle, the result is meaningless.
-    fn node_index(&self, node: Self::NodeHandle) -> usize;
+    fn node_index(&self, node: Self::NodeHandle) -> u64;
 
     /// Convert a contiguous index that enumerates all nodes into a node handle.
     /// This operation is the inverse of `node_index`.
     /// The index must be in the range `0..self.size()`.
     ///
     /// If the index is out of bounds, the behavior is unspecified.
-    fn node_handle(&self, index: usize) -> Self::NodeHandle;
+    fn node_handle(&self, index: u64) -> Self::NodeHandle;
 
     /// Returns true if the node is a leaf.
     /// If `node` is not a valid node handle, the result is meaningless.
@@ -63,7 +63,7 @@ pub trait Tree {
     fn depth(&self, node: Self::NodeHandle) -> u64;
 
     /// Returns the number of nodes in the tree.
-    fn size(&self) -> usize;
+    fn size(&self) -> u64;
 
     /// Returns true, if the tree has no nodes.
     fn is_empty(&self) -> bool {
@@ -81,7 +81,7 @@ pub trait SubtreeSize: Tree {
     ///
     /// Returns `None` if the `node` has no closing parenthesis (in an unbalanced parenthesis
     /// expression).
-    fn subtree_size(&self, node: Self::NodeHandle) -> Option<usize>;
+    fn subtree_size(&self, node: Self::NodeHandle) -> Option<u64>;
 }
 
 /// A trait for succinct tree data structures that support [`is_ancestor`] queries.
@@ -122,6 +122,10 @@ pub trait LevelTree: Tree {
 ///
 /// Once the full tree has been visited, the caller must call [`build`] to create an instance of the
 /// implementing tree type.
+///
+/// [`enter_node`]: TreeBuilder::enter_node
+/// [`leave_node`]: TreeBuilder::leave_node
+/// [`build`]: TreeBuilder::build
 pub trait TreeBuilder {
     /// The tree type constructed with this interface
     type Tree;
@@ -139,5 +143,8 @@ pub trait TreeBuilder {
     /// (i.e. there are nodes for which [`leave_node`] has not been called,
     /// or there are more calls to `leave_node` than to [`enter_node`];
     /// the number of extraneous calls to `enter_node` is returned in the error).
+    ///
+    /// [`leave_node`]: Self::leave_node
+    /// [`enter_node`]: Self::enter_node
     fn build(self) -> Result<Self::Tree, i64>;
 }

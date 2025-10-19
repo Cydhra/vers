@@ -11,7 +11,7 @@ use std::cmp::{max, min};
 use std::iter::FusedIterator;
 
 /// The default block size for the tree, used in several const generics
-const DEFAULT_BLOCK_SIZE: usize = 512;
+const DEFAULT_BLOCK_SIZE: u64 = 512;
 
 const OPEN_PAREN: u64 = 1;
 const CLOSE_PAREN: u64 = 0;
@@ -139,12 +139,12 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// [`BitVec`]: BitVec
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct BpTree<const BLOCK_SIZE: usize = DEFAULT_BLOCK_SIZE> {
+pub struct BpTree<const BLOCK_SIZE: u64 = DEFAULT_BLOCK_SIZE> {
     vec: RsVec,
     min_max_tree: MinMaxTree,
 }
 
-impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
+impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
     /// Construct a new `BpTree` from a given bit vector.
     #[must_use]
     pub fn from_bit_vector(bv: BitVec) -> Self {
@@ -161,14 +161,15 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// # Arguments
     /// - `index`: The starting index.
     /// - `relative_excess`: The desired relative excess value.
-    pub fn fwd_search(&self, index: usize, mut relative_excess: i64) -> Option<usize> {
+    pub fn fwd_search(&self, index: u64, mut relative_excess: i64) -> Option<u64> {
         // check for greater than or equal length minus one, because the last element
         // won't ever have a result from fwd_search
         if index >= (self.vec.len() - 1) {
             return None;
         }
 
-        let block_index = (index + 1) / BLOCK_SIZE;
+        #[allow(clippy::cast_possible_truncation)] // safe due to the division
+        let block_index = ((index + 1) / BLOCK_SIZE) as usize;
         self.fwd_search_block(index, block_index, &mut relative_excess)
             .map_or_else(
                 |()| {
@@ -177,8 +178,12 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
 
                     // check the result block for the exact position
                     block.and_then(|(block, mut relative_excess)| {
-                        self.fwd_search_block(block * BLOCK_SIZE - 1, block, &mut relative_excess)
-                            .ok()
+                        self.fwd_search_block(
+                            block as u64 * BLOCK_SIZE - 1,
+                            block,
+                            &mut relative_excess,
+                        )
+                        .ok()
                     })
                 },
                 Some,
@@ -194,15 +199,15 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     #[inline(always)]
     fn fwd_search_block(
         &self,
-        start_index: usize,
+        start_index: u64,
         block_index: usize,
         relative_excess: &mut i64,
-    ) -> Result<usize, ()> {
-        let block_boundary = min((block_index + 1) * BLOCK_SIZE, self.vec.len());
+    ) -> Result<u64, ()> {
+        let block_boundary = min((block_index as u64 + 1) * BLOCK_SIZE, self.vec.len());
 
         // the boundary at which we can start with table lookups
         let lookup_boundary = min(
-            (start_index + 1).div_ceil(LOOKUP_BLOCK_SIZE as usize) * LOOKUP_BLOCK_SIZE as usize,
+            (start_index + 1).div_ceil(LOOKUP_BLOCK_SIZE) * LOOKUP_BLOCK_SIZE,
             block_boundary,
         );
         for i in start_index + 1..lookup_boundary {
@@ -217,18 +222,20 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
         // the boundary up to which we can use table lookups
         let upper_lookup_boundary = max(
             lookup_boundary,
-            (block_boundary / LOOKUP_BLOCK_SIZE as usize) * LOOKUP_BLOCK_SIZE as usize,
+            (block_boundary / LOOKUP_BLOCK_SIZE) * LOOKUP_BLOCK_SIZE,
         );
 
+        // LOOKUP_BLOCK_SIZE as usize is a false positive for the lint: https://github.com/rust-lang/rust-clippy/issues/9613
+        #[allow(clippy::cast_possible_truncation)]
         for i in (lookup_boundary..upper_lookup_boundary).step_by(LOOKUP_BLOCK_SIZE as usize) {
             if let Ok(idx) = process_block_fwd(
                 self.vec
-                    .get_bits_unchecked(i, LOOKUP_BLOCK_SIZE as usize)
+                    .get_bits_unchecked(i, LOOKUP_BLOCK_SIZE)
                     .try_into()
                     .unwrap(),
                 relative_excess,
             ) {
-                return Ok(i + idx as usize);
+                return Ok(i + idx);
             }
         }
 
@@ -254,7 +261,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// # Arguments
     /// - `index`: The starting index.
     /// - `relative_excess`: The desired relative excess value.
-    pub fn bwd_search(&self, index: usize, mut relative_excess: i64) -> Option<usize> {
+    pub fn bwd_search(&self, index: u64, mut relative_excess: i64) -> Option<u64> {
         if index >= self.vec.len() {
             return None;
         }
@@ -267,7 +274,8 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
 
         // calculate the block we start searching in. It starts at index - 1, so we don't accidentally
         // search the mM tree and immediately find `index` as the position
-        let block_index = (index - 1) / BLOCK_SIZE;
+        #[allow(clippy::cast_possible_truncation)] // safe due to the division
+        let block_index = ((index - 1) / BLOCK_SIZE) as usize;
 
         // check the current block
         self.bwd_search_block(index, block_index, &mut relative_excess)
@@ -278,8 +286,12 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
 
                     // check the result block for the exact position
                     block.and_then(|(block, mut relative_excess)| {
-                        self.bwd_search_block((block + 1) * BLOCK_SIZE, block, &mut relative_excess)
-                            .ok()
+                        self.bwd_search_block(
+                            (block as u64 + 1) * BLOCK_SIZE,
+                            block,
+                            &mut relative_excess,
+                        )
+                        .ok()
                     })
                 },
                 Some,
@@ -295,15 +307,15 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     #[inline(always)]
     fn bwd_search_block(
         &self,
-        start_index: usize,
+        start_index: u64,
         block_index: usize,
         relative_excess: &mut i64,
-    ) -> Result<usize, ()> {
-        let block_boundary = min(block_index * BLOCK_SIZE, self.vec.len());
+    ) -> Result<u64, ()> {
+        let block_boundary = min(block_index as u64 * BLOCK_SIZE, self.vec.len());
 
         // the boundary at which we can start with table lookups
         let lookup_boundary = max(
-            ((start_index - 1) / LOOKUP_BLOCK_SIZE as usize) * LOOKUP_BLOCK_SIZE as usize,
+            ((start_index - 1) / LOOKUP_BLOCK_SIZE) * LOOKUP_BLOCK_SIZE,
             block_boundary,
         );
         for i in (lookup_boundary..start_index).rev() {
@@ -315,18 +327,22 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
             }
         }
 
-        for i in (block_boundary..lookup_boundary)
+        // lookup_boundary - block_boundary is smaller than a block, so casting to usize cannot
+        // truncate
+        // and LOOKUP_BLOCK_SIZE as usize is a false positive for the lint: https://github.com/rust-lang/rust-clippy/issues/9613
+        #[allow(clippy::cast_possible_truncation)]
+        for i in (0..(lookup_boundary - block_boundary) as usize)
             .step_by(LOOKUP_BLOCK_SIZE as usize)
             .rev()
         {
             if let Ok(idx) = process_block_bwd(
                 self.vec
-                    .get_bits_unchecked(i, LOOKUP_BLOCK_SIZE as usize)
+                    .get_bits_unchecked(block_boundary + i as u64, LOOKUP_BLOCK_SIZE)
                     .try_into()
                     .unwrap(),
                 relative_excess,
             ) {
-                return Ok(i + idx as usize);
+                return Ok(block_boundary + i as u64 + idx);
             }
         }
 
@@ -337,7 +353,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// If the bit at `index` is not an opening parenthesis, the result is meaningless.
     /// If there is no matching closing parenthesis, `None` is returned.
     #[must_use]
-    pub fn close(&self, index: usize) -> Option<usize> {
+    pub fn close(&self, index: u64) -> Option<u64> {
         if index >= self.vec.len() {
             return None;
         }
@@ -349,7 +365,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// If the bit at `index` is not a closing parenthesis, the result is meaningless.
     /// If there is no matching opening parenthesis, `None` is returned.
     #[must_use]
-    pub fn open(&self, index: usize) -> Option<usize> {
+    pub fn open(&self, index: u64) -> Option<u64> {
         if index >= self.vec.len() {
             return None;
         }
@@ -361,7 +377,7 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// This works regardless of whether the bit at `index` is an opening or closing parenthesis.
     /// If there is no enclosing parenthesis, `None` is returned.
     #[must_use]
-    pub fn enclose(&self, index: usize) -> Option<usize> {
+    pub fn enclose(&self, index: u64) -> Option<u64> {
         if index >= self.vec.len() {
             return None;
         }
@@ -380,7 +396,8 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// The excess is the number of open parentheses minus the number of closing parentheses.
     /// If `index` is out of bounds, the total excess of the parentheses expression is returned.
     #[must_use]
-    pub fn excess(&self, index: usize) -> i64 {
+    #[allow(clippy::cast_possible_wrap)] // only happens if the tree is unbalanced and has more than 2^62 nodes
+    pub fn excess(&self, index: u64) -> i64 {
         debug_assert!(index < self.vec.len(), "Index out of bounds");
         self.vec.rank1(index + 1) as i64 - self.vec.rank0(index + 1) as i64
     }
@@ -426,8 +443,14 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     /// Iterate over a subtree rooted at `node` in depth-first (pre-)order.
     /// The iteration starts with the node itself.
     ///
+    /// # Limitations
+    /// When called on an architecture where `usize` is smaller than 64 bits, on a tree with more
+    /// than 2^31 nodes, the iterator may produce an iterator over an unspecified subset of nodes.
+    ///
+    /// # Panics
     /// Calling this method on an invalid node handle, or an unbalanced parenthesis expression,
-    /// will produce an iterator over an unspecified subset of nodes.
+    /// will produce an iterator over an unspecified subset of nodes, or panic either during
+    /// construction or iteration.
     pub fn subtree_iter(
         &self,
         node: <BpTree<BLOCK_SIZE> as Tree>::NodeHandle,
@@ -437,16 +460,43 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
             "Node handle is invalid"
         );
 
-        let index = self.vec.rank1(node);
+        let mut index = self.vec.rank1(node);
         let close = self.close(node).unwrap_or(node);
         let subtree_size = self.vec.rank1(close) - index;
 
-        self.vec.iter1().skip(index).take(subtree_size)
+        let mut iterator = self.vec.iter1();
+
+        // since index and subtree_size can exceed usize::MAX, we need some special casing.
+        // This should be optimized away on 64-bit architectures
+
+        // skip `index` bytes
+        while index > usize::MAX as u64 {
+            index -= usize::MAX as u64;
+            iterator.advance_by(usize::MAX).unwrap();
+        }
+        #[allow(clippy::cast_possible_truncation)] // the loop guarantees no truncation
+        iterator.advance_by(index as usize).unwrap();
+
+        // limit to `subtree_size` bytes by consuming the back of the iterator
+        let mut remaining_bits = self.vec.rank1 - index - subtree_size;
+        while remaining_bits > usize::MAX as u64 {
+            remaining_bits -= usize::MAX as u64;
+            iterator.advance_back_by(usize::MAX).unwrap();
+        }
+        #[allow(clippy::cast_possible_truncation)] // the loop guarantees no truncation
+        iterator.advance_back_by(remaining_bits as usize).unwrap();
+
+        iterator
     }
 
     /// Iterate over a subtree rooted at `node` in depth-first (post-)order.
     /// This is slower than the pre-order iteration.
     /// The iteration ends with the node itself.
+    ///
+    /// # Limitations
+    /// When called on an architecture where `usize` is smaller than 64 bits, on a tree with more
+    /// than 2^31 nodes, the iterator may return an unspecified number of nodes starting at an
+    /// unspecified node.
     ///
     /// # Panics
     /// Calling this method on an invalid node handle, or an unbalanced parenthesis expression,
@@ -461,15 +511,33 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
             "Node handle is invalid"
         );
 
-        let index = self.vec.rank0(node);
+        let mut index = self.vec.rank0(node);
         let close = self.close(node).unwrap_or(node);
         let subtree_size = self.vec.rank0(close) + 1 - index;
 
-        self.vec
-            .iter0()
-            .skip(index)
-            .take(subtree_size)
-            .map(|n| self.open(n).unwrap())
+        let mut iterator = self.vec.iter0();
+
+        // since index and subtree_size can exceed usize::MAX, we need some special casing.
+        // This should be optimized away on 64-bit architectures
+
+        // skip `index` bytes
+        while index > usize::MAX as u64 {
+            index -= usize::MAX as u64;
+            iterator.advance_by(usize::MAX).unwrap();
+        }
+        #[allow(clippy::cast_possible_truncation)] // the loop guarantees no truncation
+        iterator.advance_by(index as usize).unwrap();
+
+        // limit to `subtree_size` bytes by consuming the back of the iterator
+        let mut remaining_bits = self.vec.rank0 - index - subtree_size;
+        while remaining_bits > usize::MAX as u64 {
+            remaining_bits -= usize::MAX as u64;
+            iterator.advance_back_by(usize::MAX).unwrap();
+        }
+        #[allow(clippy::cast_possible_truncation)] // the loop guarantees no truncation
+        iterator.advance_back_by(remaining_bits as usize).unwrap();
+
+        iterator.map(|n| self.open(n).unwrap())
     }
 
     /// Iterate over the children of a node in the tree.
@@ -544,8 +612,8 @@ impl<const BLOCK_SIZE: usize> BpTree<BLOCK_SIZE> {
     }
 }
 
-impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
-    type NodeHandle = usize;
+impl<const BLOCK_SIZE: u64> Tree for BpTree<BLOCK_SIZE> {
+    type NodeHandle = u64;
 
     fn root(&self) -> Option<Self::NodeHandle> {
         if self.vec.is_empty() {
@@ -627,7 +695,7 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
         })
     }
 
-    fn node_index(&self, node: Self::NodeHandle) -> usize {
+    fn node_index(&self, node: Self::NodeHandle) -> u64 {
         debug_assert!(
             self.vec.get(node) == Some(OPEN_PAREN),
             "Node handle is invalid"
@@ -635,7 +703,7 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
         self.vec.rank1(node)
     }
 
-    fn node_handle(&self, index: usize) -> Self::NodeHandle {
+    fn node_handle(&self, index: u64) -> Self::NodeHandle {
         self.vec.select1(index)
     }
 
@@ -656,7 +724,7 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
         excess.saturating_sub(1)
     }
 
-    fn size(&self) -> usize {
+    fn size(&self) -> u64 {
         self.vec.rank1(self.vec.len())
     }
 
@@ -665,7 +733,7 @@ impl<const BLOCK_SIZE: usize> Tree for BpTree<BLOCK_SIZE> {
     }
 }
 
-impl<const BLOCK_SIZE: usize> IsAncestor for BpTree<BLOCK_SIZE> {
+impl<const BLOCK_SIZE: u64> IsAncestor for BpTree<BLOCK_SIZE> {
     fn is_ancestor(
         &self,
         ancestor: Self::NodeHandle,
@@ -685,7 +753,7 @@ impl<const BLOCK_SIZE: usize> IsAncestor for BpTree<BLOCK_SIZE> {
     }
 }
 
-impl<const BLOCK_SIZE: usize> LevelTree for BpTree<BLOCK_SIZE> {
+impl<const BLOCK_SIZE: u64> LevelTree for BpTree<BLOCK_SIZE> {
     fn level_ancestor(&self, node: Self::NodeHandle, level: u64) -> Option<Self::NodeHandle> {
         if level == 0 {
             return Some(node);
@@ -722,8 +790,8 @@ impl<const BLOCK_SIZE: usize> LevelTree for BpTree<BLOCK_SIZE> {
     }
 }
 
-impl<const BLOCK_SIZE: usize> SubtreeSize for BpTree<BLOCK_SIZE> {
-    fn subtree_size(&self, node: Self::NodeHandle) -> Option<usize> {
+impl<const BLOCK_SIZE: u64> SubtreeSize for BpTree<BLOCK_SIZE> {
+    fn subtree_size(&self, node: Self::NodeHandle) -> Option<u64> {
         debug_assert!(
             self.vec.get(node) == Some(OPEN_PAREN),
             "Node handle is invalid"
@@ -734,7 +802,7 @@ impl<const BLOCK_SIZE: usize> SubtreeSize for BpTree<BLOCK_SIZE> {
     }
 }
 
-impl<const BLOCK_SIZE: usize> IntoIterator for BpTree<BLOCK_SIZE> {
+impl<const BLOCK_SIZE: u64> IntoIterator for BpTree<BLOCK_SIZE> {
     type Item = <BpTree<BLOCK_SIZE> as Tree>::NodeHandle;
     type IntoIter = SelectIntoIter<false>;
 
@@ -743,19 +811,19 @@ impl<const BLOCK_SIZE: usize> IntoIterator for BpTree<BLOCK_SIZE> {
     }
 }
 
-impl<const BLOCK_SIZE: usize> From<BitVec> for BpTree<BLOCK_SIZE> {
+impl<const BLOCK_SIZE: u64> From<BitVec> for BpTree<BLOCK_SIZE> {
     fn from(bv: BitVec) -> Self {
         Self::from_bit_vector(bv)
     }
 }
 
-impl<const BLOCK_SIZE: usize> From<BpTree<BLOCK_SIZE>> for BitVec {
+impl<const BLOCK_SIZE: u64> From<BpTree<BLOCK_SIZE>> for BitVec {
     fn from(value: BpTree<BLOCK_SIZE>) -> Self {
         value.into_parentheses_vec().into_bit_vec()
     }
 }
 
-impl<const BLOCK_SIZE: usize> From<BpTree<BLOCK_SIZE>> for RsVec {
+impl<const BLOCK_SIZE: u64> From<BpTree<BLOCK_SIZE>> for RsVec {
     fn from(value: BpTree<BLOCK_SIZE>) -> Self {
         value.into_parentheses_vec()
     }
@@ -764,13 +832,13 @@ impl<const BLOCK_SIZE: usize> From<BpTree<BLOCK_SIZE>> for RsVec {
 /// An iterator over the children of a node.
 /// Calls to `next` return the next child node handle in the order they appear in the parenthesis
 /// expression.
-struct ChildrenIter<'a, const BLOCK_SIZE: usize, const FORWARD: bool> {
+struct ChildrenIter<'a, const BLOCK_SIZE: u64, const FORWARD: bool> {
     tree: &'a BpTree<BLOCK_SIZE>,
-    current_sibling: Option<usize>,
+    current_sibling: Option<u64>,
 }
 
-impl<'a, const BLOCK_SIZE: usize, const FORWARD: bool> ChildrenIter<'a, BLOCK_SIZE, FORWARD> {
-    fn new(tree: &'a BpTree<BLOCK_SIZE>, node: usize) -> Self {
+impl<'a, const BLOCK_SIZE: u64, const FORWARD: bool> ChildrenIter<'a, BLOCK_SIZE, FORWARD> {
+    fn new(tree: &'a BpTree<BLOCK_SIZE>, node: u64) -> Self {
         Self {
             tree,
             current_sibling: if FORWARD {
@@ -782,10 +850,10 @@ impl<'a, const BLOCK_SIZE: usize, const FORWARD: bool> ChildrenIter<'a, BLOCK_SI
     }
 }
 
-impl<const BLOCK_SIZE: usize, const FORWARD: bool> Iterator
+impl<const BLOCK_SIZE: u64, const FORWARD: bool> Iterator
     for ChildrenIter<'_, BLOCK_SIZE, FORWARD>
 {
-    type Item = usize;
+    type Item = u64;
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.current_sibling?;
@@ -799,7 +867,7 @@ impl<const BLOCK_SIZE: usize, const FORWARD: bool> Iterator
     }
 }
 
-impl<const BLOCK_SIZE: usize, const FORWARD: bool> FusedIterator
+impl<const BLOCK_SIZE: u64, const FORWARD: bool> FusedIterator
     for ChildrenIter<'_, BLOCK_SIZE, FORWARD>
 {
 }

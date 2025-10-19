@@ -22,14 +22,14 @@ pub const SIZES: [usize; 7] = [
 const FILL_FACTORS: [f64; 6] = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5];
 
 /// Generate a bitvector with `fill_factors` percent ones at random positions
-fn generate_vector_with_fill(rng: &mut ThreadRng, len: usize, fill_factor: f64) -> BitVec {
+fn generate_vector_with_fill(rng: &mut ThreadRng, len: u64, fill_factor: f64) -> BitVec {
     let mut bit_vec1 = BitVec::from_zeros(len);
 
     // flip exactly fill-factor * len bits so the equality check is not trivial
-    sample(rng, len, (fill_factor * len as f64) as usize)
+    sample(rng, len as usize, (fill_factor * len as f64) as usize)
         .iter()
         .for_each(|i| {
-            bit_vec1.flip_bit(i);
+            bit_vec1.flip_bit(i as u64);
         });
 
     bit_vec1
@@ -39,6 +39,7 @@ fn bench(b: &mut Criterion<TimeDiff>) {
     let mut rng = rand::thread_rng();
 
     for len in SIZES {
+        let len = len as u64;
         let mut group = b.benchmark_group(format!("Equals Benchmark: {}", len));
         group.plot_config(common::plot_config());
 

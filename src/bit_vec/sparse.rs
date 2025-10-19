@@ -2,7 +2,7 @@
 //! The vector requires `O(n log u/n) + 2n + o(n)` bits of space, where `n` is the number of bits in the vector
 //! and `u` is the number of 1-bits.
 //! The vector is constructed from a sorted list of indices of 1-bits, or from an existing
-//! [`BitVec`](crate::BitVec).
+//! [`BitVec`].
 
 use crate::{BitVec, EliasFanoVec};
 
@@ -80,7 +80,7 @@ impl SparseRSVec {
     /// - `input`: The input `BitVec` to compress.
     #[must_use]
     pub fn from_bitvec(input: &BitVec) -> Self {
-        let len = input.len() as u64;
+        let len = input.len();
         Self::new(
             input
                 .iter()
@@ -127,7 +127,7 @@ impl SparseRSVec {
     /// [`get`]: #method.get
     #[must_use]
     pub fn from_bitvec_inverted(input: &BitVec) -> Self {
-        let len = input.len() as u64;
+        let len = input.len();
         Self::new(
             input
                 .iter()
@@ -170,6 +170,8 @@ impl SparseRSVec {
     /// # Panics
     /// If `i` is out of bounds the function might panic or produce incorrect results.
     /// Use [`get`] for a checked version.
+    ///
+    /// [`get`]: Self::get
     #[must_use]
     pub fn get_unchecked(&self, i: u64) -> u64 {
         self.is_set_unchecked(i).into()
@@ -188,7 +190,7 @@ impl SparseRSVec {
     ///
     /// If the rank is larger than the number of sparse bits in the vector, the vector length is returned.
     #[must_use]
-    pub fn select1(&self, i: usize) -> u64 {
+    pub fn select1(&self, i: u64) -> u64 {
         self.vec.get(i).unwrap_or(self.len)
     }
 
@@ -383,7 +385,7 @@ mod tests {
 
     #[test]
     fn test_fuzzy() {
-        const L: usize = 100_000;
+        const L: u64 = 100_000;
         let mut bv = BitVec::from_zeros(L);
         let mut rng = StdRng::from_seed([0; 32]);
 
@@ -395,11 +397,11 @@ mod tests {
 
         let mut ones = 0;
         for i in 0..L {
-            assert_eq!(bv.get(i), sparse.get(i as u64));
-            assert_eq!(ones, sparse.rank1(i as u64));
-            assert_eq!(i as u64 - ones, sparse.rank0(i as u64));
+            assert_eq!(bv.get(i), sparse.get(i));
+            assert_eq!(ones, sparse.rank1(i));
+            assert_eq!(i - ones, sparse.rank0(i));
             if bv.get(i) == Some(1) {
-                assert_eq!(i, sparse.select1(ones as usize).try_into().unwrap());
+                assert_eq!(i, sparse.select1(ones).try_into().unwrap());
                 ones += 1;
             }
         }
