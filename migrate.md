@@ -9,3 +9,5 @@ The following structures and functions were renamed
 - `FastRmq` to `SmallRmq`
 - `BinaryRmq` to `SparseRmq`
 - `BitVec::from_bits` to `BitVec::from_bits_u8`
+- module `fast_rs_vec` to `rs`
+- module `elias_fano` to `ef`

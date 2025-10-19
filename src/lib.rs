@@ -55,10 +55,10 @@
 //! - `bp_u16_lookup` (disabled by default): Uses a 16-bit lookup table for the balanced parenthesis
 //!   tree data structure. This is faster, but requires 128 KiB instead of 4 KiB.
 
-pub use bit_vec::fast_rs_vec::RsVec;
+pub use bit_vec::rs::RsVec;
 pub use bit_vec::sparse::SparseRsVec;
 pub use bit_vec::BitVec;
-pub use elias_fano::EliasFanoVec;
+pub use ef::EliasFanoVec;
 pub use rmq::binary_rmq::SparseRmq;
 pub use rmq::fast_rmq::SmallRmq;
 pub use trees::bp::{BpBuilder, BpTree};
@@ -68,7 +68,7 @@ pub use wavelet::WaveletMatrix;
 pub mod bit_vec;
 
 #[forbid(unsafe_code)]
-pub mod elias_fano;
+pub mod ef;
 
 #[forbid(unsafe_code)]
 pub mod rmq;

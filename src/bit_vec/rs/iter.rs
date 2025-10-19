@@ -1,4 +1,4 @@
-use crate::bit_vec::fast_rs_vec::{BLOCK_SIZE, SELECT_BLOCK_SIZE, SUPER_BLOCK_SIZE};
+use crate::bit_vec::rs::{BLOCK_SIZE, SELECT_BLOCK_SIZE, SUPER_BLOCK_SIZE};
 use crate::RsVec;
 use std::iter::FusedIterator;
 use std::num::NonZeroUsize;

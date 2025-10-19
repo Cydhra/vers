@@ -7,7 +7,7 @@ use std::cmp::min;
 use std::hash::{Hash, Hasher};
 use std::mem::size_of;
 
-pub mod fast_rs_vec;
+pub mod rs;
 
 pub mod sparse;
 

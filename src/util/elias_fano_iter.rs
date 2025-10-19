@@ -197,7 +197,7 @@ macro_rules! impl_ef_iterator {
         #[doc = concat!("This struct is created by the `into_iter` trait implementation of `", stringify!($type), "`.")]
         #[derive(Clone, Debug)]
         pub struct $own {
-            upper_iter: crate::bit_vec::fast_rs_vec::SelectIntoIter<false>,
+            upper_iter: crate::bit_vec::rs::SelectIntoIter<false>,
             vec: crate::bit_vec::BitVec,
             index: u64,
             // back index is none, iff it points to element -1 (i.e. element 0 has been consumed by
@@ -209,7 +209,7 @@ macro_rules! impl_ef_iterator {
 
         impl $own {
             #[must_use]
-            fn new(vec: crate::elias_fano::EliasFanoVec) -> Self {
+            fn new(vec: crate::ef::EliasFanoVec) -> Self {
                 if vec.is_empty() {
                     return Self {
                         upper_iter: vec.upper_vec.into_iter1(),
@@ -246,7 +246,7 @@ macro_rules! impl_ef_iterator {
         #[doc = concat!("This struct is created by the `iter` method of `", stringify!($type), "`.")]
         #[derive(Clone, Debug)]
         pub struct $bor<'a> {
-            upper_iter: crate::bit_vec::fast_rs_vec::SelectIter<'a, false>,
+            upper_iter: crate::bit_vec::rs::SelectIter<'a, false>,
             vec: &'a crate::bit_vec::BitVec,
             index: u64,
             // back index is none, iff it points to element -1 (i.e. element 0 has been consumed by
@@ -258,7 +258,7 @@ macro_rules! impl_ef_iterator {
 
         impl<'a> $bor<'a> {
             #[must_use]
-            fn new(vec: &'a crate::elias_fano::EliasFanoVec) -> Self {
+            fn new(vec: &'a crate::ef::EliasFanoVec) -> Self {
                 if vec.is_empty() {
                     return Self {
                         upper_iter: vec.upper_vec.iter1(),
