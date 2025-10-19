@@ -225,7 +225,8 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
             (block_boundary / LOOKUP_BLOCK_SIZE) * LOOKUP_BLOCK_SIZE,
         );
 
-        // TODO truncation
+        // LOOKUP_BLOCK_SIZE as usize is a false positive for the lint: https://github.com/rust-lang/rust-clippy/issues/9613
+        #[allow(clippy::cast_possible_truncation)]
         for i in (lookup_boundary..upper_lookup_boundary).step_by(LOOKUP_BLOCK_SIZE as usize) {
             if let Ok(idx) = process_block_fwd(
                 self.vec
@@ -328,7 +329,8 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
 
         // lookup_boundary - block_boundary is smaller than a block, so casting to usize cannot
         // truncate
-        // TODO truncation
+        // and LOOKUP_BLOCK_SIZE as usize is a false positive for the lint: https://github.com/rust-lang/rust-clippy/issues/9613
+        #[allow(clippy::cast_possible_truncation)]
         for i in (0..(lookup_boundary - block_boundary) as usize)
             .step_by(LOOKUP_BLOCK_SIZE as usize)
             .rev()
@@ -458,16 +460,33 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
             "Node handle is invalid"
         );
 
-        let index = self.vec.rank1(node);
+        let mut index = self.vec.rank1(node);
         let close = self.close(node).unwrap_or(node);
         let subtree_size = self.vec.rank1(close) - index;
 
-        // we accept if this truncates, since we cannot change the definition of iterator traits
-        // TODO truncation
-        self.vec
-            .iter1()
-            .skip(index as usize)
-            .take(subtree_size as usize)
+        let mut iterator = self.vec.iter1();
+
+        // since index and subtree_size can exceed usize::MAX, we need some special casing.
+        // This should be optimized away on 64-bit architectures
+
+        // skip `index` bytes
+        while index > usize::MAX as u64 {
+            index -= usize::MAX as u64;
+            iterator.advance_by(usize::MAX).unwrap();
+        }
+        #[allow(clippy::cast_possible_truncation)] // the loop guarantees no truncation
+        iterator.advance_by(index as usize).unwrap();
+
+        // limit to `subtree_size` bytes by consuming the back of the iterator
+        let mut remaining_bits = self.vec.rank1 - index - subtree_size;
+        while remaining_bits > usize::MAX as u64 {
+            remaining_bits -= usize::MAX as u64;
+            iterator.advance_back_by(usize::MAX).unwrap();
+        }
+        #[allow(clippy::cast_possible_truncation)] // the loop guarantees no truncation
+        iterator.advance_back_by(remaining_bits as usize).unwrap();
+
+        iterator
     }
 
     /// Iterate over a subtree rooted at `node` in depth-first (post-)order.
@@ -492,17 +511,33 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
             "Node handle is invalid"
         );
 
-        let index = self.vec.rank0(node);
+        let mut index = self.vec.rank0(node);
         let close = self.close(node).unwrap_or(node);
         let subtree_size = self.vec.rank0(close) + 1 - index;
 
-        // we accept if this truncates, since we cannot change the definition of iterator traits
-        // TODO truncation
-        self.vec
-            .iter0()
-            .skip(index as usize)
-            .take(subtree_size as usize)
-            .map(|n| self.open(n).unwrap())
+        let mut iterator = self.vec.iter0();
+
+        // since index and subtree_size can exceed usize::MAX, we need some special casing.
+        // This should be optimized away on 64-bit architectures
+
+        // skip `index` bytes
+        while index > usize::MAX as u64 {
+            index -= usize::MAX as u64;
+            iterator.advance_by(usize::MAX).unwrap();
+        }
+        #[allow(clippy::cast_possible_truncation)] // the loop guarantees no truncation
+        iterator.advance_by(index as usize).unwrap();
+
+        // limit to `subtree_size` bytes by consuming the back of the iterator
+        let mut remaining_bits = self.vec.rank0 - index - subtree_size;
+        while remaining_bits > usize::MAX as u64 {
+            remaining_bits -= usize::MAX as u64;
+            iterator.advance_back_by(usize::MAX).unwrap();
+        }
+        #[allow(clippy::cast_possible_truncation)] // the loop guarantees no truncation
+        iterator.advance_back_by(remaining_bits as usize).unwrap();
+
+        iterator.map(|n| self.open(n).unwrap())
     }
 
     /// Iterate over the children of a node in the tree.

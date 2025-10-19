@@ -329,7 +329,7 @@ macro_rules! gen_iter_impl {
             /// [this issue](https://github.com/rust-lang/rust/issues/77404).
             /// As soon as it is stabilized, this method will be removed and replaced with a custom
             /// implementation in the iterator impl.
-            pub(super) fn advance_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
+            pub fn advance_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
                 if self.len() >= n {
                     self.next_rank += n as u64;
                     Ok(())
@@ -346,7 +346,7 @@ macro_rules! gen_iter_impl {
             /// [this issue](https://github.com/rust-lang/rust/issues/77404).
             /// As soon as it is stabilized, this method will be removed and replaced with a custom
             /// implementation in the double ended iterator impl.
-            pub(super) fn advance_back_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
+            pub fn advance_back_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
                 // TODO self.len() cannot work if sizeof(usize) < sizeof(u64)
                 if self.len() >= n {
                     self.next_rank_back = self.next_rank_back.map(|x| x - n as u64);
