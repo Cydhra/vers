@@ -1,3 +1,6 @@
+#![allow(clippy::cast_sign_loss)] // sign loss cannot happen on correctly formed BP trees
+#![allow(clippy::cast_possible_wrap)] // ditto
+
 //! This module provides the lookup table and lookup functionality to answer excess queries
 //! for 8-bit and 16-bit blocks in the tree vector.
 //! Note that the 8-bit version is unused, since this whole module gets replaced with
@@ -52,6 +55,7 @@ const PAREN_BLOCK_LOOKUP: [EncodedTableType; 1 << LOOKUP_BLOCK_SIZE] = calculate
 
 /// Offset to add to encoded excess values, so negative numbers are stored as positive integers, reducing
 /// encoding complexity
+#[allow(clippy::cast_possible_truncation)] // false positive
 const ENCODING_OFFSET: i32 = LOOKUP_BLOCK_SIZE as i32;
 
 /// Bitmask for one of the lookup values.
@@ -66,6 +70,7 @@ const MINIMUM_EXCESS_POSITION: usize = 6;
 #[cfg(not(feature = "bp_u16_lookup"))]
 const MINIMUM_EXCESS_POSITION: usize = 5;
 
+#[allow(clippy::cast_possible_truncation)] // all values are in range
 const fn calculate_lookup_table() -> [EncodedTableType; 1 << LOOKUP_BLOCK_SIZE] {
     // initial sentinel values during excess computation
     const MORE_THAN_MAX: SignedLookupBlockType = (LOOKUP_BLOCK_SIZE + 1) as SignedLookupBlockType;
@@ -114,12 +119,14 @@ const fn get_maximum_excess(value: EncodedTableType) -> i64 {
 }
 
 /// Branchless const minimum computation for values that cannot overflow
+#[allow(clippy::cast_possible_truncation)] // all values are in range
 const fn min(a: SignedLookupBlockType, b: SignedLookupBlockType) -> SignedLookupBlockType {
     b + ((a - b)
         & -(((a - b) as LookupBlockType >> (LOOKUP_BLOCK_SIZE - 1)) as SignedLookupBlockType))
 }
 
 /// Branchless const maximum computation for values that cannot overflow
+#[allow(clippy::cast_possible_truncation)] // all values are in range
 const fn max(a: SignedLookupBlockType, b: SignedLookupBlockType) -> SignedLookupBlockType {
     a - ((a - b)
         & -(((a - b) as LookupBlockType >> (LOOKUP_BLOCK_SIZE - 1)) as SignedLookupBlockType))

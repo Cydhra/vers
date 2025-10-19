@@ -258,6 +258,7 @@ impl super::RsVec {
             );
 
             unsafe {
+                #[allow(clippy::cast_possible_truncation)] // false positive because constants
                 let bit_nums = _mm256_set_epi16(
                     (15 * BLOCK_SIZE) as i16,
                     (14 * BLOCK_SIZE) as i16,
@@ -274,7 +275,7 @@ impl super::RsVec {
                     (3 * BLOCK_SIZE) as i16,
                     (2 * BLOCK_SIZE) as i16,
                     (1 * BLOCK_SIZE) as i16,
-                    (0 * BLOCK_SIZE) as i16,
+                    0i16,
                 );
 
                 let blocks = _mm256_loadu_epi16(self.blocks[*block_index..].as_ptr() as *const i16);
