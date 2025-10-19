@@ -13,6 +13,10 @@ impl RsVec {
     /// the linear access pattern.
     ///
     /// This method has convenience methods `iter0` and `iter1`.
+    ///
+    /// # Panics
+    /// If the vector contains more than `usize::MAX` elements, calling `len()` on the iterator will
+    /// cause it to panic.
     pub fn select_iter<const ZERO: bool>(&self) -> SelectIter<'_, ZERO> {
         SelectIter::new(self)
     }
@@ -26,6 +30,10 @@ impl RsVec {
     /// the linear access pattern.
     ///
     /// This method has convenience methods `into_iter0` and `into_iter1`.
+    ///
+    /// # Panics
+    /// If the vector contains more than `usize::MAX` elements, calling `len()` on the iterator will
+    /// cause it to panic.
     pub fn into_select_iter<const ZERO: bool>(self) -> SelectIntoIter<ZERO> {
         SelectIntoIter::new(self)
     }
@@ -36,6 +44,10 @@ impl RsVec {
     /// exploits the linear access pattern.
     ///
     /// See [`SelectIter`] for more information.
+    ///
+    /// # Panics
+    /// If the vector contains more than `usize::MAX` elements, calling `len()` on the iterator will
+    /// cause it to panic.
     pub fn iter0(&self) -> SelectIter<'_, true> {
         self.select_iter()
     }
@@ -46,6 +58,10 @@ impl RsVec {
     /// exploits the linear access pattern.
     ///
     /// See [`SelectIter`] for more information.
+    ///
+    /// # Panics
+    /// If the vector contains more than `usize::MAX` elements, calling `len()` on the iterator will
+    /// cause it to panic.
     pub fn iter1(&self) -> SelectIter<'_, false> {
         self.select_iter()
     }
@@ -56,6 +72,10 @@ impl RsVec {
     /// exploits the linear access pattern.
     ///
     /// See [`SelectIntoIter`] for more information.
+    ///
+    /// # Panics
+    /// If the vector contains more than `usize::MAX` elements, calling `len()` on the iterator will
+    /// cause it to panic.
     pub fn into_iter0(self) -> SelectIntoIter<true> {
         self.into_select_iter()
     }
@@ -66,6 +86,10 @@ impl RsVec {
     /// exploits the linear access pattern.
     ///
     /// See [`SelectIntoIter`] for more information.
+    ///
+    /// # Panics
+    /// If the vector contains more than `usize::MAX` elements, calling `len()` on the iterator will
+    /// cause it to panic.
     pub fn into_iter1(self) -> SelectIntoIter<false> {
         self.into_select_iter()
     }
@@ -431,7 +455,15 @@ macro_rules! gen_iter_impl {
         impl<$($life,)? const ZERO: bool> FusedIterator for $name<$($life,)? ZERO> {}
 
         impl<$($life,)? const ZERO: bool> ExactSizeIterator for $name<$($life,)? ZERO> {
+            // the check and panic guarantees panic on truncation
+            #[allow(clippy::cast_possible_truncation)]
             fn len(&self) -> usize {
+                // this check is hopefully eliminated on 64-bit architectures
+                if self.next_rank_back.map(|x| x + 1).unwrap_or_default().saturating_sub(self.next_rank)
+                    > usize::MAX as u64 {
+                    panic!("calling len() on an iterator containing more than usize::MAX elements is forbidden");
+                }
+
                 // TODO this may truncate, but we cannot redefine the trait
                 self.next_rank_back.map(|x| x + 1).unwrap_or_default().saturating_sub(self.next_rank) as usize
             }
