@@ -164,6 +164,8 @@ impl EliasFanoVec {
     ///
     /// Note, that select in bit-vectors returns an index, while select in Elias-Fano returns the
     /// element at the given rank.
+    ///
+    /// [`get`]: Self::get
     #[must_use]
     pub fn select(&self, rank: usize) -> Option<u64> {
         self.get(rank)

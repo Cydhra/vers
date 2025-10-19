@@ -122,6 +122,10 @@ pub trait LevelTree: Tree {
 ///
 /// Once the full tree has been visited, the caller must call [`build`] to create an instance of the
 /// implementing tree type.
+///
+/// [`enter_node`]: TreeBuilder::enter_node
+/// [`leave_node`]: TreeBuilder::leave_node
+/// [`build`]: TreeBuilder::build
 pub trait TreeBuilder {
     /// The tree type constructed with this interface
     type Tree;
@@ -139,5 +143,8 @@ pub trait TreeBuilder {
     /// (i.e. there are nodes for which [`leave_node`] has not been called,
     /// or there are more calls to `leave_node` than to [`enter_node`];
     /// the number of extraneous calls to `enter_node` is returned in the error).
+    ///
+    /// [`leave_node`]: Self::leave_node
+    /// [`enter_node`]: Self::enter_node
     fn build(self) -> Result<Self::Tree, i64>;
 }

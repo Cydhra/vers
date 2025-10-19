@@ -820,6 +820,8 @@ impl BitVec {
     /// assert_eq!(bv.get(1), Some(0));
     /// assert_eq!(bv.get(2), Some(1));
     /// ```
+    ///
+    /// [`get_unchecked`]: Self::get_unchecked
     #[must_use]
     pub fn get(&self, pos: usize) -> Option<u64> {
         if pos >= self.len {
@@ -1226,6 +1228,8 @@ impl BitVec {
     /// containing the original vector.
     ///
     /// See also: [`split_at_unchecked`]
+    ///
+    /// [`split_at_unchecked`]: Self::split_at_unchecked
     pub fn split_at(self, at: usize) -> Result<(Self, Self), Self> {
         if at > self.len {
             Err(self)
@@ -1241,6 +1245,8 @@ impl BitVec {
     /// If the index is larger than the length of the vector the function will panic or run
     /// out of memory.
     /// Use [`split_at`] to properly handle this case.
+    ///
+    /// [`split_at`]: Self::split_at
     #[must_use]
     pub fn split_at_unchecked(mut self, at: usize) -> (Self, Self) {
         let other_len = self.len - at;

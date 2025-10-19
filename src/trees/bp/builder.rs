@@ -5,7 +5,8 @@ use crate::BitVec;
 /// A builder for [`BpTrees`] using depth-first traversal of the tree. See the documentation of
 /// [`TreeBuilder`].
 ///
-/// [`BpTree`]: BpTree
+/// [`BpTrees`]: BpTree
+/// [`TreeBuilder`]: TreeBuilder
 pub struct BpBuilder<const BLOCK_SIZE: usize = DEFAULT_BLOCK_SIZE> {
     excess: i64,
     bit_vec: BitVec,

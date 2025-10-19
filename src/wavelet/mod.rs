@@ -62,6 +62,10 @@ use std::ops::Range;
 /// ```
 ///
 /// [`RsVec`]: RsVec
+/// [`from_bit_vec`]: WaveletMatrix::from_bit_vec
+/// [`from_slice`]: WaveletMatrix::from_slice
+/// [`from_bit_vec_pc`]: WaveletMatrix::from_bit_vec_pc
+/// [`from_slice_pc`]: WaveletMatrix::from_slice_pc
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WaveletMatrix {
@@ -1080,7 +1084,7 @@ impl WaveletMatrix {
     /// Get the `k`-th smallest element in the encoded sequence in the specified `range`,
     /// where `k = 0` returns the smallest element.
     /// The `range` is a half-open interval, meaning that the `end` index is exclusive.
-    /// The `k`-th smallest element is returned as a `BitVec`,
+    /// The `k`-th smallest element is returned as a [`BitVec`],
     /// where the least significant bit is the first element.
     ///
     /// Returns `None` if the `range` is out of bounds, or if `k` is greater than the size of the range.
@@ -1114,6 +1118,8 @@ impl WaveletMatrix {
     ///
     /// # Panics
     /// May panic if the `i` is out of bounds, or returns an empty bit vector.
+    ///
+    /// [`get_sorted`]: Self::get_sorted
     #[must_use]
     pub fn get_sorted_unchecked(&self, i: usize) -> BitVec {
         self.quantile_unchecked(0..self.len(), i)
@@ -1966,6 +1972,8 @@ impl WaveletMatrix {
     /// The iterator yields `BitVec` elements.
     ///
     /// See also [`iter_sorted_u64`] for an iterator that yields `u64` elements.
+    ///
+    /// [`iter_sorted_u64`]: Self::iter_sorted_u64
     #[must_use]
     pub fn iter_sorted(&self) -> WaveletSortedRefIter<'_> {
         WaveletSortedRefIter::new(self)
