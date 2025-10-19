@@ -19,3 +19,9 @@ This affects `BitVec`, `RsVec`, `EliasFano`, `SparseRsVec`, `BpTree`, and `Wavel
 This changes the parameter and return types of various functions on the affected types from `usize` to `u64`.
 The only adverse effect is that `len()` and `count()` of iterators over these data structures may panic if the
 iterator has more than `usize::MAX` elements.
+
+## Changed Backing Structures
+`RsVec`, `SparseRmq`, and `FastRmq` now use `Box<[_]>` instead of `Vec<_>` as backing structs, which reduces the stack 
+footprint.
+This breaks the serde-compatibility with already serialized data.
+It also changes the `Deref` implementation of the RMQ structs, which previously returned `Vec<_>`.

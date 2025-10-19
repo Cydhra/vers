@@ -29,12 +29,12 @@ use std::ops::{Deref, RangeBounds};
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SparseRmq {
-    data: Vec<u64>,
+    data: Box<[u64]>,
 
     // store indices relative to start of range. There is no way to have ranges exceeding 2^32 bits
     // but since we have fast_rmq for larger inputs, which does not have any downsides at that point,
     // we can just use u32 here (which gains cache efficiency for both implementations).
-    results: Vec<u32>,
+    results: Box<[u32]>,
 }
 
 impl SparseRmq {
@@ -102,7 +102,10 @@ impl SparseRmq {
             }
         }
 
-        Self { data, results }
+        Self {
+            data: data.into_boxed_slice(),
+            results: results.into_boxed_slice(),
+        }
     }
 
     /// Convenience function for [`SparseRmq::range_min`] for using range operators.
@@ -170,7 +173,7 @@ impl SparseRmq {
 /// indexing syntax on the RMQ data structure to access the underlying data, as well as iterators,
 /// etc.
 impl Deref for SparseRmq {
-    type Target = Vec<u64>;
+    type Target = Box<[u64]>;
 
     fn deref(&self) -> &Self::Target {
         &self.data

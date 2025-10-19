@@ -78,10 +78,10 @@ struct Block {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SmallRmq {
-    data: Vec<u64>,
+    data: Box<[u64]>,
     block_minima: SparseRmq,
-    block_min_indices: Vec<u8>,
-    blocks: Vec<Block>,
+    block_min_indices: Box<[u8]>,
+    blocks: Box<[Block]>,
 }
 
 impl SmallRmq {
@@ -141,10 +141,10 @@ impl SmallRmq {
         });
 
         Self {
-            data,
+            data: data.into_boxed_slice(),
             block_minima: SparseRmq::from_vec(block_minima),
-            block_min_indices,
-            blocks,
+            block_min_indices: block_min_indices.into_boxed_slice(),
+            blocks: blocks.into_boxed_slice(),
         }
     }
 
@@ -291,7 +291,7 @@ impl SmallRmq {
 /// indexing syntax on the RMQ data structure to access the underlying data, as well as iterators,
 /// etc.
 impl Deref for SmallRmq {
-    type Target = Vec<u64>;
+    type Target = Box<[u64]>;
 
     fn deref(&self) -> &Self::Target {
         &self.data
