@@ -1942,7 +1942,7 @@ impl WaveletMatrix {
     /// assert_eq!(iter.collect::<Vec<_>>(), vec![1, 4, 4, 1, 2, 7]);
     /// ```
     #[must_use]
-    pub fn iter_u64(&self) -> Option<WaveletNumRefIter> {
+    pub fn iter_u64(&self) -> Option<WaveletNumRefIter<'_>> {
         if self.bits_per_element() > 64 {
             None
         } else {
@@ -1967,7 +1967,7 @@ impl WaveletMatrix {
     ///
     /// See also [`iter_sorted_u64`] for an iterator that yields `u64` elements.
     #[must_use]
-    pub fn iter_sorted(&self) -> WaveletSortedRefIter {
+    pub fn iter_sorted(&self) -> WaveletSortedRefIter<'_> {
         WaveletSortedRefIter::new(self)
     }
 
@@ -1993,7 +1993,7 @@ impl WaveletMatrix {
     /// assert_eq!(iter.collect::<Vec<_>>(), vec![1, 1, 2, 4, 4, 7]);
     /// ```
     #[must_use]
-    pub fn iter_sorted_u64(&self) -> Option<WaveletSortedNumRefIter> {
+    pub fn iter_sorted_u64(&self) -> Option<WaveletSortedNumRefIter<'_>> {
         if self.bits_per_element() > 64 {
             None
         } else {
