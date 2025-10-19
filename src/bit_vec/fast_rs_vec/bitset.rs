@@ -73,6 +73,7 @@ impl RsVec {
 /// [`bit_set_iter0`]: RsVec::bit_set_iter0
 /// [`bit_set_iter1`]: RsVec::bit_set_iter1
 /// [`SelectIter`]: super::SelectIter
+#[allow(clippy::cast_possible_truncation)]
 pub struct BitSetIter<'a, const ZERO: bool> {
     vec: &'a RsVec,
     base: u64,
@@ -83,6 +84,7 @@ pub struct BitSetIter<'a, const ZERO: bool> {
 
 impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
     pub(super) fn new(vec: &'a RsVec) -> Self {
+        #[allow(clippy::cast_possible_truncation)]
         let mut iter = Self {
             vec,
             base: 0,

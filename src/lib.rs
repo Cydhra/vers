@@ -1,20 +1,10 @@
-#![cfg_attr(
-    all(
-        feature = "simd",
-        target_arch = "x86_64",
-        target_feature = "avx",
-        target_feature = "avx2",
-        target_feature = "avx512f",
-        target_feature = "avx512bw",
-    ),
-    feature(stdarch_x86_avx512)
-)]
 #![warn(missing_docs)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::assertions_on_constants)] // for asserts warning about incompatible constant values
 #![allow(clippy::inline_always)] // we actually measure performance increases with most of these
 #![allow(clippy::cast_lossless)] // it is often more readable to use `as u64` instead of `u64::from(..)`
-#![cfg_attr(docsrs, feature(doc_cfg), feature(doc_auto_cfg))] // for conditional compilation in docs
+#![allow(clippy::needless_for_each)] // readability of one-liners
+#![cfg_attr(docsrs, feature(doc_cfg))] // for conditional compilation in docs
 
 //! This crate provides a collection of data structures supported by fast implementations of
 //! rank and select queries. The data structures are static, meaning that they cannot be modified

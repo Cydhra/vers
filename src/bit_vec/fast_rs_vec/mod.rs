@@ -124,8 +124,8 @@ impl RsVec {
         for (word_idx, &word) in vec.data.iter().enumerate() {
             // if we moved past a block boundary, append the block information for the previous
             // block and reset the counter if we moved past a super-block boundary.
-            if word_idx as u64 % (BLOCK_SIZE / WORD_SIZE) == 0 {
-                if word_idx as u64 % (SUPER_BLOCK_SIZE / WORD_SIZE) == 0 {
+            if (word_idx as u64).is_multiple_of(BLOCK_SIZE / WORD_SIZE) {
+                if (word_idx as u64).is_multiple_of(SUPER_BLOCK_SIZE / WORD_SIZE) {
                     total_zeros += current_zeros;
                     current_zeros = 0;
                     super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
@@ -144,7 +144,7 @@ impl RsVec {
             let mut new_zeros = word.count_zeros() as u64;
 
             // in the last block, remove remaining zeros of limb that aren't part of the vector
-            if word_idx == vec.data.len() - 1 && vec.len % WORD_SIZE > 0 {
+            if word_idx == vec.data.len() - 1 && !vec.len.is_multiple_of(WORD_SIZE) {
                 let mask = (1 << (vec.len % WORD_SIZE)) - 1;
                 new_zeros -= (word | mask).count_zeros() as u64;
             }
@@ -485,7 +485,7 @@ impl RsVec {
         }
 
         // if last incomplete block exists, test it without junk data
-        if self.len % 64 > 0
+        if !self.len.is_multiple_of(WORD_SIZE)
             && self.data[(self.len / WORD_SIZE) as usize] & ((1 << (self.len % WORD_SIZE)) - 1)
                 != other.data[(self.len / WORD_SIZE) as usize]
                     & ((1 << (other.len % WORD_SIZE)) - 1)

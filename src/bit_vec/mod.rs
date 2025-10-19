@@ -498,7 +498,7 @@ impl BitVec {
     /// [`append_bit_u8`]: BitVec::append_bit_u8
     /// [`append_word`]: BitVec::append_word
     pub fn append(&mut self, bit: bool) {
-        if self.len % WORD_SIZE == 0 {
+        if self.len.is_multiple_of(WORD_SIZE) {
             self.data.push(0);
         }
         if bit {
@@ -573,7 +573,7 @@ impl BitVec {
     /// [`append_bit_u8`]: BitVec::append_bit_u8
     /// [`append_word`]: BitVec::append_word
     pub fn append_bit(&mut self, bit: u64) {
-        if self.len % WORD_SIZE == 0 {
+        if self.len.is_multiple_of(WORD_SIZE) {
             self.data.push(0);
         }
         if bit % 2 == 1 {
@@ -652,7 +652,7 @@ impl BitVec {
     /// [`append_bit_u16`]: BitVec::append_bit_u16
     /// [`append_bit_u8`]: BitVec::append_bit_u8
     pub fn append_word(&mut self, word: u64) {
-        if self.len % WORD_SIZE == 0 {
+        if self.len.is_multiple_of(WORD_SIZE) {
             self.data.push(word);
         } else {
             // zero out the unused bits before or-ing the new one, to ensure no garbage data remains
@@ -687,7 +687,7 @@ impl BitVec {
     pub fn append_bits(&mut self, bits: u64, len: u64) {
         assert!(len <= 64, "Cannot append more than 64 bits");
 
-        if self.len % WORD_SIZE == 0 {
+        if self.len.is_multiple_of(WORD_SIZE) {
             self.data.push(bits);
         } else {
             // zero out the unused bits before or-ing the new one, to ensure no garbage data remains
@@ -724,7 +724,7 @@ impl BitVec {
     /// [`append_bits`]: BitVec::append_bits
     /// [`drop_last`]: BitVec::drop_last
     pub fn append_bits_unchecked(&mut self, bits: u64, len: u64) {
-        if self.len % WORD_SIZE == 0 {
+        if self.len.is_multiple_of(WORD_SIZE) {
             self.data.push(bits);
         } else {
             self.data[(self.len / WORD_SIZE) as usize] |= bits << (self.len % WORD_SIZE);
@@ -820,6 +820,8 @@ impl BitVec {
     /// assert_eq!(bv.get(1), Some(0));
     /// assert_eq!(bv.get(2), Some(1));
     /// ```
+    ///
+    /// [`get_unchecked`]: Self::get_unchecked
     #[must_use]
     pub fn get(&self, pos: u64) -> Option<u64> {
         if pos >= self.len {
@@ -1045,7 +1047,7 @@ impl BitVec {
             .iter()
             .map(|limb| u64::from(limb.count_ones()))
             .sum();
-        if self.len % WORD_SIZE > 0 {
+        if !self.len.is_multiple_of(WORD_SIZE) {
             ones += u64::from(
                 (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones(),
             );
@@ -1228,6 +1230,8 @@ impl BitVec {
     /// containing the original vector.
     ///
     /// See also: [`split_at_unchecked`]
+    ///
+    /// [`split_at_unchecked`]: Self::split_at_unchecked
     pub fn split_at(self, at: u64) -> Result<(Self, Self), Self> {
         if at > self.len {
             Err(self)
@@ -1243,6 +1247,8 @@ impl BitVec {
     /// If the index is larger than the length of the vector the function will panic or run
     /// out of memory.
     /// Use [`split_at`] to properly handle this case.
+    ///
+    /// [`split_at`]: Self::split_at
     #[must_use]
     pub fn split_at_unchecked(mut self, at: u64) -> (Self, Self) {
         let other_len = self.len - at;
