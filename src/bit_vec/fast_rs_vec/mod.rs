@@ -124,8 +124,8 @@ impl RsVec {
         for (word_idx, &word) in vec.data.iter().enumerate() {
             // if we moved past a block boundary, append the block information for the previous
             // block and reset the counter if we moved past a super-block boundary.
-            if word_idx as u64 % (BLOCK_SIZE / WORD_SIZE) == 0 {
-                if word_idx as u64 % (SUPER_BLOCK_SIZE / WORD_SIZE) == 0 {
+            if (word_idx as u64).is_multiple_of(BLOCK_SIZE / WORD_SIZE) {
+                if (word_idx as u64).is_multiple_of(SUPER_BLOCK_SIZE / WORD_SIZE) {
                     total_zeros += current_zeros;
                     current_zeros = 0;
                     super_blocks.push(SuperBlockDescriptor { zeros: total_zeros });
