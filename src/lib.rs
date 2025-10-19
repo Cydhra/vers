@@ -1,14 +1,3 @@
-#![cfg_attr(
-    all(
-        feature = "simd",
-        target_arch = "x86_64",
-        target_feature = "avx",
-        target_feature = "avx2",
-        target_feature = "avx512f",
-        target_feature = "avx512bw",
-    ),
-    feature(stdarch_x86_avx512)
-)]
 #![warn(missing_docs)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::assertions_on_constants)] // for asserts warning about incompatible constant values
