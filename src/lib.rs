@@ -3,6 +3,7 @@
 #![allow(clippy::assertions_on_constants)] // for asserts warning about incompatible constant values
 #![allow(clippy::inline_always)] // we actually measure performance increases with most of these
 #![allow(clippy::cast_lossless)] // it is often more readable to use `as u64` instead of `u64::from(..)`
+#![allow(clippy::needless_for_each)] // readability of one-liners
 #![cfg_attr(docsrs, feature(doc_cfg))] // for conditional compilation in docs
 
 //! This crate provides a collection of data structures supported by fast implementations of
