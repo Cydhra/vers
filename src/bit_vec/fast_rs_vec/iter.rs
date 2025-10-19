@@ -323,12 +323,16 @@ macro_rules! gen_iter_impl {
                 Some(self.vec.search_word_in_block1(rank, block_index))
             }
 
-            /// Advances the iterator by `n` elements. Returns an error if the iterator does not have
-            /// enough elements left. Does not call `next` internally.
+            /// Advances the iterator by `n` elements.
+            /// Does not call `next` internally.
             /// This method is currently being added to the iterator trait, see
             /// [this issue](https://github.com/rust-lang/rust/issues/77404).
             /// As soon as it is stabilized, this method will be removed and replaced with a custom
             /// implementation in the iterator impl.
+            ///
+            /// # Errors
+            /// If the iterator does not hold `n` elements,
+            /// all remaining elements are skipped, and an error with the overflow is returned.
             pub fn advance_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
                 if self.len() >= n {
                     self.next_rank += n as u64;
@@ -340,14 +344,17 @@ macro_rules! gen_iter_impl {
                 }
             }
 
-            /// Advances the iterator back by `n` elements. Returns an error if the iterator does not have
-            /// enough elements left. Does not call `next_back` internally.
+            /// Advances the iterator back by `n` elements.
+            /// Does not call `next_back` internally.
             /// This method is currently being added to the iterator trait, see
             /// [this issue](https://github.com/rust-lang/rust/issues/77404).
             /// As soon as it is stabilized, this method will be removed and replaced with a custom
             /// implementation in the double ended iterator impl.
+            ///
+            /// # Errors
+            /// If the iterator does not hold `n` elements,
+            /// all remaining elements are skipped, and an error with the overflow is returned.
             pub fn advance_back_by(&mut self, n: usize) -> Result<(), NonZeroUsize> {
-                // TODO self.len() cannot work if sizeof(usize) < sizeof(u64)
                 if self.len() >= n {
                     self.next_rank_back = self.next_rank_back.map(|x| x - n as u64);
                     Ok(())
