@@ -55,7 +55,7 @@ impl<const BLOCK_SIZE: u64> TreeBuilder for BpBuilder<BLOCK_SIZE> {
         if self.excess != 0 {
             Err(self.excess)
         } else {
-            Ok(BpTree::from_bit_vector(self.bit_vec))
+            Ok(BpTree::from_bit_vec(self.bit_vec))
         }
     }
 }

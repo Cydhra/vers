@@ -6,13 +6,13 @@ use rand::{RngCore, SeedableRng};
 #[test]
 fn test_fwd_search() {
     #[rustfmt::skip]
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 0, 0, 1, 1,
         0, 1, 0, 0, 1, 0, 1, 0,
         1, 0, 1, 0, 1, 0, 0, 0,
     ]);
 
-    let bp_tree = BpTree::<8>::from_bit_vector(bv);
+    let bp_tree = BpTree::<8>::from_bit_vec(bv);
 
     // search within block
     assert_eq!(bp_tree.fwd_search(3, -1), Some(4));
@@ -33,13 +33,13 @@ fn test_fwd_search() {
 #[test]
 fn test_fwd_single_block() {
     #[rustfmt::skip]
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 0, 0, 1, 1,
         0, 1, 0, 0, 1, 0, 1, 0,
         1, 0, 1, 0, 1, 0, 0, 0,
     ]);
 
-    let bp_tree = BpTree::<512>::from_bit_vector(bv);
+    let bp_tree = BpTree::<512>::from_bit_vec(bv);
 
     assert_eq!(bp_tree.fwd_search(3, -1), Some(4));
     assert_eq!(bp_tree.fwd_search(2, -1), Some(5));
@@ -55,13 +55,13 @@ fn test_fwd_single_block() {
 #[test]
 fn test_fwd_illegal_queries() {
     #[rustfmt::skip]
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 0, 0, 1, 1,
         0, 1, 0, 0, 1, 0, 1, 0,
         1, 0, 1, 0, 1, 0, 0, 0,
     ]);
 
-    let tree = BpTree::<8>::from_bit_vector(bv.clone());
+    let tree = BpTree::<8>::from_bit_vec(bv.clone());
 
     assert_eq!(tree.fwd_search(24, 0), None);
     assert_eq!(tree.fwd_search(25, 0), None);
@@ -69,7 +69,7 @@ fn test_fwd_illegal_queries() {
     assert_eq!(tree.fwd_search(0, -2), None);
     assert_eq!(tree.fwd_search(22, 1), None);
 
-    let tree = BpTree::<64>::from_bit_vector(bv);
+    let tree = BpTree::<64>::from_bit_vec(bv);
 
     assert_eq!(tree.fwd_search(24, 0), None);
     assert_eq!(tree.fwd_search(25, 0), None);
@@ -82,13 +82,13 @@ fn test_fwd_illegal_queries() {
 fn test_fwd_unbalanced_expression() {
     // test whether forward search works with unbalanced parenthesis expressions
     #[rustfmt::skip]
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 0, 0, 1, 1,
         0, 1, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 1,
     ]);
 
-    let tree = BpTree::<8>::from_bit_vector(bv);
+    let tree = BpTree::<8>::from_bit_vec(bv);
 
     assert_eq!(tree.fwd_search(0, -1), Some(13));
     assert_eq!(tree.fwd_search(1, -1), Some(12));
@@ -99,8 +99,8 @@ fn test_fwd_unbalanced_expression() {
 
 #[test]
 fn test_fwd_block_boundary() {
-    let bv = BitVec::from_bits(&[1, 1, 0, 1, 0, 0]);
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[1, 1, 0, 1, 0, 0]);
+    let tree = BpTree::<4>::from_bit_vec(bv);
 
     // test if a query returns the correct result if the result is the first bit in a block
     // and not in the initial block
@@ -113,8 +113,8 @@ fn test_fwd_block_boundary() {
 
 #[test]
 fn test_fwd_negative_block() {
-    let bv = BitVec::from_bits(&[1, 1, 1, 1, 0, 0, 0, 0]);
-    let tree = BpTree::<2>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[1, 1, 1, 1, 0, 0, 0, 0]);
+    let tree = BpTree::<2>::from_bit_vec(bv);
 
     // regression: test if a query correctly returns none (instead of crashing) if the following
     // block has a negative maximum excess (as a previous bug clamped it to 0).
@@ -127,28 +127,28 @@ fn test_fwd_last_element() {
     // the binary mM tree right of it may be uninitialized, and so not ending the query early
     // may yield invalid results or break assertions
     #[rustfmt::skip]
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 0, 1,  0, 1, 0, 1,
         0, 1, 0, 1,  0, 1, 0, 1,
         0, 1, 0, 1,  0, 1, 0, 1,
     ]);
 
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let tree = BpTree::<4>::from_bit_vec(bv);
     assert!(tree.fwd_search(23, 0).is_none());
 }
 
 #[test]
 fn test_lookup_extreme_pop() {
     // test whether a table lookup works if the bit pattern is only ones or only zeros
-    let bv = BitVec::from_bits(&[1; 64]);
-    let tree = BpTree::<512>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[1; 64]);
+    let tree = BpTree::<512>::from_bit_vec(bv);
 
     for excess in 1..64 {
         assert_eq!(tree.fwd_search(0, excess), Some(excess as u64));
     }
 
-    let bv = BitVec::from_bits(&[0; 64]);
-    let tree = BpTree::<512>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[0; 64]);
+    let tree = BpTree::<512>::from_bit_vec(bv);
 
     for excess in 1..64 {
         assert_eq!(tree.fwd_search(0, -excess), Some(excess as u64));
@@ -182,7 +182,7 @@ fn test_fwd_fuzzy() {
         }
     }
 
-    let bp = BpTree::<128>::from_bit_vector(bit_vec);
+    let bp = BpTree::<128>::from_bit_vec(bit_vec);
 
     // test any query from valid nodes with the given relative excess values
     for relative_excess in [-3, -2, -1, 0, 1, 2, 3] {
@@ -209,13 +209,13 @@ fn test_fwd_fuzzy() {
 #[test]
 fn test_bwd_search() {
     #[rustfmt::skip]
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 0, 0, 1, 1,
         0, 1, 0, 0, 1, 0, 1, 0,
         1, 0, 1, 0, 1, 0, 0, 0,
     ]);
 
-    let bp_tree = BpTree::<8>::from_bit_vector(bv);
+    let bp_tree = BpTree::<8>::from_bit_vec(bv);
 
     // search within block
     assert_eq!(bp_tree.bwd_search(4, -1), Some(3));
@@ -236,13 +236,13 @@ fn test_bwd_search() {
 #[test]
 fn test_bwd_single_block() {
     #[rustfmt::skip]
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 0, 0, 1, 1,
         0, 1, 0, 0, 1, 0, 1, 0,
         1, 0, 1, 0, 1, 0, 0, 0,
     ]);
 
-    let bp_tree = BpTree::<512>::from_bit_vector(bv);
+    let bp_tree = BpTree::<512>::from_bit_vec(bv);
 
     assert_eq!(bp_tree.bwd_search(4, -1), Some(3));
     assert_eq!(bp_tree.bwd_search(5, -1), Some(2));
@@ -258,13 +258,13 @@ fn test_bwd_single_block() {
 #[test]
 fn test_bwd_illegal_queries() {
     #[rustfmt::skip]
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 0, 0, 1, 1,
         0, 1, 0, 0, 1, 0, 1, 0,
         1, 0, 1, 0, 1, 0, 0, 0,
     ]);
 
-    let tree = BpTree::<8>::from_bit_vector(bv.clone());
+    let tree = BpTree::<8>::from_bit_vec(bv.clone());
 
     assert_eq!(tree.bwd_search(0, 0), None);
     assert_eq!(tree.bwd_search(1, 0), None);
@@ -272,7 +272,7 @@ fn test_bwd_illegal_queries() {
     assert_eq!(tree.bwd_search(23, -2), None);
     assert_eq!(tree.bwd_search(22, -3), None);
 
-    let tree = BpTree::<64>::from_bit_vector(bv);
+    let tree = BpTree::<64>::from_bit_vec(bv);
 
     assert_eq!(tree.bwd_search(0, 0), None);
     assert_eq!(tree.bwd_search(1, 0), None);
@@ -285,8 +285,8 @@ fn test_bwd_illegal_queries() {
 fn test_bwd_left_block_boundary() {
     // test if a query returns the correct result if the result is the first bit after
     // a block boundary (the left-most one even for backward search)
-    let bv = BitVec::from_bits(&[1, 1, 0, 1, 0, 0]);
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[1, 1, 0, 1, 0, 0]);
+    let tree = BpTree::<4>::from_bit_vec(bv);
 
     assert_eq!(tree.bwd_search(5, 0), Some(3));
 }
@@ -294,12 +294,12 @@ fn test_bwd_left_block_boundary() {
 #[test]
 fn test_bwd_right_block_boundary() {
     #[rustfmt::skip]
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 1, 1, 1, 1,
         0, 0, 0, 0,
     ]);
 
-    let bp_tree = BpTree::<4>::from_bit_vector(bv);
+    let bp_tree = BpTree::<4>::from_bit_vec(bv);
 
     // test the correct result is returned if result is exactly at a right block boundary
     assert_eq!(bp_tree.bwd_search(11, -1), Some(4));
@@ -307,8 +307,8 @@ fn test_bwd_right_block_boundary() {
 
 #[test]
 fn test_bwd_block_traversal() {
-    let bv = BitVec::from_bits(&[1, 1, 1, 1, 0]);
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[1, 1, 1, 1, 0]);
+    let tree = BpTree::<4>::from_bit_vec(bv);
 
     // if we request excess 0 backwards at a block boundary
     // we test if that actually traverses the vector instead of reporting
@@ -344,7 +344,7 @@ fn test_bwd_fuzzy() {
         }
     }
 
-    let bp = BpTree::<128>::from_bit_vector(bit_vec);
+    let bp = BpTree::<128>::from_bit_vec(bit_vec);
 
     // test any query from valid nodes with the given relative excess values
     for relative_excess in [-3, -2, -1, 0, 1, 2, 3] {
@@ -375,12 +375,12 @@ fn test_bwd_fuzzy() {
 
 #[test]
 fn test_close() {
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]);
 
-    let tree = BpTree::<8>::from_bit_vector(bv);
+    let tree = BpTree::<8>::from_bit_vec(bv);
 
     for i in 0..24 {
         assert_eq!(tree.close(i), Some(47 - i));
@@ -391,12 +391,12 @@ fn test_close() {
 
 #[test]
 fn test_open() {
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]);
 
-    let tree = BpTree::<8>::from_bit_vector(bv);
+    let tree = BpTree::<8>::from_bit_vec(bv);
 
     for i in 24..48 {
         assert_eq!(tree.open(i), Some(47 - i));
@@ -407,12 +407,12 @@ fn test_open() {
 
 #[test]
 fn test_enclose() {
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]);
 
-    let tree = BpTree::<8>::from_bit_vector(bv);
+    let tree = BpTree::<8>::from_bit_vec(bv);
 
     for i in 1..24 {
         assert_eq!(tree.enclose(i), Some(i - 1));
@@ -431,11 +431,11 @@ fn test_enclose() {
 
 #[test]
 fn test_parent() {
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0,
     ]);
 
-    let tree = BpTree::<8>::from_bit_vector(bv.clone());
+    let tree = BpTree::<8>::from_bit_vec(bv.clone());
 
     assert_eq!(tree.excess(27), 0, "tree is not balanced");
 
@@ -459,9 +459,9 @@ fn test_parent() {
 
 #[test]
 fn test_children() {
-    let bv = BitVec::from_bits(&[1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0]);
+    let bv = BitVec::from_bits_u8(&[1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0]);
 
-    let tree = BpTree::<8>::from_bit_vector(bv);
+    let tree = BpTree::<8>::from_bit_vec(bv);
 
     assert_eq!(tree.excess(17), 0, "tree is not balanced");
     assert_eq!(tree.first_child(0), Some(1));
@@ -492,8 +492,8 @@ fn test_children() {
 fn test_contiguous_index() {
     // test whether `node_index` and `node_handle` return correct indices / node handles.
 
-    let bv = BitVec::from_bits(&[1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0]);
-    let tree = BpTree::<4>::from_bit_vector(bv.clone());
+    let bv = BitVec::from_bits_u8(&[1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0]);
+    let tree = BpTree::<4>::from_bit_vec(bv.clone());
     let rs: RsVec = bv.into();
 
     for (rank, index_in_bv) in rs.iter1().enumerate() {
@@ -504,13 +504,13 @@ fn test_contiguous_index() {
 
 #[test]
 fn test_depth() {
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]);
 
     let mut depth = 0;
 
-    let tree = BpTree::<8>::from_bit_vector(bv.clone());
+    let tree = BpTree::<8>::from_bit_vec(bv.clone());
     for i in 0..24 {
         if bv.get(i) == Some(1) {
             assert_eq!(tree.depth(i), depth);
@@ -526,12 +526,12 @@ fn test_is_leaf() {
     let bits = vec![
         1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0,
     ];
-    let bv = BitVec::from_bits(&bits);
+    let bv = BitVec::from_bits_u8(&bits);
     let leaves = bits[..]
         .windows(2)
         .map(|window| window[0] == 1 && window[1] == 0)
         .collect::<Vec<_>>();
-    let tree = BpTree::<8>::from_bit_vector(bv.clone());
+    let tree = BpTree::<8>::from_bit_vec(bv.clone());
 
     for (idx, is_leaf) in leaves.iter().enumerate() {
         // if the bit is 1, check if that node is a leaf. If it's 0, it's not a valid node handle.
@@ -546,8 +546,8 @@ fn test_is_ancestor() {
     // (()((())()))
     // ab cde  f
     let bits = vec![1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0];
-    let bv = BitVec::from_bits(&bits);
-    let tree = BpTree::<8>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&bits);
+    let tree = BpTree::<8>::from_bit_vec(bv);
     let a = tree.root().unwrap();
     let b = tree.first_child(a).unwrap();
     let c = tree.next_sibling(b).unwrap();
@@ -575,22 +575,22 @@ fn test_is_ancestor() {
 
 #[test]
 fn test_root() {
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]);
-    let tree = BpTree::<8>::from_bit_vector(bv);
+    let tree = BpTree::<8>::from_bit_vec(bv);
     assert_eq!(tree.root(), Some(0));
     assert_eq!(tree.previous_sibling(0), None);
     assert_eq!(tree.next_sibling(0), None);
 
-    let tree = BpTree::<16>::from_bit_vector(BitVec::new());
+    let tree = BpTree::<16>::from_bit_vec(BitVec::new());
     assert_eq!(tree.root(), None);
 }
 
 #[test]
 fn test_level_ancestor() {
-    let bv = BitVec::from_bits(&[1, 1, 1, 0, 0, 1, 0, 0]);
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[1, 1, 1, 0, 0, 1, 0, 0]);
+    let tree = BpTree::<4>::from_bit_vec(bv);
 
     assert_eq!(tree.level_ancestor(2, 0), Some(2));
     assert_eq!(tree.level_ancestor(2, 1), Some(1));
@@ -604,10 +604,10 @@ fn test_level_ancestor() {
 
 #[test]
 fn test_level_next() {
-    let bv = BitVec::from_bits(&[
+    let bv = BitVec::from_bits_u8(&[
         1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, // intentionally unbalanced
     ]);
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let tree = BpTree::<4>::from_bit_vec(bv);
 
     assert_eq!(tree.level_next(0), None); // unbalanced query
     assert_eq!(tree.level_next(1), Some(5));
@@ -619,8 +619,8 @@ fn test_level_next() {
 
 #[test]
 fn test_level_prev() {
-    let bv = BitVec::from_bits(&[1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
+    let tree = BpTree::<4>::from_bit_vec(bv);
 
     assert_eq!(tree.level_prev(0), None);
     assert_eq!(tree.level_prev(1), None);
@@ -635,8 +635,8 @@ fn test_level_prev() {
 
 #[test]
 fn test_level_leftmost() {
-    let bv = BitVec::from_bits(&[1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
+    let tree = BpTree::<4>::from_bit_vec(bv);
 
     assert_eq!(tree.level_leftmost(0), Some(0));
     assert_eq!(tree.level_leftmost(1), Some(1));
@@ -648,8 +648,8 @@ fn test_level_leftmost() {
 
 #[test]
 fn test_level_rightmost() {
-    let bv = BitVec::from_bits(&[1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
+    let tree = BpTree::<4>::from_bit_vec(bv);
 
     assert_eq!(tree.level_rightmost(0), Some(0));
     assert_eq!(tree.level_rightmost(1), Some(11));
@@ -661,8 +661,8 @@ fn test_level_rightmost() {
 
 #[test]
 fn test_subtree_size() {
-    let bv = BitVec::from_bits(&[1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
+    let tree = BpTree::<4>::from_bit_vec(bv);
 
     assert_eq!(tree.subtree_size(0), Some(9));
     assert_eq!(tree.subtree_size(1), Some(2));
@@ -682,8 +682,8 @@ fn test_malformed_tree_positive() {
     // for further queries in a consistent state.
 
     // the tree has not enough closing brackets
-    let bv = BitVec::from_bits(&[1, 1, 1, 0, 1, 1, 0, 1, 1, 0]);
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[1, 1, 1, 0, 1, 1, 0, 1, 1, 0]);
+    let tree = BpTree::<4>::from_bit_vec(bv);
 
     test_all_functions(&tree);
 }
@@ -695,8 +695,8 @@ fn test_malformed_tree_negative() {
     // for further queries in a consistent state.
 
     // the tree has too many closing brackets
-    let bv = BitVec::from_bits(&[0, 0, 1, 1, 1, 0, 0, 0, 0, 0]);
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[0, 0, 1, 1, 1, 0, 0, 0, 0, 0]);
+    let tree = BpTree::<4>::from_bit_vec(bv);
 
     test_all_functions(&tree);
 }
@@ -707,8 +707,8 @@ fn test_negative_depth() {
     // most results are meaningless, but we don't want to panic and leave the data structure
     // for further queries in a consistent state.
 
-    let bv = BitVec::from_bits(&[0, 0, 0, 0, 1, 1, 0]);
-    let tree = BpTree::<4>::from_bit_vector(bv);
+    let bv = BitVec::from_bits_u8(&[0, 0, 0, 0, 1, 1, 0]);
+    let tree = BpTree::<4>::from_bit_vec(bv);
 
     assert_eq!(tree.depth(4), 0);
 }
@@ -768,7 +768,7 @@ fn fuzz_tree_navigation() {
         bit_vec.append_word(rng.next_u64());
     }
 
-    let tree = BpTree::<32>::from_bit_vector(bit_vec.clone());
+    let tree = BpTree::<32>::from_bit_vec(bit_vec.clone());
     let mut parent_stack = Vec::new();
 
     // keep track of last sibling for each node
@@ -833,7 +833,7 @@ fn fuzz_tree_navigation() {
 
 #[test]
 fn test_dfs_iterators() {
-    let tree = BpTree::<32>::from_bit_vector(BitVec::from_bits(&[
+    let tree = BpTree::<32>::from_bit_vec(BitVec::from_bits_u8(&[
         1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0,
     ]));
 
@@ -846,7 +846,7 @@ fn test_dfs_iterators() {
 
 #[test]
 fn test_subtree_iterators() {
-    let tree = BpTree::<4>::from_bit_vector(BitVec::from_bits(&[
+    let tree = BpTree::<4>::from_bit_vec(BitVec::from_bits_u8(&[
         1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0,
     ]));
 
@@ -877,7 +877,7 @@ fn test_subtree_iterators() {
 
 #[test]
 fn test_children_iterator() {
-    let tree = BpTree::<4>::from_bit_vector(BitVec::from_bits(&[
+    let tree = BpTree::<4>::from_bit_vec(BitVec::from_bits_u8(&[
         1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0,
     ]));
 
@@ -920,7 +920,7 @@ fn test_from_padded_bitvec() {
     bv.append_bit(0);
     bv.drop_last(1);
 
-    let tree = BpTree::<64>::from_bit_vector(bv.clone());
+    let tree = BpTree::<64>::from_bit_vec(bv.clone());
     assert_eq!(tree.root(), Some(0));
     assert_eq!(tree.size(), 1);
     assert_eq!(tree.fwd_search(0, 2), None);

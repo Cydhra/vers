@@ -3,7 +3,7 @@
 //! time, as well as subtree size, level-order, and ancestor queries in `O(log n)` time.
 //! The tree is succinct (ideally sublinear space overhead) and pointer-less.
 
-use crate::bit_vec::fast_rs_vec::SelectIntoIter;
+use crate::bit_vec::rs::SelectIntoIter;
 use crate::trees::mmt::MinMaxTree;
 use crate::trees::{IsAncestor, LevelTree, SubtreeSize, Tree};
 use crate::{BitVec, RsVec};
@@ -122,7 +122,7 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// # #![allow(long_running_const_eval)]
 /// use vers_vecs::{BitVec, BpTree, Tree};
 /// let bv = BitVec::pack_sequence_u8(&[0b1101_0111, 0b0010_0100], 8);
-/// let tree = BpTree::<4>::from_bit_vector(bv);
+/// let tree = BpTree::<4>::from_bit_vec(bv);
 ///
 /// let nodes = tree.dfs_iter().collect::<Vec<_>>();
 /// assert_eq!(nodes, vec![0, 1, 2, 4, 6, 7, 10, 13]);
@@ -147,7 +147,7 @@ pub struct BpTree<const BLOCK_SIZE: u64 = DEFAULT_BLOCK_SIZE> {
 impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
     /// Construct a new `BpTree` from a given bit vector.
     #[must_use]
-    pub fn from_bit_vector(bv: BitVec) -> Self {
+    pub fn from_bit_vec(bv: BitVec) -> Self {
         let min_max_tree = MinMaxTree::excess_tree(&bv, BLOCK_SIZE);
         let vec = bv.into();
         Self { vec, min_max_tree }
@@ -588,7 +588,7 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
     /// use vers_vecs::{BitVec, RsVec, BpTree, Tree};
     ///
     /// let bv = BitVec::pack_sequence_u8(&[0b1101_0111, 0b0010_0100], 8);
-    /// let tree = BpTree::<4>::from_bit_vector(bv);
+    /// let tree = BpTree::<4>::from_bit_vec(bv);
     /// assert_eq!(tree.size(), 8);
     ///
     /// let rs_vec = tree.into_parentheses_vec();
@@ -596,7 +596,7 @@ impl<const BLOCK_SIZE: u64> BpTree<BLOCK_SIZE> {
     ///
     /// bv.flip_bit(15);
     /// bv.append_bits(0, 2);
-    /// let tree = BpTree::<4>::from_bit_vector(bv);
+    /// let tree = BpTree::<4>::from_bit_vec(bv);
     /// assert_eq!(tree.size(), 9);
     /// ```
     #[must_use]
@@ -813,7 +813,7 @@ impl<const BLOCK_SIZE: u64> IntoIterator for BpTree<BLOCK_SIZE> {
 
 impl<const BLOCK_SIZE: u64> From<BitVec> for BpTree<BLOCK_SIZE> {
     fn from(bv: BitVec) -> Self {
-        Self::from_bit_vector(bv)
+        Self::from_bit_vec(bv)
     }
 }
 

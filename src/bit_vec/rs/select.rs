@@ -1,6 +1,6 @@
 // Select code is in here to keep it more organized.
 
-use crate::bit_vec::fast_rs_vec::{BLOCK_SIZE, SELECT_BLOCK_SIZE, SUPER_BLOCK_SIZE};
+use crate::bit_vec::rs::{BLOCK_SIZE, SELECT_BLOCK_SIZE, SUPER_BLOCK_SIZE};
 use crate::bit_vec::WORD_SIZE;
 use crate::util::pdep::Pdep;
 use crate::util::unroll;

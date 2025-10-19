@@ -7,7 +7,7 @@ use std::cmp::min_by;
 use std::mem::size_of;
 use std::ops::{Bound, Deref, RangeBounds};
 
-use crate::rmq::binary_rmq::BinaryRmq;
+use crate::rmq::binary_rmq::SparseRmq;
 use crate::util::pdep::Pdep;
 
 /// Size of the blocks the data is split into. One block is indexable with a u8, hence its size.
@@ -66,10 +66,10 @@ struct Block {
 ///
 /// # Example
 /// ```rust
-/// use vers_vecs::FastRmq;
+/// use vers_vecs::SmallRmq;
 ///
 /// let data = vec![4, 10, 3, 11, 2, 12];
-/// let rmq = FastRmq::from_vec(data);
+/// let rmq = SmallRmq::from_vec(data);
 ///
 /// assert_eq!(rmq.range_min(0, 1), 0);
 /// assert_eq!(rmq.range_min(0, 2), 2);
@@ -77,17 +77,17 @@ struct Block {
 /// ```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct FastRmq {
+pub struct SmallRmq {
     data: Vec<u64>,
-    block_minima: BinaryRmq,
+    block_minima: SparseRmq,
     block_min_indices: Vec<u8>,
     blocks: Vec<Block>,
 }
 
-impl FastRmq {
+impl SmallRmq {
     /// Creates a new range minimum query data structure from the given data. Creation time is
     /// O(n log n) and space overhead is O(n log n) with a fractional constant factor
-    /// (see [`FastRmq`])
+    /// (see [`SmallRmq`])
     ///
     /// # Panics
     /// This function will panic if the input is larger than 2^40 elements.
@@ -142,20 +142,20 @@ impl FastRmq {
 
         Self {
             data,
-            block_minima: BinaryRmq::from_vec(block_minima),
+            block_minima: SparseRmq::from_vec(block_minima),
             block_min_indices,
             blocks,
         }
     }
 
-    /// Convenience function for [`FastRmq::range_min`] for using range operators.
+    /// Convenience function for [`SmallRmq::range_min`] for using range operators.
     /// The range is clamped to the length of the data structure, sso this function will not panic,
     /// unless called on an empty data structure, because that does not have a valid index.
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::FastRmq;
-    /// let rmq = FastRmq::from_vec(vec![5, 4, 3, 2, 1]);
+    /// use vers_vecs::SmallRmq;
+    /// let rmq = SmallRmq::from_vec(vec![5, 4, 3, 2, 1]);
     /// assert_eq!(rmq.range_min_with_range(0..3), 2);
     /// assert_eq!(rmq.range_min_with_range(0..=3), 3);
     /// ```
@@ -290,7 +290,7 @@ impl FastRmq {
 /// Implements Deref to delegate to the underlying data structure. This allows the user to use
 /// indexing syntax on the RMQ data structure to access the underlying data, as well as iterators,
 /// etc.
-impl Deref for FastRmq {
+impl Deref for SmallRmq {
     type Target = Vec<u64>;
 
     fn deref(&self) -> &Self::Target {
@@ -298,7 +298,7 @@ impl Deref for FastRmq {
     }
 }
 
-impl From<Vec<u64>> for FastRmq {
+impl From<Vec<u64>> for SmallRmq {
     fn from(data: Vec<u64>) -> Self {
         Self::from_vec(data)
     }
@@ -309,8 +309,8 @@ impl From<Vec<u64>> for FastRmq {
 ///
 /// See [`FastRmq::from_vec`] for more information.
 ///
-/// [`FastRmq::from_vec`]: FastRmq::from_vec
-impl FromIterator<u64> for FastRmq {
+/// [`FastRmq::from_vec`]: SmallRmq::from_vec
+impl FromIterator<u64> for SmallRmq {
     fn from_iter<T: IntoIterator<Item = u64>>(iter: T) -> Self {
         Self::from_vec(iter.into_iter().collect())
     }

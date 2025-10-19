@@ -475,7 +475,7 @@ fn test_apply_masks() {
 
 #[test]
 fn test_from_bits() {
-    let bv = BitVec::from_bits(&[1, 0, 1]);
+    let bv = BitVec::from_bits_u8(&[1, 0, 1]);
     assert_eq!(bv.len, 3);
     assert_eq!(bv.get_bits(0, 3), Some(0b101));
 
