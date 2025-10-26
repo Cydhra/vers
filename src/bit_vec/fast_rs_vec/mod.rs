@@ -42,6 +42,7 @@ const SELECT_BLOCK_SIZE: usize = 1 << 13;
 /// always stores the number zero, which serves as a sentinel value to avoid special-casing the
 /// first block in a super-block (which would be a performance hit due branch prediction failures).
 #[derive(Clone, Copy, Debug)]
+#[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct BlockDescriptor {
     zeros: u16,

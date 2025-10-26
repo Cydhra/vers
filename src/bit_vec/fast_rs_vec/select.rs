@@ -4,6 +4,7 @@ use crate::bit_vec::fast_rs_vec::{BLOCK_SIZE, SELECT_BLOCK_SIZE, SUPER_BLOCK_SIZ
 use crate::bit_vec::WORD_SIZE;
 use crate::util::pdep::Pdep;
 use crate::util::unroll;
+use std::slice::from_raw_parts;
 
 /// A safety constant for assertions to make sure that the block size doesn't change without
 /// adjusting the code.
@@ -229,81 +230,141 @@ impl super::RsVec {
     /// It loads the entire block into a SIMD register and compares the rank to the number of ones
     /// in the block. The resulting mask is popcounted to find how many blocks from the block boundary
     /// the rank is.
-    #[cfg(all(
-        feature = "simd",
-        target_arch = "x86_64",
-        target_feature = "avx",
-        target_feature = "avx2",
-        target_feature = "avx512vl",
-        target_feature = "avx512bw",
-    ))]
-    #[inline(always)]
-    pub(super) fn search_block1(
+    // #[cfg(all(
+    //     feature = "simd",
+    //     target_arch = "x86_64",
+    //     target_feature = "avx",
+    //     target_feature = "avx2",
+    //     target_feature = "avx512vl",
+    //     target_feature = "avx512bw",
+    // ))]
+    // #[inline(always)]
+    // pub(super) fn search_block1(
+    //     &self,
+    //     rank: usize,
+    //     block_at_super_block: usize,
+    //     block_index: &mut usize,
+    // ) {
+    //     use std::arch::x86_64::{
+    //         _mm256_cmpgt_epu16_mask, _mm256_loadu_epi16, _mm256_set1_epi16, _mm256_set_epi16,
+    //         _mm256_sub_epi16,
+    //     };
+    //
+    //     if self.blocks.len() > *block_index + BLOCKS_PER_SUPERBLOCK {
+    //         debug_assert!(
+    //             SUPER_BLOCK_SIZE / BLOCK_SIZE == BLOCKS_PER_SUPERBLOCK,
+    //             "change unroll constant to {}",
+    //             64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
+    //         );
+    //
+    //         unsafe {
+    //             let bit_nums = _mm256_set_epi16(
+    //                 (15 * BLOCK_SIZE) as i16,
+    //                 (14 * BLOCK_SIZE) as i16,
+    //                 (13 * BLOCK_SIZE) as i16,
+    //                 (12 * BLOCK_SIZE) as i16,
+    //                 (11 * BLOCK_SIZE) as i16,
+    //                 (10 * BLOCK_SIZE) as i16,
+    //                 (9 * BLOCK_SIZE) as i16,
+    //                 (8 * BLOCK_SIZE) as i16,
+    //                 (7 * BLOCK_SIZE) as i16,
+    //                 (6 * BLOCK_SIZE) as i16,
+    //                 (5 * BLOCK_SIZE) as i16,
+    //                 (4 * BLOCK_SIZE) as i16,
+    //                 (3 * BLOCK_SIZE) as i16,
+    //                 (2 * BLOCK_SIZE) as i16,
+    //                 (1 * BLOCK_SIZE) as i16,
+    //                 (0 * BLOCK_SIZE) as i16,
+    //             );
+    //
+    //             let blocks = _mm256_loadu_epi16(self.blocks[*block_index..].as_ptr() as *const i16);
+    //             let ones = _mm256_sub_epi16(bit_nums, blocks);
+    //
+    //             let ranks = _mm256_set1_epi16(rank as i16);
+    //             let mask = _mm256_cmpgt_epu16_mask(ones, ranks);
+    //
+    //             debug_assert!(
+    //                 mask.count_zeros() > 0,
+    //                 "first block should always be zero, but still claims to be greater than rank"
+    //             );
+    //             *block_index += mask.count_zeros() as usize - 1;
+    //         }
+    //     } else {
+    //         self.search_block1_naive(rank, block_at_super_block, block_index)
+    //     }
+    // }
+
+    #[cfg(all(feature = "simd",))]
+    pub(super) fn search_block1_portable(
         &self,
         rank: usize,
-        block_at_super_block: usize,
+        _block_at_super_block: usize,
         block_index: &mut usize,
     ) {
-        use std::arch::x86_64::{
-            _mm256_cmpgt_epu16_mask, _mm256_loadu_epi16, _mm256_set1_epi16, _mm256_set_epi16,
-            _mm256_sub_epi16,
+        use std::simd::cmp::SimdPartialOrd;
+        use std::simd::u16x16;
+
+        debug_assert!(
+            SUPER_BLOCK_SIZE / BLOCK_SIZE == BLOCKS_PER_SUPERBLOCK,
+            "change unroll constant to {}",
+            64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
+        );
+
+        let bit_nums = u16x16::from([
+            (0 * BLOCK_SIZE) as u16,
+            (1 * BLOCK_SIZE) as u16,
+            (2 * BLOCK_SIZE) as u16,
+            (3 * BLOCK_SIZE) as u16,
+            (4 * BLOCK_SIZE) as u16,
+            (5 * BLOCK_SIZE) as u16,
+            (6 * BLOCK_SIZE) as u16,
+            (7 * BLOCK_SIZE) as u16,
+            (8 * BLOCK_SIZE) as u16,
+            (9 * BLOCK_SIZE) as u16,
+            (10 * BLOCK_SIZE) as u16,
+            (11 * BLOCK_SIZE) as u16,
+            (12 * BLOCK_SIZE) as u16,
+            (13 * BLOCK_SIZE) as u16,
+            (14 * BLOCK_SIZE) as u16,
+            (15 * BLOCK_SIZE) as u16,
+        ]);
+
+        let sentinel = u16x16::default();
+
+        let slice: &[u16] = unsafe {
+            from_raw_parts(
+                self.blocks[*block_index..].as_ptr() as *const u16,
+                self.blocks[*block_index..].len(),
+            )
         };
+        let blocks = u16x16::load_or(slice, sentinel);
+        let ones = bit_nums - blocks;
 
-        if self.blocks.len() > *block_index + BLOCKS_PER_SUPERBLOCK {
-            debug_assert!(
-                SUPER_BLOCK_SIZE / BLOCK_SIZE == BLOCKS_PER_SUPERBLOCK,
-                "change unroll constant to {}",
-                64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
-            );
+        let ranks = u16x16::splat(rank as u16);
+        let mask = ones.simd_gt(ranks);
 
-            unsafe {
-                let bit_nums = _mm256_set_epi16(
-                    (15 * BLOCK_SIZE) as i16,
-                    (14 * BLOCK_SIZE) as i16,
-                    (13 * BLOCK_SIZE) as i16,
-                    (12 * BLOCK_SIZE) as i16,
-                    (11 * BLOCK_SIZE) as i16,
-                    (10 * BLOCK_SIZE) as i16,
-                    (9 * BLOCK_SIZE) as i16,
-                    (8 * BLOCK_SIZE) as i16,
-                    (7 * BLOCK_SIZE) as i16,
-                    (6 * BLOCK_SIZE) as i16,
-                    (5 * BLOCK_SIZE) as i16,
-                    (4 * BLOCK_SIZE) as i16,
-                    (3 * BLOCK_SIZE) as i16,
-                    (2 * BLOCK_SIZE) as i16,
-                    (1 * BLOCK_SIZE) as i16,
-                    (0 * BLOCK_SIZE) as i16,
-                );
+        // calculate the number of blocks where the number of ones does not exceed rank
+        // (subtract 48 unused bits because the bitmask has 64 bits)
+        let num = mask.to_bitmask().count_zeros() - 48;
 
-                let blocks = _mm256_loadu_epi16(self.blocks[*block_index..].as_ptr() as *const i16);
-                let ones = _mm256_sub_epi16(bit_nums, blocks);
-
-                let ranks = _mm256_set1_epi16(rank as i16);
-                let mask = _mm256_cmpgt_epu16_mask(ones, ranks);
-
-                debug_assert!(
-                    mask.count_zeros() > 0,
-                    "first block should always be zero, but still claims to be greater than rank"
-                );
-                *block_index += mask.count_zeros() as usize - 1;
-            }
-        } else {
-            self.search_block1_naive(rank, block_at_super_block, block_index)
-        }
+        debug_assert!(
+            num > 0,
+            "first block should always be zero, but still claims to be greater than rank"
+        );
+        *block_index += num as usize - 1;
     }
 
     /// Search for the block in a superblock that contains the rank. This function is only used
     /// internally and is not part of the public API.
     /// It compares blocks in a loop-unrolled binary search to find the block that contains the rank.
-    #[cfg(not(all(
-        feature = "simd",
-        target_arch = "x86_64",
-        target_feature = "avx",
-        target_feature = "avx2",
-        target_feature = "avx512vl",
-        target_feature = "avx512bw",
-    )))]
+    // #[cfg(not(all(
+    //     feature = "simd",
+    //     target_arch = "x86_64",
+    //     target_feature = "avx",
+    //     target_feature = "avx2",
+    //     target_feature = "avx512vl",
+    //     target_feature = "avx512bw",
+    // )))]
     #[inline(always)]
     pub(super) fn search_block1(
         &self,
@@ -311,7 +372,7 @@ impl super::RsVec {
         block_at_super_block: usize,
         block_index: &mut usize,
     ) {
-        self.search_block1_naive(rank, block_at_super_block, block_index);
+        self.search_block1_portable(rank, block_at_super_block, block_index);
     }
 
     #[inline(always)]
