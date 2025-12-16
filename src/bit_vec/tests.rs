@@ -597,6 +597,50 @@ fn test_remaining_packing_constructors() {
     assert_eq!(bv.get_bits(50, 10), Some(0));
     assert_eq!(bv.get_bits(60, 10), Some(1));
     assert_eq!(bv.get_bits(70, 10), Some(0));
+
+    let bv = BitVec::pack_from_iter_u64([10, 12, 0, 1000, 1, 0, 1, 0].into_iter(), 10);
+    assert_eq!(bv.len, 80);
+    assert_eq!(bv.get_bits(0, 10), Some(10));
+    assert_eq!(bv.get_bits(10, 10), Some(12));
+    assert_eq!(bv.get_bits(20, 10), Some(0));
+    assert_eq!(bv.get_bits(30, 10), Some(1000));
+    assert_eq!(bv.get_bits(40, 10), Some(1));
+    assert_eq!(bv.get_bits(50, 10), Some(0));
+    assert_eq!(bv.get_bits(60, 10), Some(1));
+    assert_eq!(bv.get_bits(70, 10), Some(0));
+
+    let bv = BitVec::pack_from_iter_u32([10, 12, 0, 1000, 1, 0, 1, 0].into_iter(), 10);
+    assert_eq!(bv.len, 80);
+    assert_eq!(bv.get_bits(0, 10), Some(10));
+    assert_eq!(bv.get_bits(10, 10), Some(12));
+    assert_eq!(bv.get_bits(20, 10), Some(0));
+    assert_eq!(bv.get_bits(30, 10), Some(1000));
+    assert_eq!(bv.get_bits(40, 10), Some(1));
+    assert_eq!(bv.get_bits(50, 10), Some(0));
+    assert_eq!(bv.get_bits(60, 10), Some(1));
+    assert_eq!(bv.get_bits(70, 10), Some(0));
+
+    let bv = BitVec::pack_from_iter_u16([10, 12, 0, 1000, 1, 0, 1, 0].into_iter(), 10);
+    assert_eq!(bv.len, 80);
+    assert_eq!(bv.get_bits(0, 10), Some(10));
+    assert_eq!(bv.get_bits(10, 10), Some(12));
+    assert_eq!(bv.get_bits(20, 10), Some(0));
+    assert_eq!(bv.get_bits(30, 10), Some(1000));
+    assert_eq!(bv.get_bits(40, 10), Some(1));
+    assert_eq!(bv.get_bits(50, 10), Some(0));
+    assert_eq!(bv.get_bits(60, 10), Some(1));
+    assert_eq!(bv.get_bits(70, 10), Some(0));
+
+    let bv = BitVec::pack_from_iter_u8([10, 12, 0, 100, 1, 0, 1, 0].into_iter(), 10);
+    assert_eq!(bv.len, 80);
+    assert_eq!(bv.get_bits(0, 10), Some(10));
+    assert_eq!(bv.get_bits(10, 10), Some(12));
+    assert_eq!(bv.get_bits(20, 10), Some(0));
+    assert_eq!(bv.get_bits(30, 10), Some(100));
+    assert_eq!(bv.get_bits(40, 10), Some(1));
+    assert_eq!(bv.get_bits(50, 10), Some(0));
+    assert_eq!(bv.get_bits(60, 10), Some(1));
+    assert_eq!(bv.get_bits(70, 10), Some(0));
 }
 
 #[test]
