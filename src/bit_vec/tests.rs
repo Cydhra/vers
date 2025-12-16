@@ -883,3 +883,15 @@ fn test_bool_constructors() {
     assert_eq!(bv2.len(), 8);
     assert_eq!(bv1.get_bits(0, 8), Some(0b00001011));
 }
+
+#[test]
+fn test_limbs_constructor() {
+    // test limbs are recovered
+    let limbs = [10003584882, 248939, 10];
+    let bv = BitVec::from_limbs(&limbs);
+    bv.iter_limbs().zip(limbs.iter()).for_each(|(limb, &reference)| assert_eq!(limb, reference));
+
+    // test last limb correctly returns value
+    let bv = BitVec::pack_sequence_u32(&[23], 5);
+    assert_eq!(bv.iter_limbs().next().unwrap() & ((1 << 23) - 1), 23);
+}

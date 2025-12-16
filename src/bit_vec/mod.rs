@@ -1511,6 +1511,19 @@ impl BitVec {
 
         (self, other)
     }
+
+    /// Iterate through the u64 limbs of the bitvector.
+    /// The limbs are encoded starting at the least significant bit (i.e., the first bit in the bit
+    /// vector is the least significant bit in the first limb).
+    /// Note that the last limb may be incomplete, if the number of bits in the vector is not
+    /// divisible by 64.
+    /// In this case, the least significant `self.len() % 64` bits are the correct bits.
+    /// The remaining bits of the last limb are in an unspecified state and code should not rely
+    /// on them being set or unset.
+    #[inline]
+    pub fn iter_limbs(&self) -> impl Iterator<Item = u64> + use<'_> {
+        self.data.iter().copied()
+    }
 }
 
 impl_vector_iterator! { BitVec, BitVecIter, BitVecRefIter }
