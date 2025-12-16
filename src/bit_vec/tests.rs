@@ -870,3 +870,16 @@ fn test_equals_junk() {
 
     assert_eq!(bv1, bv2);
 }
+
+#[test]
+fn test_bool_constructors() {
+    let bools = [true, true, false, true, false, false, false, false];
+    let bv1 = BitVec::from_bools(&bools);
+
+    assert_eq!(bv1.len(), 8);
+    assert_eq!(bv1.get_bits(0, 8), Some(0b00001011));
+
+    let bv2 = BitVec::from_bool_iter(bools.iter().copied());
+    assert_eq!(bv2.len(), 8);
+    assert_eq!(bv1.get_bits(0, 8), Some(0b00001011));
+}

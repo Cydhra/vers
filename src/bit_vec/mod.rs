@@ -642,6 +642,52 @@ impl BitVec {
         Self::pack_bits_iter::<_, _, 8>(iter, bits_per_element)
     }
 
+    /// Construct a bit vector from bits given as boolean values in a slice.
+    /// The function will append the bits to the bit vector in the order they are
+    /// given in the sequence (i.e. the first bool is the first bit of the vector).
+    ///
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::BitVec;
+    ///
+    /// let sequence = [true, false, true, true];
+    /// let bv = BitVec::from_bools(&sequence);
+    ///
+    /// assert_eq!(bv.len(), 4);
+    /// assert_eq!(bv.is_bit_set(0), Some(true));
+    /// assert_eq!(bv.is_bit_set(1), Some(false));
+    /// assert_eq!(bv.is_bit_set(2), Some(true));
+    /// assert_eq!(bv.is_bit_set(3), Some(true));
+    /// ```
+    pub fn from_bools(bools: &[bool]) -> Self {
+        let mut bv = BitVec::with_capacity(bools.len());
+        bools.iter().for_each(|&b| bv.append(b));
+        bv
+    }
+
+    /// Construct a bit vector from bits given as boolean values from an iterator.
+    /// The function will append the bits to the bit vector in the order they are
+    /// given in the sequence (i.e. the first bool is the first bit of the vector).
+    ///
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::BitVec;
+    ///
+    /// let sequence = [true, false, true, true];
+    /// let bv = BitVec::from_bool_iter(sequence.into_iter());
+    ///
+    /// assert_eq!(bv.len(), 4);
+    /// assert_eq!(bv.is_bit_set(0), Some(true));
+    /// assert_eq!(bv.is_bit_set(1), Some(false));
+    /// assert_eq!(bv.is_bit_set(2), Some(true));
+    /// assert_eq!(bv.is_bit_set(3), Some(true));
+    /// ```
+    pub fn from_bool_iter<I: IntoIterator<Item=bool>>(iter: I) -> Self {
+        let mut bv = BitVec::new();
+        iter.into_iter().for_each(|b| bv.append(b));
+        bv
+    }
+
     /// Append a bit encoded as a `bool` to the bit vector, where `true` means 1 and `false` means 0.
     ///
     /// See also: [`append_bit`], [`append_bit_u32`], [`append_bit_u16`], [`append_bit_u8`], [`append_word`]
