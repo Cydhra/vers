@@ -17,7 +17,7 @@ impl super::RsVec {
     /// If the rank is larger than the number of 0-bits in the vector, the vector length is returned.
     #[must_use]
     #[allow(clippy::assertions_on_constants)]
-    pub fn select0(&self, mut rank: usize) -> usize {
+    pub fn select0(&self, rank: usize) -> usize {
         // Use ARM64 NEON optimizations if available
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
@@ -27,6 +27,7 @@ impl super::RsVec {
         // Original implementation
         #[cfg(not(all(target_arch = "aarch64", target_feature = "neon")))]
         {
+            let mut rank = rank;
             if rank >= self.rank0 {
                 return self.len;
             }
@@ -202,7 +203,7 @@ impl super::RsVec {
     /// If the rank is larger than the number of 1-bits in the bit-vector, the vector length is returned.
     #[must_use]
     #[allow(clippy::assertions_on_constants)]
-    pub fn select1(&self, mut rank: usize) -> usize {
+    pub fn select1(&self, rank: usize) -> usize {
         // ARM64 NEON optimizations are prepared but disabled pending validation
         // TODO: Enable once NEON implementation passes all tests
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
@@ -211,7 +212,9 @@ impl super::RsVec {
         }
 
         // Original implementation
+        #[cfg(not(all(target_arch = "aarch64", target_feature = "neon")))]
         {
+            let mut rank = rank;
             if rank >= self.rank1 {
                 return self.len;
             }

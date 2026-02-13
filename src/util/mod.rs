@@ -1,6 +1,6 @@
 pub(crate) mod elias_fano_iter;
 pub(crate) mod general_iter;
-pub(crate) mod pdep;
+pub mod pdep;
 pub(crate) mod unroll;
 
 // reexport all macros at toplevel for convenience

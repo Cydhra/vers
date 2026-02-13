@@ -80,5 +80,5 @@ pub mod trees;
 #[forbid(unsafe_code)]
 pub mod wavelet;
 
-pub(crate) mod util;
-pub(crate) mod arch;
+pub mod arch;
+pub mod util;
