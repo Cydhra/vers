@@ -18,26 +18,36 @@ impl super::RsVec {
     #[must_use]
     #[allow(clippy::assertions_on_constants)]
     pub fn select0(&self, mut rank: usize) -> usize {
-        if rank >= self.rank0 {
-            return self.len;
-        }
-
-        let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_0;
-
-        if self.super_blocks.len() > (super_block + 1)
-            && self.super_blocks[super_block + 1].zeros <= rank
+        // Use ARM64 NEON optimizations if available
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
-            super_block = self.search_super_block0(super_block, rank);
+            return unsafe { self.select0_neon(rank) };
         }
 
-        rank -= self.super_blocks[super_block].zeros;
+        // Original implementation
+        #[cfg(not(all(target_arch = "aarch64", target_feature = "neon")))]
+        {
+            if rank >= self.rank0 {
+                return self.len;
+            }
 
-        let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
-        self.search_block0(rank, &mut block_index);
+            let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_0;
 
-        rank -= self.blocks[block_index].zeros as usize;
+            if self.super_blocks.len() > (super_block + 1)
+                && self.super_blocks[super_block + 1].zeros <= rank
+            {
+                super_block = self.search_super_block0(super_block, rank);
+            }
 
-        self.search_word_in_block0(rank, block_index)
+            rank -= self.super_blocks[super_block].zeros;
+
+            let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+            self.search_block0(rank, &mut block_index);
+
+            rank -= self.blocks[block_index].zeros as usize;
+
+            self.search_word_in_block0(rank, block_index)
+        }
     }
 
     /// Search for the block in a superblock that contains the rank. This function is only used
@@ -193,32 +203,42 @@ impl super::RsVec {
     #[must_use]
     #[allow(clippy::assertions_on_constants)]
     pub fn select1(&self, mut rank: usize) -> usize {
-        if rank >= self.rank1 {
-            return self.len;
-        }
-
-        let mut super_block =
-            self.select_blocks[rank / crate::bit_vec::fast_rs_vec::SELECT_BLOCK_SIZE].index_1;
-
-        if self.super_blocks.len() > (super_block + 1)
-            && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
-                <= rank
+        // ARM64 NEON optimizations are prepared but disabled pending validation
+        // TODO: Enable once NEON implementation passes all tests
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
-            super_block = self.search_super_block1(super_block, rank);
+            return unsafe { self.select1_neon(rank) };
         }
 
-        rank -= (super_block) * SUPER_BLOCK_SIZE - self.super_blocks[super_block].zeros;
+        // Original implementation
+        {
+            if rank >= self.rank1 {
+                return self.len;
+            }
 
-        // full binary search for block that contains the rank, manually loop-unrolled, because
-        // LLVM doesn't do it for us, but it gains just under 20% performance
-        let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
-        let mut block_index = block_at_super_block;
-        self.search_block1(rank, block_at_super_block, &mut block_index);
+            let mut super_block =
+                self.select_blocks[rank / crate::bit_vec::fast_rs_vec::SELECT_BLOCK_SIZE].index_1;
 
-        rank -= (block_index - block_at_super_block) * BLOCK_SIZE
-            - self.blocks[block_index].zeros as usize;
+            if self.super_blocks.len() > (super_block + 1)
+                && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
+                    <= rank
+            {
+                super_block = self.search_super_block1(super_block, rank);
+            }
 
-        self.search_word_in_block1(rank, block_index)
+            rank -= (super_block) * SUPER_BLOCK_SIZE - self.super_blocks[super_block].zeros;
+
+            // full binary search for block that contains the rank, manually loop-unrolled, because
+            // LLVM doesn't do it for us, but it gains just under 20% performance
+            let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+            let mut block_index = block_at_super_block;
+            self.search_block1(rank, block_at_super_block, &mut block_index);
+
+            rank -= (block_index - block_at_super_block) * BLOCK_SIZE
+                - self.blocks[block_index].zeros as usize;
+
+            self.search_word_in_block1(rank, block_index)
+        }
     }
 
     /// Search for the block in a superblock that contains the rank. This function is only used

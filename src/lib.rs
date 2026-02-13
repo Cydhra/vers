@@ -78,3 +78,4 @@ pub mod trees;
 pub mod wavelet;
 
 pub(crate) mod util;
+pub(crate) mod arch;

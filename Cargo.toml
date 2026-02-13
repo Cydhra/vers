@@ -10,10 +10,7 @@ license = "MIT OR Apache-2.0"
 keywords = ["succinct", "elias-fano", "bitvector", "rank", "wavelet-matrix"]
 categories = ["data-structures", "algorithms"]
 documentation = "https://docs.rs/vers-vecs"
-exclude = [
-    "images/*",
-    ".github/*",
-]
+exclude = ["images/*", ".github/*"]
 
 [dependencies]
 serde = { version = "1.0", optional = true, features = ["derive"] }
@@ -26,7 +23,7 @@ rand = { version = "0.8", features = ["alloc"] }
 [features]
 simd = []
 bp_u16_lookup = []
-docsrs = [] # special feature for docs.rs to enable doc_auto_cfg on nightly
+docsrs = []        # special feature for docs.rs to enable doc_auto_cfg on nightly
 
 [[bench]]
 name = "rank"

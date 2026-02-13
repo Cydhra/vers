@@ -1,28 +1,10 @@
 //! Parallel bits deposit intrinsics for all platforms.
 //! Uses the `PDEP` instruction on `x86`/`x86_64` platforms with the `bmi2` feature enabled.
+//! Uses NEON-accelerated ARM64 implementations on `aarch64` platforms.
 
 // bit manipulation generally doesn't care about sign, so the caller is aware of the consequences
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::cast_possible_wrap)]
-
-// This file is part of the `bitintr` crate and is licensed under the terms of the MIT license.
-// Since this crate is dual-licensed, you may choose to use this file under either the MIT license
-// or the Apache License, Version 2.0, at your option (in compliance with the terms of the MIT license).
-//
-// Since the `bitintr` crate is abandoned, and the version on crates.io is outdated,
-// the contents of this file are copied from the `bitintr` crate from the files
-// `src/pdep.rs`, `src/macros.rs` and `src/lib.rs` at commit `6c49e01`.
-// The code is functionally identical to the original code, with only minor edits to make it
-// self-contained and update some documentation.
-// None of the utils here are publicly exposed.
-
-mod arch {
-    #[cfg(all(target_arch = "x86", target_feature = "bmi2"))]
-    pub use core::arch::x86::*;
-
-    #[cfg(all(target_arch = "x86_64", target_feature = "bmi2"))]
-    pub use core::arch::x86_64::*;
-}
 
 /// Parallel bits deposit
 pub trait Pdep {
@@ -33,155 +15,160 @@ pub trait Pdep {
     ///
     /// All other bits (bits not set in the `mask`) of the result are set to
     /// zero.
-    ///
-    /// **Keywords**: Parallel bits deposit, scatter bits.
-    ///
-    /// # Instructions
-    ///
-    /// - [`PDEP`](http://www.felixcloutier.com/x86/PDEP.html):
-    ///   - Description: Parallel bits deposit.
-    ///   - Architecture: x86.
-    ///   - Instruction set: BMI2.
-    ///   - Registers: 32/64 bit.
-    /// ```
     fn pdep(self, mask: Self) -> Self;
 }
 
-macro_rules! impl_all {
-    ($impl_macro:ident: $($id:ident),*) => {
-        $(
-            $impl_macro!($id);
-        )*
+/// Parallel bits extract (complementary to PDEP)
+pub trait Pext {
+    /// Parallel bits extract.
+    ///
+    /// Extract bits from `self` at the positions specified by `mask` to 
+    /// contiguous low order bits of the result.
+    fn pext(self, mask: Self) -> Self;
+}
+
+// x86_64 implementations
+#[cfg(all(target_arch = "x86_64", target_feature = "bmi2"))]
+use std::arch::x86_64::{_pdep_u64, _pext_u64};
+
+// ARM64: Import sophisticated NEON implementations
+#[cfg(target_arch = "aarch64")]
+use crate::arch::aarch64::{Arm64BitOps, BitOps};
+
+// Generic implementations for other architectures
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+mod generic_impl {
+    #[inline(always)]
+    pub fn pext_u64_generic(value: u64, mask: u64) -> u64 {
+        let mut result = 0u64;
+        let mut bb = 1u64;
+        let mut m = mask;
+        
+        while m != 0 {
+            if value & bb != 0 {
+                result |= m & m.wrapping_neg();
+            }
+            m &= m - 1;
+            bb <<= 1;
+        }
+        
+        result
+    }
+
+    #[inline(always)]
+    pub fn pdep_u64_generic(value: u64, mut mask: u64) -> u64 {
+        let mut res = 0;
+        let mut bb: u64 = 1;
+        loop {
+            if mask == 0 {
+                break;
+            }
+            if (value & bb) != 0 {
+                res |= mask & mask.wrapping_neg();
+            }
+            mask &= mask - 1;
+            bb = bb.wrapping_add(bb);
+        }
+        res
     }
 }
 
-macro_rules! cfg_if {
-    // match if/else chains with a final `else`
-    ($(
-        if #[cfg($($meta:meta),*)] { $($it:item)* }
-    ) else * else {
-        $($it2:item)*
-    }) => {
-        cfg_if! {
-            @__items
-            () ;
-            $( ( ($($meta),*) ($($it)*) ), )*
-            ( () ($($it2)*) ),
+// Implement for u64 with direct dispatch (no trait overhead)
+impl Pdep for u64 {
+    #[inline(always)]
+    fn pdep(self, mask: Self) -> Self {
+        #[cfg(all(target_arch = "x86_64", target_feature = "bmi2"))]
+        unsafe {
+            _pdep_u64(self, mask)
         }
-    };
-
-    // match if/else chains lacking a final `else`
-    (
-        if #[cfg($($i_met:meta),*)] { $($i_it:item)* }
-        $(
-            else if #[cfg($($e_met:meta),*)] { $($e_it:item)* }
-        )*
-    ) => {
-        cfg_if! {
-            @__items
-            () ;
-            ( ($($i_met),*) ($($i_it)*) ),
-            $( ( ($($e_met),*) ($($e_it)*) ), )*
-            ( () () ),
+        
+        #[cfg(all(target_arch = "aarch64", not(all(target_arch = "x86_64", target_feature = "bmi2"))))]
+        {
+            // Use sophisticated NEON-accelerated implementations from arch/aarch64
+            Arm64BitOps::pdep_u64(self, mask)
         }
-    };
-
-    // Internal and recursive macro to emit all the items
-    //
-    // Collects all the negated cfgs in a list at the beginning and after the
-    // semicolon is all the remaining items
-    (@__items ($($not:meta,)*) ; ) => {};
-    (@__items ($($not:meta,)*) ; ( ($($m:meta),*) ($($it:item)*) ), $($rest:tt)*) => {
-        // Emit all items within one block, applying an approprate #[cfg]. The
-        // #[cfg] will require all `$m` matchers specified and must also negate
-        // all previous matchers.
-        cfg_if! { @__apply cfg(all($($m,)* not(any($($not),*)))), $($it)* }
-
-        // Recurse to emit all other items in `$rest`, and when we do so add all
-        // our `$m` matchers to the list of `$not` matchers as future emissions
-        // will have to negate everything we just matched as well.
-        cfg_if! { @__items ($($not,)* $($m,)*) ; $($rest)* }
-    };
-
-    // Internal macro to Apply a cfg attribute to a list of items
-    (@__apply $m:meta, $($it:item)*) => {
-        $(#[$m] $it)*
-    };
-}
-
-macro_rules! pdep_impl {
-    ($ty:ty) => {
-        #[inline]
-        fn pdep_(value: $ty, mut mask: $ty) -> $ty {
-            let mut res = 0;
-            let mut bb: $ty = 1;
-            loop {
-                if mask == 0 {
-                    break;
-                }
-                if (value & bb) != 0 {
-                    res |= mask & mask.wrapping_neg();
-                }
-                mask &= mask - 1;
-                bb = bb.wrapping_add(bb);
-            }
-            res
-        }
-    };
-    ($ty:ty, $intr:ident) => {
-        cfg_if! {
-            if  #[cfg(all(
-                  any(target_arch = "x86", target_arch = "x86_64"),
-                  target_feature = "bmi2"
-            ))] {
-                #[inline]
-                #[target_feature(enable = "bmi2")]
-                unsafe fn pdep_(value: $ty, mask: $ty) -> $ty {
-                    crate::util::pdep::arch::$intr(
-                        value as _,
-                        mask as _,
-                    ) as _
-                }
-            } else {
-                pdep_impl!($ty);
-            }
-
-        }
-    };
-}
-
-macro_rules! impl_pdep {
-    ($id:ident $(,$args:ident)*) => {
-        impl Pdep for $id {
-            #[inline]
-            #[allow(unused_unsafe)]
-            fn pdep(self, mask: Self) -> Self {
-                pdep_impl!($id $(,$args)*);
-                // UNSAFETY: this is always safe, because
-                // the unsafe `#[target_feature]` function
-                // is only generated when the feature is
-                // statically-enabled at compile-time.
-                unsafe { pdep_(self, mask) }
-           }
+        
+        #[cfg(not(any(
+            all(target_arch = "x86_64", target_feature = "bmi2"),
+            target_arch = "aarch64"
+        )))]
+        {
+            generic_impl::pdep_u64_generic(self, mask)
         }
     }
 }
 
-impl_all!(impl_pdep: u8, u16, i8, i16);
-
-cfg_if! {
-    if #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] {
-        impl_pdep!(u32, _pdep_u32);
-        impl_pdep!(i32, _pdep_u32);
-        cfg_if! {
-            if #[cfg(target_arch = "x86_64")] {
-                impl_pdep!(u64, _pdep_u64);
-                impl_pdep!(i64, _pdep_u64);
-            } else {
-                impl_all!(impl_pdep: i64, u64);
-            }
+impl Pext for u64 {
+    #[inline(always)]
+    fn pext(self, mask: Self) -> Self {
+        #[cfg(all(target_arch = "x86_64", target_feature = "bmi2"))]
+        unsafe {
+            _pext_u64(self, mask)
         }
-    } else {
-        impl_all!(impl_pdep: u32, i32, i64, u64);
+        
+        #[cfg(all(target_arch = "aarch64", not(all(target_arch = "x86_64", target_feature = "bmi2"))))]
+        {
+            // Use sophisticated NEON-accelerated implementations from arch/aarch64
+            Arm64BitOps::pext_u64(self, mask)
+        }
+        
+        #[cfg(not(any(
+            all(target_arch = "x86_64", target_feature = "bmi2"),
+            target_arch = "aarch64"
+        )))]
+        {
+            generic_impl::pext_u64_generic(self, mask)
+        }
+    }
+}
+
+// Implement for other integer types by casting
+macro_rules! impl_pdep_pext {
+    ($($t:ty),*) => {
+        $(
+            impl Pdep for $t {
+                #[inline(always)]
+                fn pdep(self, mask: Self) -> Self {
+                    (self as u64).pdep(mask as u64) as Self
+                }
+            }
+            
+            impl Pext for $t {
+                #[inline(always)]
+                fn pext(self, mask: Self) -> Self {
+                    (self as u64).pext(mask as u64) as Self
+                }
+            }
+        )*
+    };
+}
+
+impl_pdep_pext!(u8, u16, u32, i8, i16, i32, i64);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_pdep_basic() {
+        let value: u64 = 0b1111;
+        let mask: u64 = 0b10101010;
+        assert_eq!(value.pdep(mask), 0b10101010);
+    }
+    
+    #[test]
+    fn test_pext_basic() {
+        let value: u64 = 0b11111111;
+        let mask: u64 = 0b10101010;
+        assert_eq!(value.pext(mask), 0b1111);
+    }
+    
+    #[test]
+    fn test_pdep_pext_inverse() {
+        let original: u64 = 0b1010;
+        let mask: u64 = 0b11110000;
+        let deposited = original.pdep(mask);
+        let extracted = deposited.pext(mask);
+        assert_eq!(original, extracted);
     }
 }

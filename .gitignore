@@ -1,6 +1,6 @@
 /target
 /Cargo.lock
-
+benchmark_results.json
 **.iml
 .idea
 

@@ -553,6 +553,10 @@ mod iter;
 // select code in here to keep it more organized
 mod select;
 
+// ARM64-optimized select implementation
+#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+mod arm64_select;
+
 #[cfg(all(
     feature = "simd",
     target_arch = "x86_64",
