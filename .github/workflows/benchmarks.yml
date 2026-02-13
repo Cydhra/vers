@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       architecture:
-        description: 'Select architecture to run benchmarks on'
+        description: 'Select platform/architecture (ubuntu=x86_64, macos=ARM64, windows=x86_64)'
         required: true
         type: choice
         options:
