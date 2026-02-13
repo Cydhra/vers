@@ -1,0 +1,59 @@
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      architecture:
+        description: 'Select architecture to run benchmarks on'
+        required: true
+        type: choice
+        options:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        default: 'ubuntu-latest'
+      benchmark:
+        description: 'Specific benchmark to run (leave empty for all)'
+        required: false
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  benchmark:
+    runs-on: ${{ inputs.architecture }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        
+      - name: Run all benchmarks
+        if: inputs.benchmark == ''
+        run: cargo bench --all-features
+        
+      - name: Run specific benchmark
+        if: inputs.benchmark != ''
+        run: cargo bench --bench ${{ inputs.benchmark }} --all-features
+        
+      - name: Upload criterion HTML reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: criterion-reports-${{ inputs.architecture }}
+          path: target/criterion/
+          retention-days: 30
+          
+      - name: Generate benchmark summary
+        if: always()
+        run: |
+          echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Architecture:** ${{ inputs.architecture }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Benchmark:** ${{ inputs.benchmark || 'all' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Criterion HTML reports have been uploaded as artifacts." >> $GITHUB_STEP_SUMMARY
+          echo "Download them from the workflow run page to view detailed results." >> $GITHUB_STEP_SUMMARY
