@@ -46,6 +46,8 @@ jobs:
 
   build-macos-arm64:
     runs-on: macos-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Build
