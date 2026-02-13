@@ -258,10 +258,6 @@ impl Arm64BitOps {
     #[cfg(target_feature = "neon")]
     #[target_feature(enable = "neon")]
     pub unsafe fn pext_u64_neon_simd(value: u64, mask: u64) -> u64 {
-        // Load values into NEON registers for parallel processing
-        let value_vec = vdupq_n_u64(value);
-        let mask_vec = vdupq_n_u64(mask);
-
         // Process 16 bits at a time using NEON logical operations
         let mut result = 0u64;
         let mut result_pos = 0;
@@ -444,17 +440,10 @@ impl Arm64BitOps {
     #[target_feature(enable = "neon")]
     unsafe fn pext_u16_neon(value: u16, mask: u16) -> u16 {
         // For 16-bit values, use optimized bit manipulation with NEON assist
-        let value_vec = vdup_n_u64(value as u64);
-        let mask_vec = vdup_n_u64(mask as u64);
+        let _value_vec = vdup_n_u64(value as u64);
+        let _mask_vec = vdup_n_u64(mask as u64);
 
-        // Use NEON logical operations for parallel processing
-        let _masked = vandq_u64(vdupq_lane_u64(value_vec, 0), vdupq_lane_u64(mask_vec, 0));
-
-        // Extract to scalar and use optimized loop
-        Self::pext_u16_optimized(value, mask)
-    }
-
-    /// NEON-optimized 16-bit PDEP using parallel bit manipulation
+        // N-optimized 16-bit PDEP using parallel bit manipulation
     #[cfg(target_feature = "neon")]
     #[target_feature(enable = "neon")]
     unsafe fn pdep_u16_neon(value: u16, mask: u16) -> u16 {
@@ -469,11 +458,7 @@ impl Arm64BitOps {
     /// Optimized 16-bit PEXT implementation
     #[inline(always)]
     fn pext_u16_optimized(value: u16, mask: u16) -> u16 {
-        let mut result = 0u16;
-        let mut mask_copy = mask;
-        let mut bit_pos = 0;
-
-        // Unroll for better performance
+        letUnroll for better performance
         while mask_copy != 0 {
             let lowest_bit = mask_copy & mask_copy.wrapping_neg();
             if value & lowest_bit != 0 {
@@ -508,6 +493,7 @@ impl Arm64BitOps {
 
     /// Generic PEXT implementation optimized for ARM64
     #[inline(always)]
+    #[allow(dead_code)]
     pub fn pext_u64_generic(value: u64, mask: u64) -> u64 {
         let mut result = 0u64;
         let mut bb = 1u64;
@@ -526,6 +512,7 @@ impl Arm64BitOps {
 
     /// Generic PDEP implementation
     #[inline(always)]
+    #[allow(dead_code)]
     pub fn pdep_u64_generic(value: u64, mut mask: u64) -> u64 {
         let mut res = 0;
         let mut bb: u64 = 1;
@@ -821,6 +808,7 @@ pub mod lookup_tables {
     }
 
     impl CacheOptimizedTables {
+        #[allow(dead_code)]
         pub fn new(size: usize) -> Self {
             // Optimize table sizes for M2 Max cache
             let l1_entries = 512; // 4KB in L1
@@ -839,6 +827,7 @@ pub mod memory {
     /// Prefetch data for read
     /// Note: ARM64 prefetch instructions are currently unstable in Rust
     /// For now, we rely on the CPU's hardware prefetcher
+    #[allow(dead_code)]
     #[inline(always)]
     pub fn prefetch_read(_addr: *const u8) {
         // Hardware prefetcher on M1/M2 is very good
@@ -847,6 +836,7 @@ pub mod memory {
 
     /// Prefetch data for write  
     /// Note: ARM64 prefetch instructions are currently unstable in Rust
+    #[allow(dead_code)]
     /// For now, we rely on the CPU's hardware prefetcher
     #[inline(always)]
     pub fn prefetch_write(_addr: *const u8) {

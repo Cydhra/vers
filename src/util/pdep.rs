@@ -33,45 +33,15 @@ use std::arch::x86_64::{_pdep_u64, _pext_u64};
 
 // ARM64: Import sophisticated NEON implementations
 #[cfg(target_arch = "aarch64")]
-use crate::arch::aarch64::{Arm64BitOps, BitOps};
+use crate::arch::aarch64::Arm64BitOps;
 
-// Generic implementations for other architectures
-#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
-mod generic_impl {
-    #[inline(always)]
-    pub fn pext_u64_generic(value: u64, mask: u64) -> u64 {
-        let mut result = 0u64;
-        let mut bb = 1u64;
-        let mut m = mask;
-        
-        while m != 0 {
-            if value & bb != 0 {
-                result |= m & m.wrapping_neg();
-            }
-            m &= m - 1;
-            bb <<= 1;
-        }
-        
-        result
-    }
+// Generic implementations for other architectures or fallback
+#[cfg(not(any(all(target_arch = "x86_64", target_feature = "bmi2"), target_arch = "aarch64")))]
+use crate::arch::generic::GenericBitOps;
 
-    #[inline(always)]
-    pub fn pdep_u64_generic(value: u64, mut mask: u64) -> u64 {
-        let mut res = 0;
-        let mut bb: u64 = 1;
-        loop {
-            if mask == 0 {
-                break;
-            }
-            if (value & bb) != 0 {
-                res |= mask & mask.wrapping_neg();
-            }
-            mask &= mask - 1;
-            bb = bb.wrapping_add(bb);
-        }
-        res
-    }
-}
+// Import BitOps trait for architectures that use trait-based fallback or dispatch
+#[cfg(any(target_arch = "aarch64", not(all(target_arch = "x86_64", target_feature = "bmi2"))))]
+use crate::arch::BitOps;
 
 // Implement for u64 with direct dispatch (no trait overhead)
 impl Pdep for u64 {
@@ -93,7 +63,7 @@ impl Pdep for u64 {
             target_arch = "aarch64"
         )))]
         {
-            generic_impl::pdep_u64_generic(self, mask)
+            GenericBitOps::pdep_u64(self, mask)
         }
     }
 }
@@ -117,7 +87,7 @@ impl Pext for u64 {
             target_arch = "aarch64"
         )))]
         {
-            generic_impl::pext_u64_generic(self, mask)
+            GenericBitOps::pext_u64(self, mask)
         }
     }
 }

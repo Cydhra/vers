@@ -3,6 +3,7 @@
 use super::BitOps;
 
 /// Generic bit manipulation operations
+#[allow(dead_code)]
 pub struct GenericBitOps;
 
 impl BitOps for GenericBitOps {

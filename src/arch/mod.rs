@@ -13,6 +13,7 @@ pub mod aarch64;
 pub mod generic;
 
 /// Trait for architecture-specific bit manipulation operations
+#[allow(dead_code)]
 pub trait BitOps {
     /// Count the number of set bits (population count)
     fn popcount_u64(value: u64) -> u32;
@@ -42,6 +43,7 @@ pub type ArchBitOps = generic::GenericBitOps;
 
 /// Re-export architecture-specific implementations
 #[cfg(target_arch = "x86_64")]
+#[allow(unused_imports)]
 pub use x86_64::*;
 
 #[cfg(target_arch = "aarch64")]
