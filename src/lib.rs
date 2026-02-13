@@ -45,6 +45,9 @@
 //! The intrinsics do not operate on addresses, so even if they were to be implemented incorrectly,
 //! no memory safety issues would arise.
 //!
+//! The `simd` crate feature adds SIMD implementations to some of the operations (notably `select`)
+//! which do operate on pointers.
+//!
 //! # Crate Features
 //! - `simd` (disabled by default): Enables the use of SIMD instructions in the `RsVec`
 //!   implementation, and an additional iterator for the `RsVec` data structure.

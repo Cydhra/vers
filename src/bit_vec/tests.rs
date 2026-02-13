@@ -597,6 +597,50 @@ fn test_remaining_packing_constructors() {
     assert_eq!(bv.get_bits(50, 10), Some(0));
     assert_eq!(bv.get_bits(60, 10), Some(1));
     assert_eq!(bv.get_bits(70, 10), Some(0));
+
+    let bv = BitVec::pack_from_iter_u64([10, 12, 0, 1000, 1, 0, 1, 0].into_iter(), 10);
+    assert_eq!(bv.len, 80);
+    assert_eq!(bv.get_bits(0, 10), Some(10));
+    assert_eq!(bv.get_bits(10, 10), Some(12));
+    assert_eq!(bv.get_bits(20, 10), Some(0));
+    assert_eq!(bv.get_bits(30, 10), Some(1000));
+    assert_eq!(bv.get_bits(40, 10), Some(1));
+    assert_eq!(bv.get_bits(50, 10), Some(0));
+    assert_eq!(bv.get_bits(60, 10), Some(1));
+    assert_eq!(bv.get_bits(70, 10), Some(0));
+
+    let bv = BitVec::pack_from_iter_u32([10, 12, 0, 1000, 1, 0, 1, 0].into_iter(), 10);
+    assert_eq!(bv.len, 80);
+    assert_eq!(bv.get_bits(0, 10), Some(10));
+    assert_eq!(bv.get_bits(10, 10), Some(12));
+    assert_eq!(bv.get_bits(20, 10), Some(0));
+    assert_eq!(bv.get_bits(30, 10), Some(1000));
+    assert_eq!(bv.get_bits(40, 10), Some(1));
+    assert_eq!(bv.get_bits(50, 10), Some(0));
+    assert_eq!(bv.get_bits(60, 10), Some(1));
+    assert_eq!(bv.get_bits(70, 10), Some(0));
+
+    let bv = BitVec::pack_from_iter_u16([10, 12, 0, 1000, 1, 0, 1, 0].into_iter(), 10);
+    assert_eq!(bv.len, 80);
+    assert_eq!(bv.get_bits(0, 10), Some(10));
+    assert_eq!(bv.get_bits(10, 10), Some(12));
+    assert_eq!(bv.get_bits(20, 10), Some(0));
+    assert_eq!(bv.get_bits(30, 10), Some(1000));
+    assert_eq!(bv.get_bits(40, 10), Some(1));
+    assert_eq!(bv.get_bits(50, 10), Some(0));
+    assert_eq!(bv.get_bits(60, 10), Some(1));
+    assert_eq!(bv.get_bits(70, 10), Some(0));
+
+    let bv = BitVec::pack_from_iter_u8([10, 12, 0, 100, 1, 0, 1, 0].into_iter(), 10);
+    assert_eq!(bv.len, 80);
+    assert_eq!(bv.get_bits(0, 10), Some(10));
+    assert_eq!(bv.get_bits(10, 10), Some(12));
+    assert_eq!(bv.get_bits(20, 10), Some(0));
+    assert_eq!(bv.get_bits(30, 10), Some(100));
+    assert_eq!(bv.get_bits(40, 10), Some(1));
+    assert_eq!(bv.get_bits(50, 10), Some(0));
+    assert_eq!(bv.get_bits(60, 10), Some(1));
+    assert_eq!(bv.get_bits(70, 10), Some(0));
 }
 
 #[test]
@@ -825,4 +869,29 @@ fn test_equals_junk() {
     bv2.drop_last(4);
 
     assert_eq!(bv1, bv2);
+}
+
+#[test]
+fn test_bool_constructors() {
+    let bools = [true, true, false, true, false, false, false, false];
+    let bv1 = BitVec::from_bools(&bools);
+
+    assert_eq!(bv1.len(), 8);
+    assert_eq!(bv1.get_bits(0, 8), Some(0b00001011));
+
+    let bv2 = BitVec::from_bool_iter(bools.iter().copied());
+    assert_eq!(bv2.len(), 8);
+    assert_eq!(bv1.get_bits(0, 8), Some(0b00001011));
+}
+
+#[test]
+fn test_limbs_constructor() {
+    // test limbs are recovered
+    let limbs = [10003584882, 248939, 10];
+    let bv = BitVec::from_limbs(&limbs);
+    bv.iter_limbs().zip(limbs.iter()).for_each(|(limb, &reference)| assert_eq!(limb, reference));
+
+    // test last limb correctly returns value
+    let bv = BitVec::pack_sequence_u32(&[23], 5);
+    assert_eq!(bv.iter_limbs().next().unwrap() & ((1 << 23) - 1), 23);
 }
