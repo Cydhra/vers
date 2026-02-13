@@ -80,5 +80,7 @@ pub mod trees;
 #[forbid(unsafe_code)]
 pub mod wavelet;
 
+/// Architecture-specific optimizations.
 pub mod arch;
+/// Utility functions and helpers.
 pub mod util;
