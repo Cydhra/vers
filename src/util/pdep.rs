@@ -22,7 +22,7 @@ pub trait Pdep {
 pub trait Pext {
     /// Parallel bits extract.
     ///
-    /// Extract bits from `self` at the positions specified by `mask` to 
+    /// Extract bits from `self` at the positions specified by `mask` to
     /// contiguous low order bits of the result.
     fn pext(self, mask: Self) -> Self;
 }
@@ -36,11 +36,13 @@ use std::arch::x86_64::{_pdep_u64, _pext_u64};
 use crate::arch::aarch64::Arm64BitOps;
 
 // Generic implementations for other architectures or fallback
-#[cfg(not(any(all(target_arch = "x86_64", target_feature = "bmi2"), target_arch = "aarch64")))]
+#[cfg(not(any(
+    all(target_arch = "x86_64", target_feature = "bmi2"),
+    target_arch = "aarch64"
+)))]
 use crate::arch::generic::GenericBitOps;
 
 // Import BitOps trait for architectures that use trait-based fallback or dispatch
-#[cfg(any(target_arch = "aarch64", not(all(target_arch = "x86_64", target_feature = "bmi2"))))]
 use crate::arch::BitOps;
 
 // Implement for u64 with direct dispatch (no trait overhead)
@@ -51,13 +53,16 @@ impl Pdep for u64 {
         unsafe {
             _pdep_u64(self, mask)
         }
-        
-        #[cfg(all(target_arch = "aarch64", not(all(target_arch = "x86_64", target_feature = "bmi2"))))]
+
+        #[cfg(all(
+            target_arch = "aarch64",
+            not(all(target_arch = "x86_64", target_feature = "bmi2"))
+        ))]
         {
             // Use sophisticated NEON-accelerated implementations from arch/aarch64
-            Arm64BitOps::pdep_u64(self, mask)
+            <Arm64BitOps as BitOps>::pdep_u64(self, mask)
         }
-        
+
         #[cfg(not(any(
             all(target_arch = "x86_64", target_feature = "bmi2"),
             target_arch = "aarch64"
@@ -75,13 +80,16 @@ impl Pext for u64 {
         unsafe {
             _pext_u64(self, mask)
         }
-        
-        #[cfg(all(target_arch = "aarch64", not(all(target_arch = "x86_64", target_feature = "bmi2"))))]
+
+        #[cfg(all(
+            target_arch = "aarch64",
+            not(all(target_arch = "x86_64", target_feature = "bmi2"))
+        ))]
         {
             // Use sophisticated NEON-accelerated implementations from arch/aarch64
-            Arm64BitOps::pext_u64(self, mask)
+            <Arm64BitOps as BitOps>::pext_u64(self, mask)
         }
-        
+
         #[cfg(not(any(
             all(target_arch = "x86_64", target_feature = "bmi2"),
             target_arch = "aarch64"
@@ -102,7 +110,7 @@ macro_rules! impl_pdep_pext {
                     (self as u64).pdep(mask as u64) as Self
                 }
             }
-            
+
             impl Pext for $t {
                 #[inline(always)]
                 fn pext(self, mask: Self) -> Self {
@@ -118,21 +126,21 @@ impl_pdep_pext!(u8, u16, u32, i8, i16, i32, i64);
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_pdep_basic() {
         let value: u64 = 0b1111;
         let mask: u64 = 0b10101010;
         assert_eq!(value.pdep(mask), 0b10101010);
     }
-    
+
     #[test]
     fn test_pext_basic() {
         let value: u64 = 0b11111111;
         let mask: u64 = 0b10101010;
         assert_eq!(value.pext(mask), 0b1111);
     }
-    
+
     #[test]
     fn test_pdep_pext_inverse() {
         let original: u64 = 0b1010;

@@ -210,9 +210,6 @@ impl RsVec {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::BitVec;
-
     #[test]
     fn test_arm64_select_available() {
         assert!(cfg!(target_arch = "aarch64"));
@@ -221,5 +218,4 @@ mod tests {
             println!("NEON features are enabled");
         }
     }
-
 }

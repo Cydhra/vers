@@ -25,23 +25,7 @@
 //! - NEON SIMD support (available on all modern ARM64 processors)
 //! - Optimized for Apple Silicon but compatible with other ARM64 implementations
 
-/// Trait for architecture-specific bit manipulation operations  
-pub trait BitOps {
-    /// Count the number of set bits (population count)
-    fn popcount_u64(value: u64) -> u32;
-
-    /// Count leading zeros
-    fn leading_zeros_u64(value: u64) -> u32;
-
-    /// Count trailing zeros
-    fn trailing_zeros_u64(value: u64) -> u32;
-
-    /// Parallel bit extract (PEXT equivalent)
-    fn pext_u64(value: u64, mask: u64) -> u64;
-
-    /// Parallel bit deposit (PDEP equivalent)
-    fn pdep_u64(value: u64, mask: u64) -> u64;
-}
+use super::BitOps;
 
 #[cfg(target_feature = "neon")]
 use std::arch::aarch64::*;
@@ -800,6 +784,7 @@ pub mod lookup_tables {
     pub const NEON_CHUNK_SIZE: usize = 32;
 
     /// Create lookup tables optimized for M2 Max cache hierarchy
+    #[allow(dead_code)]
     pub struct CacheOptimizedTables {
         /// Level 1 table - fits in L1 cache (4KB)
         pub level1: Vec<u64>,
@@ -808,6 +793,7 @@ pub mod lookup_tables {
     }
 
     impl CacheOptimizedTables {
+        /// Create new cache-optimized tables with the given size hint.
         #[allow(dead_code)]
         pub fn new(size: usize) -> Self {
             // Optimize table sizes for M2 Max cache

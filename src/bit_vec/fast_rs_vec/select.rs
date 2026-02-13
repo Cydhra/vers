@@ -204,8 +204,6 @@ impl super::RsVec {
     #[must_use]
     #[allow(clippy::assertions_on_constants)]
     pub fn select1(&self, rank: usize) -> usize {
-        // ARM64 NEON optimizations are prepared but disabled pending validation
-        // TODO: Enable once NEON implementation passes all tests
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
             return unsafe { self.select1_neon(rank) };

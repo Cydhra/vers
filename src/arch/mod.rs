@@ -33,12 +33,15 @@ pub trait BitOps {
 
 /// Select the appropriate implementation based on the target architecture
 #[cfg(target_arch = "x86_64")]
+/// Architecture-specific bit operations implementation.
 pub type ArchBitOps = x86_64::X86BitOps;
 
 #[cfg(target_arch = "aarch64")]
+/// Architecture-specific bit operations implementation.
 pub type ArchBitOps = aarch64::Arm64BitOps;
 
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+/// Architecture-specific bit operations implementation.
 pub type ArchBitOps = generic::GenericBitOps;
 
 /// Re-export architecture-specific implementations
