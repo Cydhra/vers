@@ -439,18 +439,14 @@ impl Arm64BitOps {
     #[cfg(target_feature = "neon")]
     #[target_feature(enable = "neon")]
     unsafe fn pext_u16_neon(value: u16, mask: u16) -> u16 {
-        // For 16-bit values, use optimized bit manipulation with NEON assist
-        let _value_vec = vdup_n_u64(value as u64);
-        let _mask_vec = vdup_n_u64(mask as u64);
+        // Extract to scalar and use optimized loop
+        Self::pext_u16_optimized(value, mask)
+    }
 
-        // N-optimized 16-bit PDEP using parallel bit manipulation
+    /// NEON-optimized 16-bit PDEP using parallel bit manipulation
     #[cfg(target_feature = "neon")]
     #[target_feature(enable = "neon")]
     unsafe fn pdep_u16_neon(value: u16, mask: u16) -> u16 {
-        // For 16-bit values, use optimized bit manipulation with NEON assist
-        let _value_vec = vdup_n_u64(value as u64);
-        let _mask_vec = vdup_n_u64(mask as u64);
-
         // Use NEON logical operations for parallel processing
         Self::pdep_u16_optimized(value, mask)
     }
@@ -458,7 +454,11 @@ impl Arm64BitOps {
     /// Optimized 16-bit PEXT implementation
     #[inline(always)]
     fn pext_u16_optimized(value: u16, mask: u16) -> u16 {
-        letUnroll for better performance
+        let mut result = 0u16;
+        let mut mask_copy = mask;
+        let mut bit_pos = 0;
+
+        // Unroll for better performance
         while mask_copy != 0 {
             let lowest_bit = mask_copy & mask_copy.wrapping_neg();
             if value & lowest_bit != 0 {
@@ -500,10 +500,11 @@ impl Arm64BitOps {
         let mut m = mask;
 
         while m != 0 {
-            if value & bb != 0 {
-                result |= m & m.wrapping_neg();
+            let lowest = m & m.wrapping_neg();
+            if value & lowest != 0 {
+                result |= bb;
             }
-            m &= m - 1;
+            m ^= lowest;
             bb <<= 1;
         }
 
@@ -513,20 +514,19 @@ impl Arm64BitOps {
     /// Generic PDEP implementation
     #[inline(always)]
     #[allow(dead_code)]
-    pub fn pdep_u64_generic(value: u64, mut mask: u64) -> u64 {
-        let mut res = 0;
-        let mut bb: u64 = 1;
-        loop {
-            if mask == 0 {
-                break;
+    pub fn pdep_u64_generic(mut value: u64, mut mask: u64) -> u64 {
+        let mut result = 0u64;
+
+        while mask != 0 {
+            let lowest = mask & mask.wrapping_neg();
+            if value & 1 != 0 {
+                result |= lowest;
             }
-            if (value & bb) != 0 {
-                res |= mask & mask.wrapping_neg();
-            }
-            mask &= mask - 1;
-            bb = bb.wrapping_add(bb);
+            mask ^= lowest;
+            value >>= 1;
         }
-        res
+
+        result
     }
 }
 

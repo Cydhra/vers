@@ -27,32 +27,32 @@ impl BitOps for GenericBitOps {
         let mut result = 0u64;
         let mut bb = 1u64;
         let mut m = mask;
-        
+
         while m != 0 {
-            if value & bb != 0 {
-                result |= m & m.wrapping_neg();
+            let lowest = m & m.wrapping_neg();
+            if value & lowest != 0 {
+                result |= bb;
             }
-            m &= m - 1;
+            m ^= lowest;
             bb <<= 1;
         }
-        
+
         result
     }
 
     #[inline(always)]
-    fn pdep_u64(value: u64, mut mask: u64) -> u64 {
-        let mut res = 0;
-        let mut bb: u64 = 1;
-        loop {
-            if mask == 0 {
-                break;
+    fn pdep_u64(mut value: u64, mut mask: u64) -> u64 {
+        let mut result = 0u64;
+
+        while mask != 0 {
+            let lowest = mask & mask.wrapping_neg();
+            if value & 1 != 0 {
+                result |= lowest;
             }
-            if (value & bb) != 0 {
-                res |= mask & mask.wrapping_neg();
-            }
-            mask &= mask - 1;
-            bb = bb.wrapping_add(bb);
+            mask ^= lowest;
+            value >>= 1;
         }
-        res
+
+        result
     }
 }
