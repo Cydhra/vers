@@ -56,6 +56,7 @@ const BIN_SEARCH_THRESHOLD: usize = 4;
 /// ```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
 pub struct EliasFanoVec {
     upper_vec: RsVec,
     lower_vec: BitVec,

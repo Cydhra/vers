@@ -17,6 +17,8 @@ const BLOCK_SIZE: usize = 128;
 /// structure
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
+#[cfg_attr(feature = "mem_dbg", mem_size_flat)]
 struct SmallBitVector(u128);
 
 impl SmallBitVector {
@@ -53,6 +55,8 @@ impl SmallBitVector {
 /// The space requirement for this structure is (sub-)linear in the block size.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
+#[cfg_attr(feature = "mem_dbg", mem_size_flat)]
 struct Block {
     prefix_minima: SmallBitVector,
     suffix_minima: SmallBitVector,
@@ -77,6 +81,7 @@ struct Block {
 /// ```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
 pub struct FastRmq {
     data: Vec<u64>,
     block_minima: BinaryRmq,

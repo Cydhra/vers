@@ -137,6 +137,7 @@ use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 /// [`BitVec`]: BitVec
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
 pub struct BpTree<const BLOCK_SIZE: usize = DEFAULT_BLOCK_SIZE> {
     vec: RsVec,
     min_max_tree: MinMaxTree,

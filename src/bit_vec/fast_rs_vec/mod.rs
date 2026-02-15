@@ -43,6 +43,8 @@ const SELECT_BLOCK_SIZE: usize = 1 << 13;
 /// first block in a super-block (which would be a performance hit due branch prediction failures).
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
+#[cfg_attr(feature = "mem_dbg", mem_size_flat)]
 struct BlockDescriptor {
     zeros: u16,
 }
@@ -52,6 +54,8 @@ struct BlockDescriptor {
 /// space. The `zeros` field is the number of zeros up to the super-block.
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
+#[cfg_attr(feature = "mem_dbg", mem_size_flat)]
 struct SuperBlockDescriptor {
     zeros: usize,
 }
@@ -61,6 +65,8 @@ struct SuperBlockDescriptor {
 /// The indices do not point into the bit-vector, but into the super-block vector.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
+#[cfg_attr(feature = "mem_dbg", mem_size_flat)]
 struct SelectSuperBlockDescriptor {
     index_0: usize,
     index_1: usize,
@@ -84,6 +90,7 @@ struct SelectSuperBlockDescriptor {
 ///```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
 pub struct RsVec {
     data: Vec<u64>,
     len: usize,

@@ -44,6 +44,7 @@ use crate::{BitVec, EliasFanoVec};
 /// [`from_bitvec_inverted`]: #method.from_bitvec_inverted
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
 pub struct SparseRSVec {
     vec: EliasFanoVec,
     len: u64,

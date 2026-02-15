@@ -28,6 +28,7 @@ use std::ops::{Deref, RangeBounds};
 /// ```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
 pub struct BinaryRmq {
     data: Vec<u64>,
 

@@ -20,6 +20,8 @@ use std::num::NonZeroUsize;
 /// [`BpTree`]: crate::trees::bp::BpTree
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
+#[cfg_attr(feature = "mem_dbg", mem_size_flat)]
 struct ExcessNode {
     /// excess from l..=r in the node [l, r]
     total: i64,
@@ -36,6 +38,7 @@ struct ExcessNode {
 /// [`BpTree`]: crate::trees::bp::BpTree
 #[derive(Clone, Debug, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
 pub(crate) struct MinMaxTree {
     nodes: Box<[ExcessNode]>,
 }
