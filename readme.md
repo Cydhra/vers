@@ -32,6 +32,7 @@ since the intrinsics speed up both `rank` and `select` operations by a factor of
 This feature requires AVX-512 support and uses unsafe code.
 It also enables a special iterator for the rank/select bit vector that uses vectorized operations.
 - `serde`: Enables serialization and deserialization of the data structures using the `serde` crate.
+- `mem_dbg` Enables `mem_dbg` support (see Dependencies).
 - `u16_lookup` Enables a larger lookup table for BP tree queries. The larger table requires 128 KiB instead of 4 KiB.
 
 ## Benchmarks
@@ -141,9 +142,11 @@ The `simd` feature uses unsafe code for AVX intrinsics, and performs operations 
 
 ## Dependencies
 The library has no dependencies outside the Rust standard library by default.
-It has a plethora of dependencies for benchmarking purposes, but these are not required for normal use.
+
 Optionally, the `serde` feature can be enabled to allow serialization and deserialization of the data structures,
 which requires the `serde` crate and its `derive` feature.
+Similarly, [`mem_dbg`](https://docs.rs/mem_dbg/latest/mem_dbg/) support can be enabled with the
+`mem_dbg` feature.
 
 ## License
 Licensed under either of
