@@ -524,3 +524,50 @@ fn test_empty_ef_vec() {
     assert_eq!(ef.rank(3), 0);
     assert_eq!(ef.delta(0), None);
 }
+
+/// Regression test for a `rank` off-by-`start_index_lower` bug in the binary-search
+/// fallback of `search_element_in_block::<INDEX=true, UPWARD=true>`.
+///
+/// When the query equals the last element of an EF upper-bucket whose size is
+/// `> BIN_SEARCH_THRESHOLD` (= 4), the fallthrough path sets
+/// `cursor = final_bound + direction` where `final_bound` is ABSOLUTE, but the
+/// final return expression `start_index_lower + cursor` treats `cursor` as RELATIVE.
+/// The returned rank is then off by `start_index_lower`, which can exceed `len()`.
+///
+/// The 14-element input below was shrunk by proptest: term ids at indices 5..9 all
+/// map to upper-bucket 4 (size 5). `rank(term_at_idx_9)` should return 9 but
+/// returned 14 (= len) before the fix. A similar 368-element input caused an
+/// out-of-bounds panic in downstream code that used the bogus rank to index a
+/// parallel EF vec.
+#[test]
+fn test_rank_last_element_of_large_bucket() {
+    let term_ids: Vec<u64> = vec![
+        78_331_002,
+        513_675_053,
+        636_305_051,
+        862_020_831,
+        940_175_489,
+        1_185_270_276,
+        1_190_131_203,
+        1_307_243_738,
+        1_317_580_511,
+        1_370_826_467,
+        2_629_427_158,
+        3_318_559_395,
+        3_497_149_084,
+        3_949_162_615,
+    ];
+    let ef = EliasFanoVec::from_slice(&term_ids);
+
+    // Every member's rank must equal its index in the input.
+    for (i, &t) in term_ids.iter().enumerate() {
+        assert_eq!(
+            ef.rank(t) as usize,
+            i,
+            "rank({t}) returned wrong index (expected {i})"
+        );
+    }
+
+    // Specifically: the last element of bucket 4 (idx 9) used to return 14.
+    assert_eq!(ef.rank(1_370_826_467), 9);
+}

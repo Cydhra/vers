@@ -381,9 +381,14 @@ impl EliasFanoVec {
                             }
                         }
 
-                        // update the cursor because we use it for the final index calculation
+                        // update the cursor because we use it for the final index calculation.
+                        // `final_bound` is an ABSOLUTE position in `lower_vec`, while the
+                        // fallthrough return `start_index_lower + cursor` treats `cursor`
+                        // as RELATIVE to `start_index_lower`, so we subtract it here to
+                        // avoid double-counting.
                         if INDEX {
-                            cursor = final_bound as isize + direction;
+                            cursor = final_bound as isize + direction
+                                - start_index_lower as isize;
                         }
                         break;
                     }
