@@ -526,26 +526,11 @@ fn test_empty_ef_vec() {
 }
 
 /// Regression for a bin-search-fallback off-by-`start_index_lower` in `rank` when
-/// the query hits the last element of an upper-bucket of size > BIN_SEARCH_THRESHOLD.
-/// Indices 5..9 share upper-bucket 4; `rank(ids[9])` used to return 14 (= len).
+/// the query hits the last element of a bucket (in the upper array) and has already fallen back to binary search.
+/// Indices 5..8 share upper-bucket 4, querying 1004 should return 8, but was off by the `start_index_lower` of the search.
 #[test]
 fn test_rank_last_element_of_large_bucket() {
-    let term_ids: Vec<u64> = vec![
-        78_331_002,
-        513_675_053,
-        636_305_051,
-        862_020_831,
-        940_175_489,
-        1_185_270_276,
-        1_190_131_203,
-        1_307_243_738,
-        1_317_580_511,
-        1_370_826_467,
-        2_629_427_158,
-        3_318_559_395,
-        3_497_149_084,
-        3_949_162_615,
-    ];
+    let term_ids: Vec<u64> = vec![0, 500, 600, 800, 900, 1_001, 1_002, 1_003, 1_004, 3_000];
     let ef = EliasFanoVec::from_slice(&term_ids);
     for (i, &t) in term_ids.iter().enumerate() {
         assert_eq!(ef.rank(t) as usize, i, "rank({t}) expected {i}");
