@@ -381,11 +381,10 @@ impl EliasFanoVec {
                             }
                         }
 
-                        // `final_bound` is absolute; the fallthrough return adds
-                        // `start_index_lower`, so make `cursor` relative here.
+                        // `final_bound` is absolute; the final return adds `start_index_lower`,
+                        // so we have to subtract it here to match the relative cursor coming out of the linear search.
                         if INDEX {
-                            cursor = final_bound as isize + direction
-                                - start_index_lower as isize;
+                            cursor = final_bound as isize + direction - start_index_lower as isize;
                         }
                         break;
                     }
@@ -393,8 +392,7 @@ impl EliasFanoVec {
 
                 return if INDEX {
                     // the loop ended because the element at cursor has a larger upper index,
-                    // so we return the previous element count
-                    // (element at curser - 1, +1 because count is not 0 based)
+                    // so we return the previous element count (element at curser - 1 + 1 because count is not 0 based)
                     start_index_lower as u64 + cursor as u64
                 } else {
                     (query_masked_upper | lower_candidate) + self.universe_zero
