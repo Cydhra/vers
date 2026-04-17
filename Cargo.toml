@@ -79,4 +79,4 @@ lto = true
 [package.metadata.docs.rs]
 all-features = true
 rustc-args = ["-C", "target-cpu=native"]
-rustdoc-args = ["-C", "target-cpu=native", "--cfg", "docsrs"]
+rustdoc-args = ["-C", "target-feature=+avx,+avx2,+avx512f,+avx512bw", "--cfg", "docsrs"]
