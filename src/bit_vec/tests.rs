@@ -889,7 +889,9 @@ fn test_limbs_constructor() {
     // test limbs are recovered
     let limbs = [10003584882, 248939, 10];
     let bv = BitVec::from_limbs(&limbs);
-    bv.iter_limbs().zip(limbs.iter()).for_each(|(limb, &reference)| assert_eq!(limb, reference));
+    bv.iter_limbs()
+        .zip(limbs.iter())
+        .for_each(|(limb, &reference)| assert_eq!(limb, reference));
 
     // test last limb correctly returns value
     let bv = BitVec::pack_sequence_u32(&[23], 5);

@@ -338,8 +338,12 @@ impl BitVec {
 
     /// Helper function for packing constructors to pack elements from an iterator into a bit-vector,
     /// taking the least significant `bits_per_element` per element.
-    fn pack_bits_iter<T, I: IntoIterator<Item=T>, const MAX_BITS: usize>(iter: I, bits_per_element: usize) -> Self
-        where T: Into<u64> + Copy
+    fn pack_bits_iter<T, I: IntoIterator<Item = T>, const MAX_BITS: usize>(
+        iter: I,
+        bits_per_element: usize,
+    ) -> Self
+    where
+        T: Into<u64> + Copy,
     {
         let mut bv = Self::new();
 
@@ -365,7 +369,6 @@ impl BitVec {
             }
         }
     }
-
 
     /// Construct a bit vector by packing a sequence of numerical values into a dense sequence.
     /// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
@@ -534,7 +537,10 @@ impl BitVec {
     /// [`pack_from_iter_u16`]: BitVec::pack_from_iter_u16
     /// [`pack_from_iter_u8`]: BitVec::pack_from_iter_u8
     /// [`pack_sequence_u64`]: BitVec::pack_sequence_u64
-    pub fn pack_from_iter_u64<I: IntoIterator<Item=u64>>(iter: I, bits_per_element: usize) -> Self {
+    pub fn pack_from_iter_u64<I: IntoIterator<Item = u64>>(
+        iter: I,
+        bits_per_element: usize,
+    ) -> Self {
         Self::pack_bits_iter::<_, _, 64>(iter, bits_per_element)
     }
 
@@ -569,7 +575,10 @@ impl BitVec {
     /// [`pack_from_iter_u16`]: BitVec::pack_from_iter_u16
     /// [`pack_from_iter_u8`]: BitVec::pack_from_iter_u8
     /// [`pack_sequence_u32`]: BitVec::pack_sequence_u32
-    pub fn pack_from_iter_u32<I: IntoIterator<Item=u32>>(iter: I, bits_per_element: usize) -> Self {
+    pub fn pack_from_iter_u32<I: IntoIterator<Item = u32>>(
+        iter: I,
+        bits_per_element: usize,
+    ) -> Self {
         Self::pack_bits_iter::<_, _, 32>(iter, bits_per_element)
     }
 
@@ -604,7 +613,10 @@ impl BitVec {
     /// [`pack_from_iter_u32`]: BitVec::pack_from_iter_u32
     /// [`pack_from_iter_u8`]: BitVec::pack_from_iter_u8
     /// [`pack_sequence_u16`]: BitVec::pack_sequence_u16
-    pub fn pack_from_iter_u16<I: IntoIterator<Item=u16>>(iter: I, bits_per_element: usize) -> Self {
+    pub fn pack_from_iter_u16<I: IntoIterator<Item = u16>>(
+        iter: I,
+        bits_per_element: usize,
+    ) -> Self {
         Self::pack_bits_iter::<_, _, 16>(iter, bits_per_element)
     }
 
@@ -639,7 +651,7 @@ impl BitVec {
     /// [`pack_from_iter_u32`]: BitVec::pack_from_iter_u32
     /// [`pack_from_iter_u16`]: BitVec::pack_from_iter_u16
     /// [`pack_sequence_u8`]: BitVec::pack_sequence_u8
-    pub fn pack_from_iter_u8<I: IntoIterator<Item=u8>>(iter: I, bits_per_element: usize) -> Self {
+    pub fn pack_from_iter_u8<I: IntoIterator<Item = u8>>(iter: I, bits_per_element: usize) -> Self {
         Self::pack_bits_iter::<_, _, 8>(iter, bits_per_element)
     }
 
@@ -683,7 +695,7 @@ impl BitVec {
     /// assert_eq!(bv.is_bit_set(2), Some(true));
     /// assert_eq!(bv.is_bit_set(3), Some(true));
     /// ```
-    pub fn from_bool_iter<I: IntoIterator<Item=bool>>(iter: I) -> Self {
+    pub fn from_bool_iter<I: IntoIterator<Item = bool>>(iter: I) -> Self {
         let mut bv = BitVec::new();
         iter.into_iter().for_each(|b| bv.append(b));
         bv
