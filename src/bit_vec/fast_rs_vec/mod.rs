@@ -44,7 +44,7 @@ const SELECT_BLOCK_SIZE: usize = 1 << 13;
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
-#[cfg_attr(feature = "mem_dbg", mem_size_flat)]
+#[cfg_attr(feature = "mem_dbg", mem_size(flat))]
 struct BlockDescriptor {
     zeros: u16,
 }
@@ -55,7 +55,7 @@ struct BlockDescriptor {
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
-#[cfg_attr(feature = "mem_dbg", mem_size_flat)]
+#[cfg_attr(feature = "mem_dbg", mem_size(flat))]
 struct SuperBlockDescriptor {
     zeros: usize,
 }
@@ -66,7 +66,7 @@ struct SuperBlockDescriptor {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
-#[cfg_attr(feature = "mem_dbg", mem_size_flat)]
+#[cfg_attr(feature = "mem_dbg", mem_size(flat))]
 struct SelectSuperBlockDescriptor {
     index_0: usize,
     index_1: usize,

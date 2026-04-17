@@ -18,7 +18,7 @@ const BLOCK_SIZE: usize = 128;
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
-#[cfg_attr(feature = "mem_dbg", mem_size_flat)]
+#[cfg_attr(feature = "mem_dbg", mem_size(flat))]
 struct SmallBitVector(u128);
 
 impl SmallBitVector {
@@ -56,7 +56,7 @@ impl SmallBitVector {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
-#[cfg_attr(feature = "mem_dbg", mem_size_flat)]
+#[cfg_attr(feature = "mem_dbg", mem_size(flat))]
 struct Block {
     prefix_minima: SmallBitVector,
     suffix_minima: SmallBitVector,
