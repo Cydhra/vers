@@ -1386,3 +1386,65 @@ fn test_simd_fallback() {
         SUPER_BLOCK_SIZE + 3 * BLOCK_SIZE + 1
     );
 }
+
+#[test]
+fn test_predecessor1_and_successor1() {
+    let mut bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(BLOCK_SIZE);
+    bv.flip_bit(BLOCK_SIZE + 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    assert_eq!(rs.predecessor1(SUPER_BLOCK_SIZE - 2), BLOCK_SIZE + 1);
+    assert_eq!(rs.successor1(SUPER_BLOCK_SIZE - 2), SUPER_BLOCK_SIZE - 1);
+
+    assert_eq!(rs.predecessor1(4), 3);
+    assert_eq!(rs.successor1(4), 5);
+
+    //let mut iter = rs.iter1();
+    //assert_eq!(iter.next(), Some(1));
+    //assert_eq!(iter.next(), Some(3));
+    //assert_eq!(iter.next(), Some(5));
+    //assert_eq!(iter.next(), Some(BLOCK_SIZE));
+    //assert_eq!(iter.next(), Some(BLOCK_SIZE + 1));
+    //assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE - 1));
+    //assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE));
+    //assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE + 1));
+    //assert_eq!(iter.next(), None);
+}
+
+#[test]
+fn test_predecessor0_and_successor0() {
+    let mut bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(BLOCK_SIZE);
+    bv.flip_bit(BLOCK_SIZE + 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    assert_eq!(rs.predecessor0(SUPER_BLOCK_SIZE - 2), BLOCK_SIZE + 1);
+    assert_eq!(rs.successor0(SUPER_BLOCK_SIZE - 2), SUPER_BLOCK_SIZE - 1);
+
+    assert_eq!(rs.predecessor0(4), 3);
+    assert_eq!(rs.successor0(4), 5);
+
+    //let mut iter = rs.iter0();
+    //assert_eq!(iter.next(), Some(1));
+    //assert_eq!(iter.next(), Some(3));
+    //assert_eq!(iter.next(), Some(5));
+    //assert_eq!(iter.next(), Some(BLOCK_SIZE));
+    //assert_eq!(iter.next(), Some(BLOCK_SIZE + 1));
+    //assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE - 1));
+    //assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE));
+    //assert_eq!(iter.next(), Some(SUPER_BLOCK_SIZE + 1));
+    //assert_eq!(iter.next(), None);
+}

@@ -503,6 +503,40 @@ impl RsVec {
             + self.super_blocks.len() * size_of::<SuperBlockDescriptor>()
             + self.select_blocks.len() * size_of::<SelectSuperBlockDescriptor>()
     }
+
+    #[must_use]
+    pub fn successor0(&self, pos: usize) -> usize {
+        let rank = self.rank0(pos);
+        let bit = self.get_unchecked(pos);
+        if bit == 0 {
+            return self.select0(rank + 1);
+        }
+
+        self.select0(rank)
+    }
+
+    #[must_use]
+    pub fn successor1(&self, pos: usize) -> usize {
+        let rank = self.rank1(pos);
+        let bit = self.get_unchecked(pos);
+        if bit == 1 {
+            return self.select1(rank + 1)
+        }
+
+        self.select1(rank)
+    }
+
+    #[must_use]
+    pub fn predecessor0(&self, pos: usize) -> usize {
+        let rank = self.rank0(pos);
+        self.select0(rank - 1)
+    }
+
+    #[must_use]
+    pub fn predecessor1(&self, pos: usize) -> usize {
+        let rank = self.rank1(pos);
+        self.select1(rank - 1)
+    }
 }
 
 impl_vector_iterator! { RsVec, RsVecIter, RsVecRefIter }
