@@ -422,7 +422,7 @@ impl super::RsVec {
         if self.super_blocks[super_block_idx].zeros < rank {
             rank -= self.super_blocks[super_block_idx].zeros;
 
-            // predecessor is in current block
+            // successor is in current block
             if (self.blocks[block_idx].zeros as usize) < rank {
                 rank -= self.blocks[block_idx].zeros as usize;
                 return self.search_word_in_block0(rank, block_idx);
@@ -444,11 +444,35 @@ impl super::RsVec {
     pub fn successor1(&self, pos: usize) -> usize {
         let rank = self.rank1(pos);
         let bit = self.get_unchecked(pos);
-        if bit == 1 {
-            return self.select1(rank + 1);
-        }
+        let mut rank = if bit == 1 { rank + 1 } else { rank };
 
-        self.select1(rank)
+        let mut block_idx = pos / BLOCK_SIZE;
+        let super_block_idx = pos / SUPER_BLOCK_SIZE;
+
+        let super_block_ones =
+            (super_block_idx * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_idx].zeros;
+
+        if super_block_ones < rank {
+            rank -= super_block_ones;
+
+            let block_at_super_block = super_block_idx * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+            let block_ones = (block_idx - block_at_super_block) * BLOCK_SIZE
+                - self.blocks[block_idx].zeros as usize;
+            // successor is in current block
+            if block_ones < rank {
+                rank -= block_ones;
+                return self.search_word_in_block1(rank, block_idx);
+            }
+
+            block_idx = block_at_super_block;
+            self.search_block1(rank, block_at_super_block, &mut block_idx);
+            rank -= (block_idx - block_at_super_block) * BLOCK_SIZE
+                - self.blocks[block_idx].zeros as usize;
+
+            self.search_word_in_block1(rank, block_idx)
+        } else {
+            self.select1(rank)
+        }
     }
 
     /// Returns the position of the 0-bit before the given index `pos`
@@ -483,7 +507,35 @@ impl super::RsVec {
     /// Returns the position of the 1-bit before the given index `pos`
     #[must_use]
     pub fn predecessor1(&self, pos: usize) -> usize {
-        let rank = self.rank1(pos);
-        self.select1(rank - 1)
+        let mut rank = self.rank1(pos) - 1;
+        //self.select1(rank - 1)
+
+        let mut block_idx = pos / BLOCK_SIZE;
+        let super_block_idx = pos / SUPER_BLOCK_SIZE;
+
+        let super_block_ones =
+            (super_block_idx * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_idx].zeros;
+
+        if super_block_ones < rank {
+            rank -= super_block_ones;
+
+            let block_at_super_block = super_block_idx * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+            let block_ones = (block_idx - block_at_super_block) * BLOCK_SIZE
+                - self.blocks[block_idx].zeros as usize;
+            // predecessor is in current block
+            if block_ones < rank {
+                rank -= block_ones;
+                return self.search_word_in_block1(rank, block_idx);
+            }
+
+            block_idx = block_at_super_block;
+            self.search_block1(rank, block_at_super_block, &mut block_idx);
+            rank -= (block_idx - block_at_super_block) * BLOCK_SIZE
+                - self.blocks[block_idx].zeros as usize;
+
+            self.search_word_in_block1(rank, block_idx)
+        } else {
+            self.select1(rank)
+        }
     }
 }
