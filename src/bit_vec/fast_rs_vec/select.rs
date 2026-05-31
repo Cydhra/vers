@@ -419,16 +419,19 @@ impl super::RsVec {
         let mut block_idx = pos / BLOCK_SIZE;
         let super_block_idx = pos / SUPER_BLOCK_SIZE;
 
-        if self.super_blocks[super_block_idx].zeros < rank {
-            rank -= self.super_blocks[super_block_idx].zeros;
-
+        if self.super_blocks.len() > (SUPER_BLOCK_SIZE + 1)
+            && self.super_blocks[SUPER_BLOCK_SIZE + 1].zeros > rank
+        {
             // successor is in current block
-            if (self.blocks[block_idx].zeros as usize) < rank {
+            if block_idx % (BLOCKS_PER_SUPERBLOCK) == (BLOCKS_PER_SUPERBLOCK - 1)
+                || self.blocks.len() > block_idx + 1
+                    && self.blocks[block_idx + 1].zeros as usize > rank
+            {
                 rank -= self.blocks[block_idx].zeros as usize;
                 return self.search_word_in_block0(rank, block_idx);
             }
 
-            block_idx = super_block_idx * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+            block_idx = super_block_idx * (BLOCKS_PER_SUPERBLOCK);
             self.search_block0(rank, &mut block_idx);
 
             rank -= self.blocks[block_idx].zeros as usize;
@@ -449,17 +452,26 @@ impl super::RsVec {
         let mut block_idx = pos / BLOCK_SIZE;
         let super_block_idx = pos / SUPER_BLOCK_SIZE;
 
-        let super_block_ones =
-            (super_block_idx * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_idx].zeros;
+        if self.super_blocks.len() > (super_block_idx + 1)
+            && (super_block_idx + 1) * SUPER_BLOCK_SIZE
+                - self.super_blocks[super_block_idx + 1].zeros
+                > rank
+        {
+            let super_block_ones =
+                (super_block_idx * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_idx].zeros;
 
-        if super_block_ones < rank {
             rank -= super_block_ones;
 
-            let block_at_super_block = super_block_idx * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
-            let block_ones = (block_idx - block_at_super_block) * BLOCK_SIZE
-                - self.blocks[block_idx].zeros as usize;
+            let block_at_super_block = super_block_idx * (BLOCKS_PER_SUPERBLOCK);
             // successor is in current block
-            if block_ones < rank {
+            if block_idx % (BLOCKS_PER_SUPERBLOCK) == BLOCKS_PER_SUPERBLOCK - 1
+                || self.blocks.len() > block_idx + 1
+                    && (block_idx + 1 - block_at_super_block) * BLOCK_SIZE
+                        - self.blocks[block_idx + 1].zeros as usize
+                        > rank
+            {
+                let block_ones = (block_idx - block_at_super_block) * BLOCK_SIZE
+                    - self.blocks[block_idx].zeros as usize;
                 rank -= block_ones;
                 return self.search_word_in_block1(rank, block_idx);
             }
@@ -493,7 +505,7 @@ impl super::RsVec {
                 return self.search_word_in_block0(rank, block_idx);
             }
 
-            block_idx = super_block_idx * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+            block_idx = super_block_idx * (BLOCKS_PER_SUPERBLOCK);
             self.search_block0(rank, &mut block_idx);
 
             rank -= self.blocks[block_idx].zeros as usize;
@@ -519,7 +531,7 @@ impl super::RsVec {
         if super_block_ones < rank {
             rank -= super_block_ones;
 
-            let block_at_super_block = super_block_idx * (SUPER_BLOCK_SIZE / BLOCK_SIZE);
+            let block_at_super_block = super_block_idx * (BLOCKS_PER_SUPERBLOCK);
             let block_ones = (block_idx - block_at_super_block) * BLOCK_SIZE
                 - self.blocks[block_idx].zeros as usize;
             // predecessor is in current block
