@@ -1444,3 +1444,48 @@ fn test_predecessor0_and_successor0() {
     assert_eq!(rs.successor0(4), Some(5));
     assert_eq!(rs.successor0(3), Some(5));
 }
+
+#[test]
+fn test_non_existing_predecessor() {
+    let bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.predecessor1(0), None);
+    assert_eq!(rs.predecessor1(SUPER_BLOCK_SIZE), None);
+    assert_eq!(rs.predecessor1(2 * SUPER_BLOCK_SIZE - 1), None);
+    assert_eq!(rs.predecessor1(2 * SUPER_BLOCK_SIZE), None);
+
+    let bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.predecessor0(0), None);
+    assert_eq!(rs.predecessor0(SUPER_BLOCK_SIZE), None);
+    assert_eq!(rs.predecessor0(2 * SUPER_BLOCK_SIZE - 1), None);
+    assert_eq!(rs.predecessor0(2 * SUPER_BLOCK_SIZE), None);
+}
+
+#[test]
+fn test_non_existing_successor() {
+    let bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.successor1(0), None);
+    assert_eq!(rs.successor1(SUPER_BLOCK_SIZE), None);
+    assert_eq!(rs.successor1(2 * SUPER_BLOCK_SIZE - 1), None);
+    assert_eq!(rs.successor1(2 * SUPER_BLOCK_SIZE), None);
+
+    let bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.successor0(0), None);
+    assert_eq!(rs.successor0(SUPER_BLOCK_SIZE), None);
+    assert_eq!(rs.successor0(2 * SUPER_BLOCK_SIZE - 1), None);
+    assert_eq!(rs.successor0(2 * SUPER_BLOCK_SIZE), None);
+}
+
+#[test]
+fn test_empty_vec_succ_pred() {
+    let bv = BitVec::new();
+    let rs = RsVec::from_bit_vec(bv);
+
+    assert_eq!(rs.successor1(0), None);
+    assert_eq!(rs.predecessor1(0), None);
+    assert_eq!(rs.successor0(0), None);
+    assert_eq!(rs.successor1(0), None);
+}
