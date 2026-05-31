@@ -377,7 +377,8 @@ impl super::RsVec {
     }
 
     /// Search for the superblock that contains the rank.
-    /// This function is called by the ``select1``, ``iter::select_next_1`` and ``iter::select_next_1_back`` functions.
+    /// This function is called by the ``select1``, ``iter::select_next_1`` and
+    /// ``iter::select_next_1_back`` functions.
     ///
     /// # Arguments
     /// * `super_block` - the index of the superblock to start the search from, this is the
@@ -408,7 +409,14 @@ impl super::RsVec {
         super_block
     }
 
-    /// Returns the position of the 0-bit after the given index `pos`
+    /// Returns the position of the next 0-bit after the given index `pos`.
+    /// If there is no 0-bit after the given index, `None` is returned.
+    ///
+    /// The function is in principle equivalent to calling `select0(rank0(pos) + 1)` (excluding
+    /// edge cases).
+    /// However, this method exploits the fact that on average, the position is expected to be near
+    /// `pos`.
+    /// If this assumption is known to be false, calling `select0(rank0(pos) + 1)` is more efficient.
     #[must_use]
     pub fn successor0(&self, pos: usize) -> Option<u64> {
         let rank = self.rank0(pos);
@@ -442,7 +450,14 @@ impl super::RsVec {
         }
     }
 
-    /// Returns the position of the 1-bit after the given index `pos`
+    /// Returns the position of the next 1-bit after the given index `pos`.
+    /// If there is no 1-bit after the given index, `None` is returned.
+    ///
+    /// The function is in principle equivalent to calling `select1(rank1(pos) + 1)` (excluding
+    /// edge cases).
+    /// However, this method exploits the fact that on average, the position is expected to be near
+    /// `pos`.
+    /// If this assumption is known to be false, calling `select1(rank1(pos) + 1)` is more efficient.
     #[must_use]
     pub fn successor1(&self, pos: usize) -> Option<u64> {
         let rank = self.rank1(pos);
@@ -487,7 +502,14 @@ impl super::RsVec {
         }
     }
 
-    /// Returns the position of the 0-bit before the given index `pos`
+    /// Returns the position of the last 0-bit before the given index `pos`.
+    /// If there is no 0-bit before the given index, `None` is returned.
+    ///
+    /// The function is in principle equivalent to calling `select0(rank0(pos) - 1)` (excluding
+    /// edge cases).
+    /// However, this method exploits the fact that on average, the position is expected to be near
+    /// `pos`.
+    /// If this assumption is known to be false, calling `select0(rank0(pos) - 1)` is more efficient.
     #[must_use]
     pub fn predecessor0(&self, pos: usize) -> Option<u64> {
         let mut rank = self.rank0(pos) - 1;
@@ -515,7 +537,14 @@ impl super::RsVec {
         }
     }
 
-    /// Returns the position of the 1-bit before the given index `pos`
+    /// Returns the position of the last 1-bit before the given index `pos`.
+    /// If there is no 1-bit before the given index, `None` is returned.
+    ///
+    /// The function is in principle equivalent to calling `select1(rank1(pos) - 1)` (excluding
+    /// edge cases).
+    /// However, this method exploits the fact that on average, the position is expected to be near
+    /// `pos`.
+    /// If this assumption is known to be false, calling `select1(rank1(pos) - 1)` is more efficient.
     #[must_use]
     pub fn predecessor1(&self, pos: usize) -> Option<u64> {
         let mut rank = self.rank1(pos) - 1;
