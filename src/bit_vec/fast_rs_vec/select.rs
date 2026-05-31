@@ -410,7 +410,7 @@ impl super::RsVec {
 
     /// Returns the position of the 0-bit after the given index `pos`
     #[must_use]
-    pub fn successor0(&self, pos: usize) -> usize {
+    pub fn successor0(&self, pos: usize) -> Option<u64> {
         let rank = self.rank0(pos);
         let bit = self.get_unchecked(pos);
 
@@ -428,7 +428,7 @@ impl super::RsVec {
                     && self.blocks[block_idx + 1].zeros as usize > rank
             {
                 rank -= self.blocks[block_idx].zeros as usize;
-                return self.search_word_in_block0(rank, block_idx);
+                return Some(self.search_word_in_block0(rank, block_idx) as u64);
             }
 
             block_idx = super_block_idx * (BLOCKS_PER_SUPERBLOCK);
@@ -436,15 +436,15 @@ impl super::RsVec {
 
             rank -= self.blocks[block_idx].zeros as usize;
 
-            self.search_word_in_block0(rank, block_idx)
+            Some(self.search_word_in_block0(rank, block_idx) as u64)
         } else {
-            self.select0(rank)
+            Some(self.select0(rank) as u64)
         }
     }
 
     /// Returns the position of the 1-bit after the given index `pos`
     #[must_use]
-    pub fn successor1(&self, pos: usize) -> usize {
+    pub fn successor1(&self, pos: usize) -> Option<u64> {
         let rank = self.rank1(pos);
         let bit = self.get_unchecked(pos);
         let mut rank = if bit == 1 { rank + 1 } else { rank };
@@ -473,7 +473,7 @@ impl super::RsVec {
                 let block_ones = (block_idx - block_at_super_block) * BLOCK_SIZE
                     - self.blocks[block_idx].zeros as usize;
                 rank -= block_ones;
-                return self.search_word_in_block1(rank, block_idx);
+                return Some(self.search_word_in_block1(rank, block_idx) as u64);
             }
 
             block_idx = block_at_super_block;
@@ -481,17 +481,16 @@ impl super::RsVec {
             rank -= (block_idx - block_at_super_block) * BLOCK_SIZE
                 - self.blocks[block_idx].zeros as usize;
 
-            self.search_word_in_block1(rank, block_idx)
+            Some(self.search_word_in_block1(rank, block_idx) as u64)
         } else {
-            self.select1(rank)
+            Some(self.select1(rank) as u64)
         }
     }
 
     /// Returns the position of the 0-bit before the given index `pos`
     #[must_use]
-    pub fn predecessor0(&self, pos: usize) -> usize {
+    pub fn predecessor0(&self, pos: usize) -> Option<u64> {
         let mut rank = self.rank0(pos) - 1;
-        //self.select0(rank - 1)
 
         let mut block_idx = pos / BLOCK_SIZE;
         let super_block_idx = pos / SUPER_BLOCK_SIZE;
@@ -502,7 +501,7 @@ impl super::RsVec {
             // predecessor is in current block
             if (self.blocks[block_idx].zeros as usize) < rank {
                 rank -= self.blocks[block_idx].zeros as usize;
-                return self.search_word_in_block0(rank, block_idx);
+                return Some(self.search_word_in_block0(rank, block_idx) as u64);
             }
 
             block_idx = super_block_idx * (BLOCKS_PER_SUPERBLOCK);
@@ -510,17 +509,16 @@ impl super::RsVec {
 
             rank -= self.blocks[block_idx].zeros as usize;
 
-            self.search_word_in_block0(rank, block_idx)
+            Some(self.search_word_in_block0(rank, block_idx) as u64)
         } else {
-            self.select0(rank)
+            Some(self.select0(rank) as u64)
         }
     }
 
     /// Returns the position of the 1-bit before the given index `pos`
     #[must_use]
-    pub fn predecessor1(&self, pos: usize) -> usize {
+    pub fn predecessor1(&self, pos: usize) -> Option<u64> {
         let mut rank = self.rank1(pos) - 1;
-        //self.select1(rank - 1)
 
         let mut block_idx = pos / BLOCK_SIZE;
         let super_block_idx = pos / SUPER_BLOCK_SIZE;
@@ -537,7 +535,7 @@ impl super::RsVec {
             // predecessor is in current block
             if block_ones < rank {
                 rank -= block_ones;
-                return self.search_word_in_block1(rank, block_idx);
+                return Some(self.search_word_in_block1(rank, block_idx) as u64);
             }
 
             block_idx = block_at_super_block;
@@ -545,9 +543,9 @@ impl super::RsVec {
             rank -= (block_idx - block_at_super_block) * BLOCK_SIZE
                 - self.blocks[block_idx].zeros as usize;
 
-            self.search_word_in_block1(rank, block_idx)
+            Some(self.search_word_in_block1(rank, block_idx) as u64)
         } else {
-            self.select1(rank)
+            Some(self.select1(rank) as u64)
         }
     }
 }
