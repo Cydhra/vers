@@ -419,10 +419,16 @@ impl super::RsVec {
     /// If this assumption is known to be false, calling `select0(rank0(pos) + 1)` is more efficient.
     #[must_use]
     pub fn successor0(&self, pos: usize) -> Option<u64> {
-        let rank = self.rank0(pos);
-        let bit = self.get_unchecked(pos);
+        if self.is_empty() {
+            return None;
+        }
 
-        let mut rank = if bit == 0 { rank + 1 } else { rank };
+        let rank = self.rank0(pos);
+        let mut rank = if self.get(pos)? == 0 { rank + 1 } else { rank };
+
+        if rank >= self.rank0 {
+            return None;
+        }
 
         let mut block_idx = pos / BLOCK_SIZE;
         let super_block_idx = pos / SUPER_BLOCK_SIZE;
@@ -460,9 +466,16 @@ impl super::RsVec {
     /// If this assumption is known to be false, calling `select1(rank1(pos) + 1)` is more efficient.
     #[must_use]
     pub fn successor1(&self, pos: usize) -> Option<u64> {
+        if self.is_empty() {
+            return None;
+        }
+
         let rank = self.rank1(pos);
-        let bit = self.get_unchecked(pos);
-        let mut rank = if bit == 1 { rank + 1 } else { rank };
+        let mut rank = if self.get(pos)? == 1 { rank + 1 } else { rank };
+
+        if rank >= self.rank1 {
+            return None;
+        }
 
         let mut block_idx = pos / BLOCK_SIZE;
         let super_block_idx = pos / SUPER_BLOCK_SIZE;
@@ -512,7 +525,11 @@ impl super::RsVec {
     /// If this assumption is known to be false, calling `select0(rank0(pos) - 1)` is more efficient.
     #[must_use]
     pub fn predecessor0(&self, pos: usize) -> Option<u64> {
-        let mut rank = self.rank0(pos) - 1;
+        if self.is_empty() {
+            return None;
+        }
+
+        let mut rank = self.rank0(pos).checked_sub(1)?;
 
         let mut block_idx = pos / BLOCK_SIZE;
         let super_block_idx = pos / SUPER_BLOCK_SIZE;
@@ -547,7 +564,11 @@ impl super::RsVec {
     /// If this assumption is known to be false, calling `select1(rank1(pos) - 1)` is more efficient.
     #[must_use]
     pub fn predecessor1(&self, pos: usize) -> Option<u64> {
-        let mut rank = self.rank1(pos) - 1;
+        if self.is_empty() {
+            return None;
+        }
+
+        let mut rank = self.rank1(pos).checked_sub(1)?;
 
         let mut block_idx = pos / BLOCK_SIZE;
         let super_block_idx = pos / SUPER_BLOCK_SIZE;
