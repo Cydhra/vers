@@ -73,6 +73,10 @@ harness = false
 name = "elias_fano_construction"
 harness = false
 
+[[bench]]
+name = "rs_successor"
+harness = false
+
 [profile.bench]
 lto = true
 
