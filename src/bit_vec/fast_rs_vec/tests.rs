@@ -1489,3 +1489,67 @@ fn test_empty_vec_succ_pred() {
     assert_eq!(rs.successor0(0), None);
     assert_eq!(rs.successor1(0), None);
 }
+
+#[test]
+fn test_pred_randomized() {
+    let mut rng = StdRng::seed_from_u64(0);
+
+    let mut bv = BitVec::with_capacity(4 * SUPER_BLOCK_SIZE);
+    for i in 0..bv.len() {
+        if rng.gen_bool(0.5) {
+            bv.flip_bit(i)
+        }
+    }
+
+    let rs = RsVec::from_bit_vec(bv.clone());
+
+    let mut last_0 = rs.select0(0) as u64;
+    let mut last_1 = rs.select1(0) as u64;
+
+    for i in 0..bv.len() {
+        if last_0 < i as u64 {
+            assert_eq!(rs.predecessor0(i), Some(last_0));
+        }
+        if last_1 < i as u64 {
+            assert_eq!(rs.predecessor1(i), Some(last_1));
+        }
+
+        if bv.is_bit_set_unchecked(i) {
+            last_1 = i as u64;
+        } else {
+            last_0 = i as u64;
+        }
+    }
+}
+
+#[test]
+fn test_succ_randomized() {
+    let mut rng = StdRng::seed_from_u64(0);
+
+    let mut bv = BitVec::with_capacity(4 * SUPER_BLOCK_SIZE);
+    for i in 0..bv.len() {
+        if rng.gen_bool(0.5) {
+            bv.flip_bit(i)
+        }
+    }
+
+    let rs = RsVec::from_bit_vec(bv.clone());
+
+    let mut last_0 = rs.select0(rs.rank0) as u64;
+    let mut last_1 = rs.select1(rs.rank1) as u64;
+
+    for i in (0..bv.len()).rev() {
+        if last_0 > i as u64 {
+            assert_eq!(rs.successor0(i), Some(last_0));
+        }
+        if last_1 > i as u64 {
+            assert_eq!(rs.successor1(i), Some(last_1));
+        }
+
+        if bv.is_bit_set_unchecked(i) {
+            last_1 = i as u64;
+        } else {
+            last_0 = i as u64;
+        }
+    }
+}
