@@ -1494,7 +1494,7 @@ fn test_empty_vec_succ_pred() {
 fn test_pred_randomized() {
     let mut rng = StdRng::seed_from_u64(0);
 
-    let mut bv = BitVec::with_capacity(4 * SUPER_BLOCK_SIZE);
+    let mut bv = BitVec::from_zeros(4 * SUPER_BLOCK_SIZE);
     for i in 0..bv.len() {
         if rng.gen_bool(0.5) {
             bv.flip_bit(i)
@@ -1526,7 +1526,7 @@ fn test_pred_randomized() {
 fn test_succ_randomized() {
     let mut rng = StdRng::seed_from_u64(0);
 
-    let mut bv = BitVec::with_capacity(4 * SUPER_BLOCK_SIZE);
+    let mut bv = BitVec::from_zeros(4 * SUPER_BLOCK_SIZE);
     for i in 0..bv.len() {
         if rng.gen_bool(0.5) {
             bv.flip_bit(i)
@@ -1535,8 +1535,8 @@ fn test_succ_randomized() {
 
     let rs = RsVec::from_bit_vec(bv.clone());
 
-    let mut last_0 = rs.select0(rs.rank0) as u64;
-    let mut last_1 = rs.select1(rs.rank1) as u64;
+    let mut last_0 = rs.select0(rs.rank0 - 1) as u64;
+    let mut last_1 = rs.select1(rs.rank1 - 1) as u64;
 
     for i in (0..bv.len()).rev() {
         if last_0 > i as u64 {
