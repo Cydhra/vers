@@ -417,6 +417,20 @@ impl super::RsVec {
     /// However, this method exploits the fact that on average, the position is expected to be near
     /// `pos`.
     /// If this assumption is known to be false, calling `select0(rank0(pos) + 1)` is more efficient.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, RsVec};
+    ///
+    /// let mut bv = BitVec::from_ones(8);
+    /// bv.flip_bit(1);
+    /// bv.flip_bit(4);
+    /// let rs = RsVec::from(bv);
+    ///
+    /// assert_eq!(rs.successor0(0), Some(1));
+    /// assert_eq!(rs.successor0(1), Some(4));
+    /// assert_eq!(rs.successor0(4), None);
+    /// ```
     #[must_use]
     pub fn successor0(&self, pos: usize) -> Option<u64> {
         if self.is_empty() {
@@ -463,6 +477,20 @@ impl super::RsVec {
     /// However, this method exploits the fact that on average, the position is expected to be near
     /// `pos`.
     /// If this assumption is known to be false, calling `select1(rank1(pos) + 1)` is more efficient.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, RsVec};
+    ///
+    /// let mut bv = BitVec::from_zeros(8);
+    /// bv.flip_bit(1);
+    /// bv.flip_bit(4);
+    /// let rs = RsVec::from(bv);
+    ///
+    /// assert_eq!(rs.successor1(0), Some(1));
+    /// assert_eq!(rs.successor1(1), Some(4));
+    /// assert_eq!(rs.successor1(4), None);
+    /// ```
     #[must_use]
     pub fn successor1(&self, pos: usize) -> Option<u64> {
         if self.is_empty() {
@@ -521,6 +549,20 @@ impl super::RsVec {
     /// However, this method exploits the fact that on average, the position is expected to be near
     /// `pos`.
     /// If this assumption is known to be false, calling `select0(rank0(pos) - 1)` is more efficient.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, RsVec};
+    ///
+    /// let mut bv = BitVec::from_ones(8);
+    /// bv.flip_bit(1);
+    /// bv.flip_bit(4);
+    /// let rs = RsVec::from(bv);
+    ///
+    /// assert_eq!(rs.predecessor0(5), Some(4));
+    /// assert_eq!(rs.predecessor0(4), Some(1));
+    /// assert_eq!(rs.predecessor0(1), None);
+    /// ```
     #[must_use]
     pub fn predecessor0(&self, pos: usize) -> Option<u64> {
         if self.is_empty() {
@@ -560,6 +602,20 @@ impl super::RsVec {
     /// However, this method exploits the fact that on average, the position is expected to be near
     /// `pos`.
     /// If this assumption is known to be false, calling `select1(rank1(pos) - 1)` is more efficient.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, RsVec};
+    ///
+    /// let mut bv = BitVec::from_zeros(8);
+    /// bv.flip_bit(1);
+    /// bv.flip_bit(4);
+    /// let rs = RsVec::from(bv);
+    ///
+    /// assert_eq!(rs.predecessor1(5), Some(4));
+    /// assert_eq!(rs.predecessor1(4), Some(1));
+    /// assert_eq!(rs.predecessor1(1), None);
+    /// ```
     #[must_use]
     pub fn predecessor1(&self, pos: usize) -> Option<u64> {
         if self.is_empty() {
