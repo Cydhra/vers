@@ -117,24 +117,6 @@ impl super::RsVec {
             boundary /= 2);
     }
 
-    /// Search for the block that contains the given rank (relative to the superblock) by linearly
-    /// traversing the super-block. The block_index is mutated until it points to the correct block,
-    /// or the last block in the super-block if the rank is not located within the super-block.
-    /// The block_index may be anywhere in the superblock.
-    fn search_block0_linearly(
-        &self,
-        rank: usize,
-        block_index: &mut usize,
-    ) {
-        *block_index += 1;
-        while (*block_index + 1) % BLOCKS_PER_SUPERBLOCK != 0 {
-            if self.blocks[*block_index + 1].zeros as usize > rank {
-                return;
-            }
-            *block_index += 1;
-        }
-    }
-
     /// Search for the word in the block that contains the rank, return the index of the rank-th
     /// zero bit in the word.
     /// This function is called by the ``select0``, ``iter::select_next_0`` and ``iter::select_next_0_back`` functions.
@@ -357,25 +339,6 @@ impl super::RsVec {
             boundary /= 2);
     }
 
-    /// Search for the block that contains the given rank (relative to the superblock) by linearly
-    /// traversing the super-block. The block_index is mutated until it points to the correct block,
-    /// or the last block in the super-block if the rank is not located within the super-block.
-    /// The block_index may be anywhere in the superblock.
-    fn search_block1_linearly(
-        &self,
-        rank: usize,
-        block_at_superblock: usize,
-        block_index: &mut usize,
-    ) {
-        *block_index += 1;
-        while (*block_index + 1) % BLOCKS_PER_SUPERBLOCK != 0 {
-            if (*block_index + 1 - block_at_superblock) * BLOCK_SIZE - self.blocks[*block_index + 1].zeros as usize > rank {
-                return;
-            }
-            *block_index += 1;
-        }
-    }
-
     /// Search for the word in the block that contains the rank, return the index of the rank-th
     /// zero bit in the word.
     /// This function is called by the ``select1``, ``iter::select_next_1`` and ``iter::select_next_1_back`` functions.
@@ -483,7 +446,7 @@ impl super::RsVec {
             }
 
             block_idx = super_block_idx * (BLOCKS_PER_SUPERBLOCK);
-            self.search_block0_linearly(rank, &mut block_idx);
+            self.search_block0(rank, &mut block_idx);
 
             rank -= self.blocks[block_idx].zeros as usize;
 
@@ -541,8 +504,8 @@ impl super::RsVec {
                 return Some(self.search_word_in_block1(rank, block_idx) as u64);
             }
 
-            // block_idx = block_at_super_block;
-            self.search_block1_linearly(rank, block_at_super_block, &mut block_idx);
+            block_idx = block_at_super_block;
+            self.search_block1(rank, block_at_super_block, &mut block_idx);
             rank -= (block_idx - block_at_super_block) * BLOCK_SIZE
                 - self.blocks[block_idx].zeros as usize;
 
