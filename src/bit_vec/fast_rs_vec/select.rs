@@ -377,7 +377,8 @@ impl super::RsVec {
     }
 
     /// Search for the superblock that contains the rank.
-    /// This function is called by the ``select1``, ``iter::select_next_1`` and ``iter::select_next_1_back`` functions.
+    /// This function is called by the ``select1``, ``iter::select_next_1`` and
+    /// ``iter::select_next_1_back`` functions.
     ///
     /// # Arguments
     /// * `super_block` - the index of the superblock to start the search from, this is the
@@ -406,5 +407,249 @@ impl super::RsVec {
         }
 
         super_block
+    }
+
+    /// Returns the position of the next 0-bit after the given index `pos`.
+    /// If there is no 0-bit after the given index, `None` is returned.
+    ///
+    /// The function is in principle equivalent to calling `select0(rank0(pos) + 1)` (excluding
+    /// edge cases).
+    /// However, this method exploits the fact that on average, the position is expected to be near
+    /// `pos`.
+    /// If this assumption is known to be false, calling `select0(rank0(pos) + 1)` is more efficient.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, RsVec};
+    ///
+    /// let mut bv = BitVec::from_ones(8);
+    /// bv.flip_bit(1);
+    /// bv.flip_bit(4);
+    /// let rs = RsVec::from(bv);
+    ///
+    /// assert_eq!(rs.successor0(0), Some(1));
+    /// assert_eq!(rs.successor0(1), Some(4));
+    /// assert_eq!(rs.successor0(4), None);
+    /// ```
+    #[must_use]
+    pub fn successor0(&self, pos: usize) -> Option<u64> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let rank = self.rank0(pos);
+        let mut rank = if self.get(pos)? == 0 { rank + 1 } else { rank };
+
+        if rank >= self.rank0 {
+            return None;
+        }
+
+        let mut block_idx = pos / BLOCK_SIZE;
+        let super_block_idx = pos / SUPER_BLOCK_SIZE;
+
+        if self.super_blocks.len() > (SUPER_BLOCK_SIZE + 1)
+            && self.super_blocks[SUPER_BLOCK_SIZE + 1].zeros > rank
+        {
+            // successor is in current block
+            if block_idx % (BLOCKS_PER_SUPERBLOCK) == (BLOCKS_PER_SUPERBLOCK - 1)
+                || self.blocks[block_idx + 1].zeros as usize > rank
+            {
+                rank -= self.blocks[block_idx].zeros as usize;
+                return Some(self.search_word_in_block0(rank, block_idx) as u64);
+            }
+
+            block_idx = super_block_idx * (BLOCKS_PER_SUPERBLOCK);
+            self.search_block0(rank, &mut block_idx);
+
+            rank -= self.blocks[block_idx].zeros as usize;
+
+            Some(self.search_word_in_block0(rank, block_idx) as u64)
+        } else {
+            Some(self.select0(rank) as u64)
+        }
+    }
+
+    /// Returns the position of the next 1-bit after the given index `pos`.
+    /// If there is no 1-bit after the given index, `None` is returned.
+    ///
+    /// The function is in principle equivalent to calling `select1(rank1(pos) + 1)` (excluding
+    /// edge cases).
+    /// However, this method exploits the fact that on average, the position is expected to be near
+    /// `pos`.
+    /// If this assumption is known to be false, calling `select1(rank1(pos) + 1)` is more efficient.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, RsVec};
+    ///
+    /// let mut bv = BitVec::from_zeros(8);
+    /// bv.flip_bit(1);
+    /// bv.flip_bit(4);
+    /// let rs = RsVec::from(bv);
+    ///
+    /// assert_eq!(rs.successor1(0), Some(1));
+    /// assert_eq!(rs.successor1(1), Some(4));
+    /// assert_eq!(rs.successor1(4), None);
+    /// ```
+    #[must_use]
+    pub fn successor1(&self, pos: usize) -> Option<u64> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let rank = self.rank1(pos);
+        let mut rank = if self.get(pos)? == 1 { rank + 1 } else { rank };
+
+        if rank >= self.rank1 {
+            return None;
+        }
+
+        let mut block_idx = pos / BLOCK_SIZE;
+        let super_block_idx = pos / SUPER_BLOCK_SIZE;
+
+        if self.super_blocks.len() > (super_block_idx + 1)
+            && (super_block_idx + 1) * SUPER_BLOCK_SIZE
+                - self.super_blocks[super_block_idx + 1].zeros
+                > rank
+        {
+            let super_block_ones =
+                (super_block_idx * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_idx].zeros;
+
+            rank -= super_block_ones;
+
+            let block_at_super_block = super_block_idx * (BLOCKS_PER_SUPERBLOCK);
+            // successor is in current block
+            if block_idx % (BLOCKS_PER_SUPERBLOCK) == BLOCKS_PER_SUPERBLOCK - 1
+                || (block_idx + 1 - block_at_super_block) * BLOCK_SIZE
+                    - self.blocks[block_idx + 1].zeros as usize
+                    > rank
+            {
+                let block_ones = (block_idx - block_at_super_block) * BLOCK_SIZE
+                    - self.blocks[block_idx].zeros as usize;
+                rank -= block_ones;
+                return Some(self.search_word_in_block1(rank, block_idx) as u64);
+            }
+
+            block_idx = block_at_super_block;
+            self.search_block1(rank, block_at_super_block, &mut block_idx);
+            rank -= (block_idx - block_at_super_block) * BLOCK_SIZE
+                - self.blocks[block_idx].zeros as usize;
+
+            Some(self.search_word_in_block1(rank, block_idx) as u64)
+        } else {
+            Some(self.select1(rank) as u64)
+        }
+    }
+
+    /// Returns the position of the last 0-bit before the given index `pos`.
+    /// If there is no 0-bit before the given index, `None` is returned.
+    ///
+    /// The function is in principle equivalent to calling `select0(rank0(pos) - 1)` (excluding
+    /// edge cases).
+    /// However, this method exploits the fact that on average, the position is expected to be near
+    /// `pos`.
+    /// If this assumption is known to be false, calling `select0(rank0(pos) - 1)` is more efficient.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, RsVec};
+    ///
+    /// let mut bv = BitVec::from_ones(8);
+    /// bv.flip_bit(1);
+    /// bv.flip_bit(4);
+    /// let rs = RsVec::from(bv);
+    ///
+    /// assert_eq!(rs.predecessor0(5), Some(4));
+    /// assert_eq!(rs.predecessor0(4), Some(1));
+    /// assert_eq!(rs.predecessor0(1), None);
+    /// ```
+    #[must_use]
+    pub fn predecessor0(&self, pos: usize) -> Option<u64> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let mut rank = self.rank0(pos).checked_sub(1)?;
+
+        let mut block_idx = pos / BLOCK_SIZE;
+        let super_block_idx = pos / SUPER_BLOCK_SIZE;
+
+        if self.super_blocks[super_block_idx].zeros < rank {
+            rank -= self.super_blocks[super_block_idx].zeros;
+
+            // predecessor is in current block
+            if (self.blocks[block_idx].zeros as usize) < rank {
+                rank -= self.blocks[block_idx].zeros as usize;
+                return Some(self.search_word_in_block0(rank, block_idx) as u64);
+            }
+
+            block_idx = super_block_idx * (BLOCKS_PER_SUPERBLOCK);
+            self.search_block0(rank, &mut block_idx);
+
+            rank -= self.blocks[block_idx].zeros as usize;
+
+            Some(self.search_word_in_block0(rank, block_idx) as u64)
+        } else {
+            Some(self.select0(rank) as u64)
+        }
+    }
+
+    /// Returns the position of the last 1-bit before the given index `pos`.
+    /// If there is no 1-bit before the given index, `None` is returned.
+    ///
+    /// The function is in principle equivalent to calling `select1(rank1(pos) - 1)` (excluding
+    /// edge cases).
+    /// However, this method exploits the fact that on average, the position is expected to be near
+    /// `pos`.
+    /// If this assumption is known to be false, calling `select1(rank1(pos) - 1)` is more efficient.
+    ///
+    /// # Example
+    /// ```
+    /// use vers_vecs::{BitVec, RsVec};
+    ///
+    /// let mut bv = BitVec::from_zeros(8);
+    /// bv.flip_bit(1);
+    /// bv.flip_bit(4);
+    /// let rs = RsVec::from(bv);
+    ///
+    /// assert_eq!(rs.predecessor1(5), Some(4));
+    /// assert_eq!(rs.predecessor1(4), Some(1));
+    /// assert_eq!(rs.predecessor1(1), None);
+    /// ```
+    #[must_use]
+    pub fn predecessor1(&self, pos: usize) -> Option<u64> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let mut rank = self.rank1(pos).checked_sub(1)?;
+
+        let mut block_idx = pos / BLOCK_SIZE;
+        let super_block_idx = pos / SUPER_BLOCK_SIZE;
+
+        let super_block_ones =
+            (super_block_idx * SUPER_BLOCK_SIZE) - self.super_blocks[super_block_idx].zeros;
+
+        if super_block_ones < rank {
+            rank -= super_block_ones;
+
+            let block_at_super_block = super_block_idx * (BLOCKS_PER_SUPERBLOCK);
+            let block_ones = (block_idx - block_at_super_block) * BLOCK_SIZE
+                - self.blocks[block_idx].zeros as usize;
+            // predecessor is in current block
+            if block_ones < rank {
+                rank -= block_ones;
+                return Some(self.search_word_in_block1(rank, block_idx) as u64);
+            }
+
+            block_idx = block_at_super_block;
+            self.search_block1(rank, block_at_super_block, &mut block_idx);
+            rank -= (block_idx - block_at_super_block) * BLOCK_SIZE
+                - self.blocks[block_idx].zeros as usize;
+
+            Some(self.search_word_in_block1(rank, block_idx) as u64)
+        } else {
+            Some(self.select1(rank) as u64)
+        }
     }
 }

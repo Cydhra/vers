@@ -1386,3 +1386,206 @@ fn test_simd_fallback() {
         SUPER_BLOCK_SIZE + 3 * BLOCK_SIZE + 1
     );
 }
+
+#[test]
+fn test_predecessor1_and_successor1() {
+    let mut bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(BLOCK_SIZE);
+    bv.flip_bit(BLOCK_SIZE + 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    assert_eq!(
+        rs.predecessor1(SUPER_BLOCK_SIZE + 2),
+        Some(SUPER_BLOCK_SIZE as u64 + 1)
+    );
+    assert_eq!(
+        rs.predecessor1(SUPER_BLOCK_SIZE + 1),
+        Some(SUPER_BLOCK_SIZE as u64)
+    );
+    assert_eq!(
+        rs.predecessor1(SUPER_BLOCK_SIZE),
+        Some(SUPER_BLOCK_SIZE as u64 - 1)
+    );
+    assert_eq!(
+        rs.predecessor1(SUPER_BLOCK_SIZE - 2),
+        Some(BLOCK_SIZE as u64 + 1)
+    );
+
+    assert_eq!(rs.predecessor1(4), Some(3));
+
+    assert_eq!(rs.successor1(SUPER_BLOCK_SIZE + 2), None);
+    assert_eq!(rs.successor1(SUPER_BLOCK_SIZE + 1), None);
+    assert_eq!(
+        rs.successor1(SUPER_BLOCK_SIZE),
+        Some(SUPER_BLOCK_SIZE as u64 + 1)
+    );
+    assert_eq!(
+        rs.successor1(SUPER_BLOCK_SIZE - 2),
+        Some(SUPER_BLOCK_SIZE as u64 - 1)
+    );
+    assert_eq!(rs.successor1(BLOCK_SIZE - 2), Some(BLOCK_SIZE as u64));
+    assert_eq!(rs.successor1(4), Some(5u64));
+}
+
+#[test]
+fn test_predecessor0_and_successor0() {
+    let mut bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(BLOCK_SIZE);
+    bv.flip_bit(BLOCK_SIZE + 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    assert_eq!(
+        rs.predecessor0(SUPER_BLOCK_SIZE + 2),
+        Some(SUPER_BLOCK_SIZE as u64 + 1)
+    );
+    assert_eq!(
+        rs.predecessor0(SUPER_BLOCK_SIZE + 1),
+        Some(SUPER_BLOCK_SIZE as u64)
+    );
+    assert_eq!(
+        rs.predecessor0(SUPER_BLOCK_SIZE),
+        Some(SUPER_BLOCK_SIZE as u64 - 1)
+    );
+    assert_eq!(
+        rs.predecessor0(SUPER_BLOCK_SIZE - 2),
+        Some(BLOCK_SIZE as u64 + 1)
+    );
+
+    assert_eq!(rs.predecessor0(4), Some(3));
+    assert_eq!(rs.predecessor0(3), Some(1));
+
+    assert_eq!(rs.successor0(SUPER_BLOCK_SIZE + 2), None);
+    assert_eq!(rs.successor0(SUPER_BLOCK_SIZE + 1), None);
+    assert_eq!(
+        rs.successor0(SUPER_BLOCK_SIZE),
+        Some(SUPER_BLOCK_SIZE as u64 + 1)
+    );
+    assert_eq!(
+        rs.successor0(SUPER_BLOCK_SIZE - 2),
+        Some(SUPER_BLOCK_SIZE as u64 - 1)
+    );
+    assert_eq!(rs.successor0(BLOCK_SIZE - 2), Some(BLOCK_SIZE as u64));
+    assert_eq!(rs.successor0(4), Some(5));
+    assert_eq!(rs.successor0(3), Some(5));
+}
+
+#[test]
+fn test_non_existing_predecessor() {
+    let bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.predecessor1(0), None);
+    assert_eq!(rs.predecessor1(SUPER_BLOCK_SIZE), None);
+    assert_eq!(rs.predecessor1(2 * SUPER_BLOCK_SIZE - 1), None);
+    assert_eq!(rs.predecessor1(2 * SUPER_BLOCK_SIZE), None);
+
+    let bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.predecessor0(0), None);
+    assert_eq!(rs.predecessor0(SUPER_BLOCK_SIZE), None);
+    assert_eq!(rs.predecessor0(2 * SUPER_BLOCK_SIZE - 1), None);
+    assert_eq!(rs.predecessor0(2 * SUPER_BLOCK_SIZE), None);
+}
+
+#[test]
+fn test_non_existing_successor() {
+    let bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.successor1(0), None);
+    assert_eq!(rs.successor1(SUPER_BLOCK_SIZE), None);
+    assert_eq!(rs.successor1(2 * SUPER_BLOCK_SIZE - 1), None);
+    assert_eq!(rs.successor1(2 * SUPER_BLOCK_SIZE), None);
+
+    let bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.successor0(0), None);
+    assert_eq!(rs.successor0(SUPER_BLOCK_SIZE), None);
+    assert_eq!(rs.successor0(2 * SUPER_BLOCK_SIZE - 1), None);
+    assert_eq!(rs.successor0(2 * SUPER_BLOCK_SIZE), None);
+}
+
+#[test]
+fn test_empty_vec_succ_pred() {
+    let bv = BitVec::new();
+    let rs = RsVec::from_bit_vec(bv);
+
+    assert_eq!(rs.successor1(0), None);
+    assert_eq!(rs.predecessor1(0), None);
+    assert_eq!(rs.successor0(0), None);
+    assert_eq!(rs.successor1(0), None);
+}
+
+#[test]
+fn test_pred_randomized() {
+    let mut rng = StdRng::seed_from_u64(0);
+
+    let mut bv = BitVec::from_zeros(4 * SUPER_BLOCK_SIZE + BLOCK_SIZE / 3);
+    for i in 0..bv.len() {
+        if rng.gen_bool(0.5) {
+            bv.flip_bit(i)
+        }
+    }
+
+    let rs = RsVec::from_bit_vec(bv.clone());
+
+    let mut last_0 = rs.select0(0) as u64;
+    let mut last_1 = rs.select1(0) as u64;
+
+    for i in 0..bv.len() {
+        if last_0 < i as u64 {
+            assert_eq!(rs.predecessor0(i), Some(last_0));
+        }
+        if last_1 < i as u64 {
+            assert_eq!(rs.predecessor1(i), Some(last_1));
+        }
+
+        if bv.is_bit_set_unchecked(i) {
+            last_1 = i as u64;
+        } else {
+            last_0 = i as u64;
+        }
+    }
+}
+
+#[test]
+fn test_succ_randomized() {
+    let mut rng = StdRng::seed_from_u64(0);
+
+    let mut bv = BitVec::from_zeros(4 * SUPER_BLOCK_SIZE + BLOCK_SIZE / 3);
+    for i in 0..bv.len() {
+        if rng.gen_bool(0.5) {
+            bv.flip_bit(i)
+        }
+    }
+
+    let rs = RsVec::from_bit_vec(bv.clone());
+
+    let mut last_0 = rs.select0(rs.rank0 - 1) as u64;
+    let mut last_1 = rs.select1(rs.rank1 - 1) as u64;
+
+    for i in (0..bv.len()).rev() {
+        if last_0 > i as u64 {
+            assert_eq!(rs.successor0(i), Some(last_0));
+        }
+        if last_1 > i as u64 {
+            assert_eq!(rs.successor1(i), Some(last_1));
+        }
+
+        if bv.is_bit_set_unchecked(i) {
+            last_1 = i as u64;
+        } else {
+            last_0 = i as u64;
+        }
+    }
+}
