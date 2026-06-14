@@ -20,12 +20,12 @@ since the intrinsics speed up both `rank` and `select` operations by a factor of
 
 ## Why Vers?
 - Vers is among the fastest publicly available bit vector implementations for rank and select operations.
-- Vers has a substantially lower memory overhead than its competitors.
+- Vers has a substantially lower memory overhead than alternatives
 - Without crate features, all data structures are implemented in pure Rust and have no dependencies outside the standard library.
 - Every functionality is extensively documented.
-- Vers aims to provide more functionality for its data structures than competitors 
-  (e.g., Elias-Fano sequences and the Wavelet Matrix support predecessor and successor queries, 
-  the Wavelet Matrix supports statistical queries, all data structures implement various iterators, etc.).
+- Vers aims to provide full functionality for its data structures, as well as full integration into the ecosystem
+  (e.g., BitVec, Elias-Fano sequences, and Wavelet Matrix support predecessor and successor queries, 
+  the Wavelet Matrix supports various statistical queries, all data structures implement various iterators, etc.).
 
 ## Crate Features
 - `simd`: Enables the use of SIMD instructions for rank and select operations.
