@@ -56,9 +56,9 @@ const ENCODING_OFFSET: i32 = LOOKUP_BLOCK_SIZE as i32;
 
 /// Bitmask for one of the lookup values.
 #[cfg(feature = "bp_u16_lookup")]
-const ENCODING_MASK: EncodedTableType = 0b111111;
+const ENCODING_MASK: EncodedTableType = 0b11_1111;
 #[cfg(not(feature = "bp_u16_lookup"))]
-const ENCODING_MASK: EncodedTableType = 0b11111;
+const ENCODING_MASK: EncodedTableType = 0b1_1111;
 
 /// Where in the encoded bit pattern to store minimum excess
 #[cfg(feature = "bp_u16_lookup")]

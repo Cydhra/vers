@@ -6,7 +6,7 @@
 use crate::RsVec;
 use std::mem::size_of;
 
-/// The number of bits in a RsVec that can be processed by AVX instructions at once.
+/// The number of bits in a `RsVec` that can be processed by AVX instructions at once.
 const VECTOR_SIZE: usize = 16;
 
 // add iterator functions to RsVec
