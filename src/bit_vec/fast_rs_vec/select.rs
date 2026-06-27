@@ -3,7 +3,7 @@
 use crate::bit_vec::fast_rs_vec::{BLOCK_SIZE, SELECT_BLOCK_SIZE, SUPER_BLOCK_SIZE};
 use crate::bit_vec::WORD_SIZE;
 use crate::util::pdep::Pdep;
-use crate::util::unroll;
+use crate::util::unroll_n;
 
 /// A safety constant for assertions to make sure that the block size doesn't change without
 /// adjusting the code.
@@ -108,7 +108,7 @@ impl super::RsVec {
             "change unroll constant to {}",
             64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
         );
-        unroll!(4,
+        unroll_n!(4,
             |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
                 // do not use select_unpredictable here, it degrades performance
                 if self.blocks.len() > *block_index + boundary && rank >= self.blocks[*block_index + boundary].zeros as usize {
@@ -133,7 +133,7 @@ impl super::RsVec {
         // we subtract the number of ones in the word from the rank and continue with the next word.
         let mut index_counter = 0;
         debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
-        unroll!(7, |n = {0}| {
+        unroll_n!(7, |n = {0}| {
                     let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
                     if (word.count_zeros() as usize) <= rank {
                         rank -= word.count_zeros() as usize;
@@ -330,7 +330,7 @@ impl super::RsVec {
             "change unroll constant to {}",
             64 - (SUPER_BLOCK_SIZE / BLOCK_SIZE).leading_zeros() - 1
         );
-        unroll!(4,
+        unroll_n!(4,
             |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) / 2}|
                 // do not use select_unpredictable here, it degrades performance
                 if self.blocks.len() > *block_index + boundary && rank >= (*block_index + boundary - block_at_super_block) * BLOCK_SIZE - self.blocks[*block_index + boundary].zeros as usize {
@@ -355,7 +355,7 @@ impl super::RsVec {
         // we subtract the number of ones in the word from the rank and continue with the next word.
         let mut index_counter = 0;
         debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
-        unroll!(7, |n = {0}| {
+        unroll_n!(7, |n = {0}| {
             let word = self.data[block_index * BLOCK_SIZE / WORD_SIZE + n];
             if (word.count_ones() as usize) <= rank {
                 rank -= word.count_ones() as usize;
