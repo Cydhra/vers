@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashSet};
 use std::hint::black_box;
@@ -17,7 +17,7 @@ fn generate_tree<R: Rng>(rng: &mut R, nodes: u64) -> BpTree<BLOCK_SIZE> {
     // generate prüfer sequence
     let mut sequence = vec![0; (nodes - 2) as usize];
     for i in 0..nodes - 2 {
-        sequence[i as usize] = rng.gen_range(0..nodes - 1);
+        sequence[i as usize] = rng.random_range(0..nodes - 1);
     }
 
     // decode prüfer sequence
@@ -110,7 +110,7 @@ fn bench_navigation(b: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("parent", l), &l, |b, _| {
             b.iter_batched(
-                || node_handles[rng.gen_range(0..node_handles.len())],
+                || node_handles[rng.random_range(0..node_handles.len())],
                 |h| black_box(bp.parent(h)),
                 BatchSize::SmallInput,
             )
@@ -118,7 +118,7 @@ fn bench_navigation(b: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("last_child", l), &l, |b, _| {
             b.iter_batched(
-                || node_handles[rng.gen_range(0..node_handles.len())],
+                || node_handles[rng.random_range(0..node_handles.len())],
                 |h| black_box(bp.last_child(h)),
                 BatchSize::SmallInput,
             )
@@ -126,7 +126,7 @@ fn bench_navigation(b: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("next_sibling", l), &l, |b, _| {
             b.iter_batched(
-                || node_handles[rng.gen_range(0..node_handles.len())],
+                || node_handles[rng.random_range(0..node_handles.len())],
                 |h| black_box(bp.next_sibling(h)),
                 BatchSize::SmallInput,
             )
@@ -134,7 +134,7 @@ fn bench_navigation(b: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("prev_sibling", l), &l, |b, _| {
             b.iter_batched(
-                || node_handles[rng.gen_range(0..node_handles.len())],
+                || node_handles[rng.random_range(0..node_handles.len())],
                 |h| black_box(bp.previous_sibling(h)),
                 BatchSize::SmallInput,
             )

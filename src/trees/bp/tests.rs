@@ -1,7 +1,7 @@
 use super::*;
 use crate::BitVec;
 use rand::rngs::StdRng;
-use rand::{RngCore, SeedableRng};
+use rand::{Rng, SeedableRng};
 
 #[test]
 fn test_fwd_search() {

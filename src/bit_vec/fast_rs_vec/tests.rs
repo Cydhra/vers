@@ -1,7 +1,7 @@
 use super::*;
-use rand::distributions::{Distribution, Uniform};
+use rand::distr::{Distribution, Uniform};
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use std::num::NonZeroUsize;
 
 #[test]
@@ -22,7 +22,7 @@ fn test_random_data_rank() {
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
     ]);
-    let sample = Uniform::new(0, 2);
+    let sample = Uniform::new(0, 2).unwrap();
     static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
 
     for _ in 0..LENGTH {
@@ -34,7 +34,7 @@ fn test_random_data_rank() {
     assert_eq!(bv.len(), LENGTH);
 
     for _ in 0..100 {
-        let rnd_index = rng.gen_range(0..LENGTH);
+        let rnd_index = rng.random_range(0..LENGTH);
         let actual_rank1 = bv.rank1(rnd_index);
         let actual_rank0 = bv.rank0(rnd_index);
 
@@ -210,7 +210,7 @@ fn random_data_select0() {
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
     ]);
-    let sample = Uniform::new(0, 2);
+    let sample = Uniform::new(0, 2).unwrap();
     static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
 
     for _ in 0..LENGTH {
@@ -222,7 +222,7 @@ fn random_data_select0() {
     assert_eq!(bv.len(), LENGTH);
 
     for _ in 0..500 {
-        let rnd_rank0 = rng.gen_range(0..bv.rank0);
+        let rnd_rank0 = rng.random_range(0..bv.rank0);
         let actual_index0 = bv.select0(rnd_rank0);
 
         let data = &bv.data;
@@ -265,7 +265,7 @@ fn random_data_select1() {
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
     ]);
-    let sample = Uniform::new(0, 2);
+    let sample = Uniform::new(0, 2).unwrap();
     static LENGTH: usize = 4 * SUPER_BLOCK_SIZE;
 
     for _ in 0..LENGTH {
@@ -277,7 +277,7 @@ fn random_data_select1() {
     assert_eq!(bv.len(), LENGTH);
 
     for _ in 0..500 {
-        let rnd_rank1 = rng.gen_range(0..bv.rank1);
+        let rnd_rank1 = rng.random_range(0..bv.rank1);
         let actual_index1 = bv.select1(rnd_rank1);
 
         let data = &bv.data;
@@ -1168,7 +1168,7 @@ fn test_random_data_iter() {
         ] {
             for _ in 0..20 {
                 let mut bv = BitVec::with_capacity(length);
-                let sample = Uniform::new(0, 100);
+                let sample = Uniform::new(0, 100).unwrap();
                 for _ in 0..length {
                     bv.append_bit((sample.sample(&mut rng) < fill_ratio) as u64);
                 }
@@ -1205,7 +1205,7 @@ fn test_random_data_iter_both_ends() {
         ] {
             for _ in 0..20 {
                 let mut bv = BitVec::with_capacity(length);
-                let sample = Uniform::new(0, 100);
+                let sample = Uniform::new(0, 100).unwrap();
                 for _ in 0..length {
                     bv.append_bit((sample.sample(&mut rng) < fill_ratio) as u64);
                 }
@@ -1260,7 +1260,7 @@ fn test_block_layout() {
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
     ]);
-    let sample = Uniform::new(0, 2);
+    let sample = Uniform::new(0, 2).unwrap();
 
     for _ in 0..LENGTH {
         bv.append_bit(sample.sample(&mut rng));
@@ -1299,7 +1299,7 @@ fn test_iter1_regression_i6() {
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
     ]);
-    let sample = Uniform::new(0, 2);
+    let sample = Uniform::new(0, 2).unwrap();
 
     for _ in 0..LENGTH {
         bv.append_bit(sample.sample(&mut rng));
@@ -1532,7 +1532,7 @@ fn test_pred_randomized() {
 
     let mut bv = BitVec::from_zeros(4 * SUPER_BLOCK_SIZE + BLOCK_SIZE / 3);
     for i in 0..bv.len() {
-        if rng.gen_bool(0.5) {
+        if rng.random_bool(0.5) {
             bv.flip_bit(i)
         }
     }
@@ -1564,7 +1564,7 @@ fn test_succ_randomized() {
 
     let mut bv = BitVec::from_zeros(4 * SUPER_BLOCK_SIZE + BLOCK_SIZE / 3);
     for i in 0..bv.len() {
-        if rng.gen_bool(0.5) {
+        if rng.random_bool(0.5) {
             bv.flip_bit(i)
         }
     }

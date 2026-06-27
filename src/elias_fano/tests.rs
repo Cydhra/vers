@@ -1,7 +1,7 @@
 use crate::EliasFanoVec;
-use rand::distributions::Uniform;
+use rand::distr::Uniform;
 use rand::rngs::StdRng;
-use rand::{thread_rng, Rng, RngCore, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 
 #[test]
 fn test_elias_fano() {
@@ -53,10 +53,10 @@ fn test_duplicates() {
 // reproduce the failing case and add it to the test suite.
 #[test]
 fn test_randomized_elias_fano() {
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
     let mut seq = vec![0u64; 1000];
     for v in seq.iter_mut() {
-        *v = rng.gen();
+        *v = rng.random();
     }
     seq.sort_unstable();
 
@@ -69,11 +69,11 @@ fn test_randomized_elias_fano() {
     }
 
     for _ in 0..1000 {
-        let mut random_splitter: u64 = rng.gen();
+        let mut random_splitter: u64 = rng.random();
 
         // make sure we don't generate erroneous queries
         while random_splitter < seq[0] {
-            random_splitter = rng.gen();
+            random_splitter = rng.random();
         }
 
         let pred = ef.predecessor_unchecked(random_splitter);
@@ -144,10 +144,10 @@ fn large_clustered_rng() {
 }
 
 fn cluster_test(l: usize) {
-    let mut rng = thread_rng();
-    let dist_high = Uniform::new(u64::MAX / 2 - 200, u64::MAX / 2 - 1);
-    let dist_low = Uniform::new(0, l as u64);
-    let query_distribution = Uniform::new(0, l);
+    let mut rng = rand::rng();
+    let dist_high = Uniform::new(u64::MAX / 2 - 200, u64::MAX / 2 - 1).unwrap();
+    let dist_low = Uniform::new(0, l as u64).unwrap();
+    let query_distribution = Uniform::new(0, l).unwrap();
 
     // prepare a sequence of low values with a few high values at the end
     let mut sequence = (&mut rng)
@@ -337,7 +337,7 @@ fn test_iter_randomized() {
         let mut compare = seq.iter();
 
         for _ in 0..len {
-            if rng.gen_bool(0.5) {
+            if rng.random_bool(0.5) {
                 assert_eq!(iter.next().unwrap(), *compare.next().unwrap());
             } else {
                 assert_eq!(iter.next_back().unwrap(), *compare.next_back().unwrap());
@@ -389,10 +389,10 @@ fn test_duplicates_successor() {
 // reproduce the failing case and add it to the test suite.
 #[test]
 fn test_randomized_elias_fano_successor() {
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
     let mut seq = vec![0u64; 1000];
     for v in seq.iter_mut() {
-        *v = rng.gen();
+        *v = rng.random();
     }
     seq.sort_unstable();
 
@@ -405,11 +405,11 @@ fn test_randomized_elias_fano_successor() {
     }
 
     for _ in 0..1000 {
-        let mut random_splitter: u64 = rng.gen();
+        let mut random_splitter: u64 = rng.random();
 
         // make sure we don't generate erroneous queries
         while random_splitter > seq[seq.len() - 1] {
-            random_splitter = rng.gen();
+            random_splitter = rng.random();
         }
 
         let succ = ef.successor_unchecked(random_splitter);

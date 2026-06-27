@@ -2,7 +2,7 @@ use criterion::measurement::{Measurement, ValueFormatter};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use rand::rngs::ThreadRng;
 use rand::seq::index::sample;
-use rand::Rng;
+use rand::RngExt;
 use std::hint::black_box;
 use std::time::Instant;
 use vers_vecs::{BitVec, RsVec};
@@ -37,7 +37,7 @@ fn generate_vector_with_fill(rng: &mut ThreadRng, len: usize, fill_factor: f64) 
 }
 
 fn bench(b: &mut Criterion<TimeDiff>) {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     for len in SIZES {
         let mut group = b.benchmark_group(format!("Equals Benchmark: {}", len));
@@ -82,7 +82,7 @@ fn bench(b: &mut Criterion<TimeDiff>) {
                             let vec = RsVec::from_bit_vec(vec);
 
                             vec2.flip_bit(vec.select1(vec.rank1(len) - 1));
-                            vec2.flip_bit(vec.select0(rng.gen_range(0..(vec.rank0(len) - 1))));
+                            vec2.flip_bit(vec.select0(rng.random_range(0..(vec.rank0(len) - 1))));
                             let vec2 = RsVec::from_bit_vec(vec2);
 
                             let start_full = TimeDiff.start();

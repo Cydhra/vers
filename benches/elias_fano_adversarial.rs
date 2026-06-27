@@ -1,26 +1,26 @@
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
-use rand::distributions::{Distribution, Standard, Uniform};
-use rand::{thread_rng, Rng};
+use rand::distr::{Distribution, StandardUniform, Uniform};
+use rand::RngExt;
 use std::hint::black_box;
 use vers_vecs::EliasFanoVec;
 
 mod common;
 
 fn bench_ef(b: &mut Criterion) {
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     let mut group = b.benchmark_group("Elias-Fano: Adversarial Input");
     group.plot_config(common::plot_config());
 
-    let dist_high = Uniform::new(u64::MAX / 2 - 200, u64::MAX / 2 - 1);
+    let dist_high = Uniform::new(u64::MAX / 2 - 200, u64::MAX / 2 - 1).unwrap();
     for l in common::SIZES {
         // a distribution clustered at the low end with some but not too many duplicates
-        let dist_low = Uniform::new(0, l as u64);
-        let query_distribution = Uniform::new(0, l);
+        let dist_low = Uniform::new(0, l as u64).unwrap();
+        let query_distribution = Uniform::new(0, l).unwrap();
 
         // prepare a uniformly distributed sequence
         let mut sequence = (&mut rng)
-            .sample_iter(Standard)
+            .sample_iter(StandardUniform)
             .take(l)
             .collect::<Vec<u64>>();
         sequence.sort_unstable();

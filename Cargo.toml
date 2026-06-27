@@ -22,7 +22,7 @@ mem_dbg = { version = "^0.4.3", optional = true }
 [dev-dependencies]
 # benchmarking
 criterion = { version = "0.8.2", features = ["html_reports"] }
-rand = { version = "0.8", features = ["alloc"] }
+rand = { version = "0.10.1", features = ["alloc"] }
 
 [features]
 simd = []

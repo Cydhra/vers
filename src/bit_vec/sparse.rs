@@ -258,7 +258,7 @@ mod tests {
     use super::SparseRSVec;
     use crate::BitVec;
     use rand::prelude::StdRng;
-    use rand::{Rng, SeedableRng};
+    use rand::{RngExt, SeedableRng};
 
     #[test]
     fn test_sparse_rank() {
@@ -391,7 +391,7 @@ mod tests {
         let mut rng = StdRng::from_seed([0; 32]);
 
         for _ in 0..L / 4 {
-            bv.flip_bit(rng.gen_range(0..L));
+            bv.flip_bit(rng.random_range(0..L));
         }
 
         let sparse = SparseRSVec::from_bitvec(&bv);
