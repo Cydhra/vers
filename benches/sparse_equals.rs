@@ -1,8 +1,9 @@
 use criterion::measurement::{Measurement, ValueFormatter};
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use rand::rngs::ThreadRng;
 use rand::seq::index::sample;
 use rand::Rng;
+use std::hint::black_box;
 use std::time::Instant;
 use vers_vecs::{BitVec, RsVec};
 

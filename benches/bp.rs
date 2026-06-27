@@ -1,8 +1,9 @@
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashSet};
+use std::hint::black_box;
 use vers_vecs::trees::bp::BpBuilder;
 use vers_vecs::trees::bp::BpTree;
 use vers_vecs::trees::{Tree, TreeBuilder};

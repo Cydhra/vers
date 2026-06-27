@@ -1,5 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use rand::distributions::{Distribution, Uniform};
+use std::hint::black_box;
 
 mod common;
 

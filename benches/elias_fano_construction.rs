@@ -1,6 +1,7 @@
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use rand::distributions::Standard;
 use rand::{thread_rng, Rng};
+use std::hint::black_box;
 
 use vers_vecs::EliasFanoVec;
 

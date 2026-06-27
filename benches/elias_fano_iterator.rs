@@ -1,6 +1,7 @@
+use std::hint::black_box;
 use std::time::{Duration, Instant};
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use rand::distributions::Standard;
 use rand::{thread_rng, Rng};
 
