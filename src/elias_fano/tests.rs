@@ -1,7 +1,7 @@
 use crate::EliasFanoVec;
 use rand::distr::Uniform;
-use rand::rngs::StdRng;
-use rand::{Rng, RngExt, SeedableRng};
+use rand::rngs::{SmallRng, StdRng};
+use rand::{make_rng, Rng, RngExt, SeedableRng};
 
 #[test]
 fn test_elias_fano() {
@@ -568,4 +568,67 @@ fn test_overfull_vector() {
     assert_eq!(ef.iter().collect::<Vec<_>>(), numbers);
     assert_eq!(ef.rank(1), 0);
     assert_eq!(ef.rank(2), ef.len() as u64);
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+#[ignore]
+fn test_giant_vector() {
+    // we assume we have well over 2 GiB available
+    const L: usize = 1 << 28;
+    let mut data = vec![0u64; L];
+    let mut rng: SmallRng = make_rng();
+
+    rng.fill(&mut data);
+    data.sort_unstable();
+
+    let ef = EliasFanoVec::from_slice(&data);
+
+    // perform queries in the last 256 elements to verify they work across the whole structure
+    const OFFSET: usize = 256;
+
+    // find how many duplicates precede L - OFFSET:
+    let predecessor = data.iter().rposition(|&v| v < data[L - OFFSET]);
+    assert!(predecessor.is_some(), "the vector has no element smaller than the 100th element from the end; the randomness is broken.");
+
+    let Some(mut predecessor) = predecessor else {
+        unreachable!()
+    };
+    assert!(predecessor > 0, "the vector has a single element smaller than the 100th element from the end; the randomness is broken.");
+
+    for (index, &value) in data[L - OFFSET..]
+        .iter()
+        .enumerate()
+        .map(|(i, v)| (i + L - OFFSET, v))
+    {
+        assert_eq!(ef.get(index), Some(value));
+        assert_eq!(ef.rank(data[index]), predecessor as u64 + 1);
+        assert_eq!(ef.predecessor(value).unwrap(), value);
+        assert_eq!(ef.predecessor(value - 1).unwrap(), data[predecessor]);
+        assert_eq!(ef.successor(value).unwrap(), value);
+        assert_eq!(ef.delta(index).unwrap(), value - data[index - 1]);
+
+        // update predecessor
+        if value > data[predecessor] {
+            predecessor = index;
+        }
+    }
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+#[ignore]
+fn test_giant_successor_gap() {
+    // we assume we have well over 2 GiB available
+    const L: usize = 1 << 28;
+    let mut data = vec![1u64; L];
+    data[L - 3] = 3;
+    data[L - 2] = 3;
+    data[L - 1] = 3;
+
+    let ef = EliasFanoVec::from_slice(&data);
+
+    assert_eq!(ef.successor(2), Some(3));
+    assert_eq!(ef.predecessor(2), Some(1));
+    assert_eq!(ef.delta(L - 3), Some(2));
 }
