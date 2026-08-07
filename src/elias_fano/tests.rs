@@ -536,3 +536,36 @@ fn test_rank_last_element_of_large_bucket() {
         assert_eq!(ef.rank(t) as usize, i, "rank({t}) expected {i}");
     }
 }
+
+/// test for the treatment of numbers which can all be represented in a single bit
+#[test]
+fn test_one_bit_list() {
+    let numbers = vec![0, 0, 0, 1, 1, 1, 1];
+    let ef = EliasFanoVec::from_slice(&numbers);
+
+    assert_eq!(ef.iter().collect::<Vec<_>>(), numbers);
+    assert_eq!(ef.rank(1), 3);
+
+    let numbers = vec![0, 0, 1, 1, 1, 1];
+    let ef = EliasFanoVec::from_slice(&numbers);
+
+    assert_eq!(ef.iter().collect::<Vec<_>>(), numbers);
+    assert_eq!(ef.rank(1), 2);
+
+    let numbers = vec![9990, 9990, 9990, 9991, 9991, 9991, 9991];
+    let ef = EliasFanoVec::from_slice(&numbers);
+
+    assert_eq!(ef.iter().collect::<Vec<_>>(), numbers);
+    assert_eq!(ef.rank(9991), 3);
+}
+
+/// test a vector with small universe bound but large size
+#[test]
+fn test_overfull_vector() {
+    let numbers = vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+    let ef = EliasFanoVec::from_slice(&numbers);
+
+    assert_eq!(ef.iter().collect::<Vec<_>>(), numbers);
+    assert_eq!(ef.rank(1), 0);
+    assert_eq!(ef.rank(2), ef.len() as u64);
+}
