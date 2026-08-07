@@ -912,7 +912,9 @@ impl BitVec {
         assert!(len <= 64, "Cannot append more than 64 bits");
 
         if self.len.is_multiple_of(WORD_SIZE) {
-            self.data.push(bits);
+            if len > 0 {
+                self.data.push(bits);
+            }
         } else {
             // zero out the unused bits before or-ing the new one, to ensure no garbage data remains
             self.data[self.len / WORD_SIZE] &= !(u64::MAX << (self.len % WORD_SIZE));
@@ -939,6 +941,9 @@ impl BitVec {
     /// set bits beyond the `len - 1`-th bit,
     /// or if bits have been dropped from the bit vector using [`drop_last`].
     ///
+    /// This means the function must only be called during initial construction of vectors which are known
+    /// to not have contained data previously, and if the input data is known to not contain superfluous set bits.
+    ///
     /// See [`append_bits`] for a checked version of this function.
     ///
     /// # Panics
@@ -949,7 +954,9 @@ impl BitVec {
     /// [`drop_last`]: BitVec::drop_last
     pub fn append_bits_unchecked(&mut self, bits: u64, len: usize) {
         if self.len.is_multiple_of(WORD_SIZE) {
-            self.data.push(bits);
+            if len > 0 {
+                self.data.push(bits);
+            }
         } else {
             self.data[self.len / WORD_SIZE] |= bits << (self.len % WORD_SIZE);
 
@@ -1176,8 +1183,19 @@ impl BitVec {
     /// Return multiple bits at the given position. The number of bits to return is given by `len`.
     /// At most 64 bits can be returned.
     ///
-    /// This function is always inlined, because it gains a lot from loop optimization and
-    /// can utilize the processor pre-fetcher better if it is.
+    /// Reading 0 bits is always legal, even if the index is out of bounds.
+    /// This behavior was chosen such that operations like the following behave expectedly:
+    /// ```
+    /// # use vers_vecs::BitVec;
+    /// let mut bv = BitVec::new();
+    /// bv.append_bits_unchecked(1, 0);
+    /// bv.append_bits_unchecked(63, 0);
+    /// bv.append_bits_unchecked(1, 0);
+    ///
+    /// assert_eq!(bv.get_bits_unchecked(0, 0), 0);
+    /// assert_eq!(bv.get_bits_unchecked(1, 0), 0);
+    /// assert_eq!(bv.get_bits_unchecked(2, 0), 0);
+    /// ```
     ///
     /// # Errors
     /// If the length of the query is larger than 64, unpredictable data will be returned.
@@ -1189,6 +1207,8 @@ impl BitVec {
     /// data or panic.
     ///
     /// [`get_bits`]: BitVec::get_bits
+    // This function is always inlined, because it gains a lot from loop optimization and
+    // can utilize the processor pre-fetcher better if it is.
     #[must_use]
     #[allow(clippy::inline_always)]
     #[allow(clippy::comparison_chain)] // readability
@@ -1196,6 +1216,10 @@ impl BitVec {
     #[allow(clippy::cast_possible_truncation)] // parameter must be out of scope for this to happen
     pub fn get_bits_unchecked(&self, pos: usize, len: usize) -> u64 {
         debug_assert!(len <= WORD_SIZE);
+        if len == 0 {
+            return 0;
+        }
+
         let partial_word = self.data[pos / WORD_SIZE] >> (pos % WORD_SIZE);
         if pos % WORD_SIZE + len <= WORD_SIZE {
             partial_word & 1u64.checked_shl(len as u32).unwrap_or(0).wrapping_sub(1)

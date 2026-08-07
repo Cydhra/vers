@@ -897,3 +897,21 @@ fn test_limbs_constructor() {
     let bv = BitVec::pack_sequence_u32(&[23], 5);
     assert_eq!(bv.iter_limbs().next().unwrap() & ((1 << 23) - 1), 23);
 }
+
+#[test]
+fn test_append_zero_bits() {
+    let mut bv = BitVec::new();
+    bv.append_bits(u64::MAX, 0);
+
+    // verify no data has been appended in public and internal representation.
+    assert_eq!(bv.len(), 0);
+    assert_eq!(bv.data.len(), 0);
+}
+
+#[test]
+fn test_get_zero_bits_oob() {
+    let bv = BitVec::new();
+
+    // verify out of bounds access is legal if the length is zero
+    assert_eq!(bv.get_bits_unchecked(123, 0), 0);
+}
