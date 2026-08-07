@@ -924,3 +924,26 @@ fn test_from_padded_bitvec() {
     assert_eq!(tree.fwd_search(0, 2), None);
     assert_eq!(tree.dfs_iter().collect::<Vec<_>>(), vec![0]);
 }
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+#[ignore]
+fn test_giant_trunk() {
+    // test open and close across a graph that is a giant tree of maximum height
+    const L: usize = 1 << 34;
+
+    let mut bv = BitVec::from_zeros(L + 2);
+    for i in 0..L / 2 {
+        bv.flip_bit_unchecked(i);
+    }
+
+    bv.flip_bit_unchecked(L);
+
+    let tree = BpTree::<64>::from_bit_vector(bv);
+    assert_eq!(tree.open(L - 1), Some(0));
+    assert_eq!(tree.close(0), Some(L - 1));
+    assert_eq!(tree.next_sibling(0), Some(L));
+    assert_eq!(tree.previous_sibling(L), Some(0));
+    assert_eq!(tree.enclose(L - 2), Some(0));
+    assert_eq!(tree.enclose(L - 3), Some(1));
+}
