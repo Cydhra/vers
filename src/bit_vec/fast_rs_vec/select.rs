@@ -450,6 +450,8 @@ impl super::RsVec {
         if self.super_blocks.len() > (super_block_idx + 1)
             && self.super_blocks[super_block_idx + 1].zeros > rank
         {
+            rank -= self.super_blocks[super_block_idx].zeros;
+
             // successor is in current block
             if block_idx % (BLOCKS_PER_SUPERBLOCK) == (BLOCKS_PER_SUPERBLOCK - 1)
                 || self.blocks[block_idx + 1].zeros as usize > rank
