@@ -190,30 +190,26 @@ impl RsVec {
             current_zeros += new_zeros;
         }
 
-        // insert dummy select blocks at the end that just report the same index like the last real
-        // block, so the bound check for binary search doesn't overflow
-        // this is technically the incorrect value, but since all valid queries will be smaller,
-        // this will only tell select to stay in the current super block, which is correct.
-        // we cannot use a real value here, because this would change the size of the super-block
+        // insert dummy select blocks at the end that just report the block beyond the number of super block
+        // this is a sentinel value that can be used as an upper bound for select.
+        // this would fail if select attempted to search a value outside the vector.
         if last_zero_select_block == select_blocks.len() - 1 {
             select_blocks.push(SelectSuperBlockDescriptor {
-                index_0: select_blocks[last_zero_select_block].index_0,
+                index_0: super_blocks.len(),
                 index_1: 0,
             });
         } else {
             debug_assert!(select_blocks[last_zero_select_block + 1].index_0 == 0);
-            select_blocks[last_zero_select_block + 1].index_0 =
-                select_blocks[last_zero_select_block].index_0;
+            select_blocks[last_zero_select_block + 1].index_0 = super_blocks.len();
         }
         if last_one_select_block == select_blocks.len() - 1 {
             select_blocks.push(SelectSuperBlockDescriptor {
                 index_0: 0,
-                index_1: select_blocks[last_one_select_block].index_1,
+                index_1: super_blocks.len(),
             });
         } else {
             debug_assert!(select_blocks[last_one_select_block + 1].index_1 == 0);
-            select_blocks[last_one_select_block + 1].index_1 =
-                select_blocks[last_one_select_block].index_1;
+            select_blocks[last_one_select_block + 1].index_1 = super_blocks.len();
         }
 
         total_zeros += current_zeros;
