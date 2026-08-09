@@ -91,8 +91,8 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
             cursor: 0,
         };
 
-        if vec.len() > VECTOR_SIZE {
-            iter.load_chunk(vec.get_bits_unchecked(0, VECTOR_SIZE) as u16);
+        if vec.len() > VECTOR_SIZE as u64 {
+            iter.load_chunk(vec.get_bits_unchecked(0, VECTOR_SIZE as u64) as u16);
         }
 
         iter
@@ -116,12 +116,12 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
 
     fn load_next_chunk(&mut self) -> Option<()> {
         while self.cursor == self.content_len {
-            if self.base + VECTOR_SIZE >= self.vec.len() {
+            if self.base + VECTOR_SIZE as u64 >= self.vec.len() {
                 return None;
             }
 
-            self.base += VECTOR_SIZE;
-            let data = self.vec.get_bits_unchecked(self.base, VECTOR_SIZE) as u16;
+            self.base += VECTOR_SIZE as u64;
+            let data = self.vec.get_bits_unchecked(self.base, VECTOR_SIZE as u64) as u16;
             self.load_chunk(data);
         }
         Some(())
