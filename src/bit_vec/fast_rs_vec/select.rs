@@ -182,6 +182,8 @@ impl super::RsVec {
             super_block += 1;
         }
 
+        debug_assert!(super_block <= upper_bound, "calculated the upper bound to be {} (initially {}) but the super block was found at {}", upper_bound, self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_0, super_block);
+
         super_block
     }
 
@@ -197,8 +199,7 @@ impl super::RsVec {
             return self.len;
         }
 
-        let mut super_block =
-            self.select_blocks[rank / crate::bit_vec::fast_rs_vec::SELECT_BLOCK_SIZE].index_1;
+        let mut super_block = self.select_blocks[rank / SELECT_BLOCK_SIZE].index_1;
 
         if self.super_blocks.len() > (super_block + 1)
             && ((super_block + 1) * SUPER_BLOCK_SIZE - self.super_blocks[super_block + 1].zeros)
@@ -392,7 +393,7 @@ impl super::RsVec {
         while upper_bound - super_block > 8 {
             let middle = super_block + ((upper_bound - super_block) >> 1);
             // using select_unpredictable does nothing here, likely because the search isn't hot
-            if ((middle + 1) * SUPER_BLOCK_SIZE - self.super_blocks[middle].zeros) <= rank {
+            if (middle * SUPER_BLOCK_SIZE - self.super_blocks[middle].zeros) <= rank {
                 super_block = middle;
             } else {
                 upper_bound = middle;
@@ -405,6 +406,8 @@ impl super::RsVec {
         {
             super_block += 1;
         }
+
+        debug_assert!(super_block <= upper_bound, "calculated the upper bound to be {} (initially {}) but the super block was found at {}", upper_bound, self.select_blocks[rank / SELECT_BLOCK_SIZE + 1].index_1, super_block);
 
         super_block
     }
