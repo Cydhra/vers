@@ -1523,7 +1523,7 @@ fn test_empty_vec_succ_pred() {
     assert_eq!(rs.successor1(0), None);
     assert_eq!(rs.predecessor1(0), None);
     assert_eq!(rs.successor0(0), None);
-    assert_eq!(rs.successor1(0), None);
+    assert_eq!(rs.predecessor0(0), None);
 }
 
 #[test]
