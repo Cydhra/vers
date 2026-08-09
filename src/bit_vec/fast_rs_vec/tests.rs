@@ -1658,7 +1658,7 @@ fn test_giant_vector1() {
 
 #[test]
 fn test_succ_pred_across_superblocks() {
-    // check that successor and predecessor work if the bits are in the first and second super block, as well as second superblock exclusively
+    // check that successor and predecessor work across super-block boundaries
     for (from_bits, succ, pred) in [
         (
             BitVec::from_zeros as fn(usize) -> BitVec,
@@ -1671,23 +1671,25 @@ fn test_succ_pred_across_superblocks() {
             RsVec::predecessor0 as fn(&RsVec, usize) -> Option<u64>,
         ),
     ] {
-        let mut bv = from_bits(SUPER_BLOCK_SIZE * 3);
-        bv.flip_bit(0);
-        bv.flip_bit(SUPER_BLOCK_SIZE + 1);
-        bv.flip_bit(SUPER_BLOCK_SIZE * 2 + 1);
+        let mut bv = from_bits(SUPER_BLOCK_SIZE * SUPER_BLOCK_SIZE);
+        for super_block in 0..SUPER_BLOCK_SIZE {
+            bv.flip_bit(super_block * SUPER_BLOCK_SIZE + 1);
+        }
         let rs = RsVec::from_bit_vec(bv);
 
-        assert_eq!(succ(&rs, 0), Some(SUPER_BLOCK_SIZE as u64 + 1));
-        assert_eq!(
-            succ(&rs, SUPER_BLOCK_SIZE + 1),
-            Some(SUPER_BLOCK_SIZE as u64 * 2 + 1)
-        );
+        for super_block in 0..SUPER_BLOCK_SIZE - 1 {
+            assert_eq!(
+                succ(&rs, SUPER_BLOCK_SIZE * super_block + 1),
+                Some(SUPER_BLOCK_SIZE as u64 * (super_block as u64 + 1) + 1)
+            );
+        }
 
-        assert_eq!(
-            pred(&rs, SUPER_BLOCK_SIZE * 2 + 1),
-            Some(SUPER_BLOCK_SIZE as u64 + 1)
-        );
-        assert_eq!(pred(&rs, SUPER_BLOCK_SIZE + 1), Some(0));
+        for super_block in 1..SUPER_BLOCK_SIZE {
+            assert_eq!(
+                pred(&rs, SUPER_BLOCK_SIZE * super_block + 1),
+                Some(SUPER_BLOCK_SIZE as u64 * (super_block as u64 - 1) + 1)
+            );
+        }
     }
 }
 
