@@ -1589,3 +1589,69 @@ fn test_succ_randomized() {
         }
     }
 }
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+#[ignore]
+fn test_giant_vector0() {
+    const L: usize = 1 << 34;
+
+    let mut bv = BitVec::from_ones(L);
+    let set_bits = vec![1, 2, SUPER_BLOCK_SIZE * 2 + 1, L - 2, L - 1];
+
+    for &i in &set_bits {
+        bv.flip_bit(i);
+    }
+
+    let rs = RsVec::from_bit_vec(bv);
+
+    // test long range queries
+    let mut predecessor = None;
+    for (rank, &bit) in set_bits.iter().enumerate() {
+        assert_eq!(rs.rank0(bit), rank);
+        assert_eq!(rs.select0(rank), bit);
+
+        assert_eq!(rs.predecessor0(bit), predecessor);
+        predecessor = Some(bit as u64);
+
+        assert_eq!(
+            rs.successor0(bit),
+            set_bits.get(rank + 1).map(|&a| a as u64)
+        )
+    }
+
+    assert_eq!(rs.iter0().collect::<Vec<_>>(), set_bits);
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+#[ignore]
+fn test_giant_vector1() {
+    const L: usize = 1 << 34;
+
+    let mut bv = BitVec::from_zeros(L);
+    let set_bits = vec![1, 2, SUPER_BLOCK_SIZE * 2 + 1, L - 2, L - 1];
+
+    for &i in &set_bits {
+        bv.flip_bit(i);
+    }
+
+    let rs = RsVec::from_bit_vec(bv);
+
+    // test long range queries
+    let mut predecessor = None;
+    for (rank, &bit) in set_bits.iter().enumerate() {
+        assert_eq!(rs.rank1(bit), rank);
+        assert_eq!(rs.select1(rank), bit);
+
+        assert_eq!(rs.predecessor1(bit), predecessor);
+        predecessor = Some(bit as u64);
+
+        assert_eq!(
+            rs.successor1(bit),
+            set_bits.get(rank + 1).map(|&a| a as u64)
+        )
+    }
+
+    assert_eq!(rs.iter1().collect::<Vec<_>>(), set_bits);
+}

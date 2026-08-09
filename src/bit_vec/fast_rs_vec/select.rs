@@ -447,8 +447,8 @@ impl super::RsVec {
         let mut block_idx = pos / BLOCK_SIZE;
         let super_block_idx = pos / SUPER_BLOCK_SIZE;
 
-        if self.super_blocks.len() > (SUPER_BLOCK_SIZE + 1)
-            && self.super_blocks[SUPER_BLOCK_SIZE + 1].zeros > rank
+        if self.super_blocks.len() > (super_block_idx + 1)
+            && self.super_blocks[super_block_idx + 1].zeros > rank
         {
             // successor is in current block
             if block_idx % (BLOCKS_PER_SUPERBLOCK) == (BLOCKS_PER_SUPERBLOCK - 1)
