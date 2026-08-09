@@ -1,7 +1,7 @@
 use super::*;
-use rand::distributions::{Distribution, Uniform};
+use rand::distr::{Distribution, Uniform};
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use std::num::NonZeroUsize;
 
 #[test]
@@ -22,7 +22,7 @@ fn test_random_data_rank() {
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
     ]);
-    let sample = Uniform::new(0, 2);
+    let sample = Uniform::new(0, 2).unwrap();
     static LENGTH: u64 = 4 * SUPER_BLOCK_SIZE;
 
     for _ in 0..LENGTH {
@@ -34,7 +34,7 @@ fn test_random_data_rank() {
     assert_eq!(bv.len(), LENGTH);
 
     for _ in 0..100 {
-        let rnd_index = rng.gen_range(0..LENGTH);
+        let rnd_index = rng.random_range(0..LENGTH);
         let actual_rank1 = bv.rank1(rnd_index);
         let actual_rank0 = bv.rank0(rnd_index);
 
@@ -211,7 +211,7 @@ fn random_data_select0() {
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
     ]);
-    let sample = Uniform::new(0, 2);
+    let sample = Uniform::new(0, 2).unwrap();
 
     for _ in 0..LENGTH {
         bv.append_bit_u8(sample.sample(&mut rng) as u8);
@@ -222,7 +222,7 @@ fn random_data_select0() {
     assert_eq!(bv.len(), LENGTH);
 
     for _ in 0..500 {
-        let rnd_rank0 = rng.gen_range(0..bv.rank0);
+        let rnd_rank0 = rng.random_range(0..bv.rank0);
         let actual_index0 = bv.select0(rnd_rank0);
 
         let data = &bv.data;
@@ -266,7 +266,7 @@ fn random_data_select1() {
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
     ]);
-    let sample = Uniform::new(0, 2);
+    let sample = Uniform::new(0, 2).unwrap();
 
     for _ in 0..LENGTH {
         bv.append_bit_u8(sample.sample(&mut rng) as u8);
@@ -277,7 +277,7 @@ fn random_data_select1() {
     assert_eq!(bv.len(), LENGTH);
 
     for _ in 0..500 {
-        let rnd_rank1 = rng.gen_range(0..bv.rank1);
+        let rnd_rank1 = rng.random_range(0..bv.rank1);
         let actual_index1 = bv.select1(rnd_rank1);
 
         let data = &bv.data;
@@ -1168,7 +1168,7 @@ fn test_random_data_iter() {
         ] {
             for _ in 0..20 {
                 let mut bv = BitVec::with_capacity(length);
-                let sample = Uniform::new(0, 100);
+                let sample = Uniform::new(0, 100).unwrap();
                 for _ in 0..length {
                     bv.append_bit((sample.sample(&mut rng) < fill_ratio) as u64);
                 }
@@ -1205,7 +1205,7 @@ fn test_random_data_iter_both_ends() {
         ] {
             for _ in 0..20 {
                 let mut bv = BitVec::with_capacity(length);
-                let sample = Uniform::new(0, 100);
+                let sample = Uniform::new(0, 100).unwrap();
                 for _ in 0..length {
                     bv.append_bit((sample.sample(&mut rng) < fill_ratio) as u64);
                 }
@@ -1260,7 +1260,7 @@ fn test_block_layout() {
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
     ]);
-    let sample = Uniform::new(0, 2);
+    let sample = Uniform::new(0, 2).unwrap();
 
     for _ in 0..LENGTH {
         bv.append_bit(sample.sample(&mut rng));
@@ -1299,7 +1299,7 @@ fn test_iter1_regression_i6() {
         0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5,
         6, 7,
     ]);
-    let sample = Uniform::new(0, 2);
+    let sample = Uniform::new(0, 2).unwrap();
 
     for _ in 0..LENGTH {
         bv.append_bit(sample.sample(&mut rng));
@@ -1385,4 +1385,207 @@ fn test_simd_fallback() {
         rs.select0(SUPER_BLOCK_SIZE + 3 * BLOCK_SIZE + 1),
         SUPER_BLOCK_SIZE + 3 * BLOCK_SIZE + 1
     );
+}
+
+#[test]
+fn test_predecessor1_and_successor1() {
+    let mut bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(BLOCK_SIZE);
+    bv.flip_bit(BLOCK_SIZE + 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    assert_eq!(
+        rs.predecessor1(SUPER_BLOCK_SIZE + 2),
+        Some(SUPER_BLOCK_SIZE as u64 + 1)
+    );
+    assert_eq!(
+        rs.predecessor1(SUPER_BLOCK_SIZE + 1),
+        Some(SUPER_BLOCK_SIZE as u64)
+    );
+    assert_eq!(
+        rs.predecessor1(SUPER_BLOCK_SIZE),
+        Some(SUPER_BLOCK_SIZE as u64 - 1)
+    );
+    assert_eq!(
+        rs.predecessor1(SUPER_BLOCK_SIZE - 2),
+        Some(BLOCK_SIZE as u64 + 1)
+    );
+
+    assert_eq!(rs.predecessor1(4), Some(3));
+
+    assert_eq!(rs.successor1(SUPER_BLOCK_SIZE + 2), None);
+    assert_eq!(rs.successor1(SUPER_BLOCK_SIZE + 1), None);
+    assert_eq!(
+        rs.successor1(SUPER_BLOCK_SIZE),
+        Some(SUPER_BLOCK_SIZE as u64 + 1)
+    );
+    assert_eq!(
+        rs.successor1(SUPER_BLOCK_SIZE - 2),
+        Some(SUPER_BLOCK_SIZE as u64 - 1)
+    );
+    assert_eq!(rs.successor1(BLOCK_SIZE - 2), Some(BLOCK_SIZE as u64));
+    assert_eq!(rs.successor1(4), Some(5u64));
+}
+
+#[test]
+fn test_predecessor0_and_successor0() {
+    let mut bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    bv.flip_bit(1);
+    bv.flip_bit(3);
+    bv.flip_bit(5);
+    bv.flip_bit(BLOCK_SIZE);
+    bv.flip_bit(BLOCK_SIZE + 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE - 1);
+    bv.flip_bit(SUPER_BLOCK_SIZE);
+    bv.flip_bit(SUPER_BLOCK_SIZE + 1);
+    let rs = RsVec::from_bit_vec(bv);
+
+    assert_eq!(
+        rs.predecessor0(SUPER_BLOCK_SIZE + 2),
+        Some(SUPER_BLOCK_SIZE as u64 + 1)
+    );
+    assert_eq!(
+        rs.predecessor0(SUPER_BLOCK_SIZE + 1),
+        Some(SUPER_BLOCK_SIZE as u64)
+    );
+    assert_eq!(
+        rs.predecessor0(SUPER_BLOCK_SIZE),
+        Some(SUPER_BLOCK_SIZE as u64 - 1)
+    );
+    assert_eq!(
+        rs.predecessor0(SUPER_BLOCK_SIZE - 2),
+        Some(BLOCK_SIZE as u64 + 1)
+    );
+
+    assert_eq!(rs.predecessor0(4), Some(3));
+    assert_eq!(rs.predecessor0(3), Some(1));
+
+    assert_eq!(rs.successor0(SUPER_BLOCK_SIZE + 2), None);
+    assert_eq!(rs.successor0(SUPER_BLOCK_SIZE + 1), None);
+    assert_eq!(
+        rs.successor0(SUPER_BLOCK_SIZE),
+        Some(SUPER_BLOCK_SIZE as u64 + 1)
+    );
+    assert_eq!(
+        rs.successor0(SUPER_BLOCK_SIZE - 2),
+        Some(SUPER_BLOCK_SIZE as u64 - 1)
+    );
+    assert_eq!(rs.successor0(BLOCK_SIZE - 2), Some(BLOCK_SIZE as u64));
+    assert_eq!(rs.successor0(4), Some(5));
+    assert_eq!(rs.successor0(3), Some(5));
+}
+
+#[test]
+fn test_non_existing_predecessor() {
+    let bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.predecessor1(0), None);
+    assert_eq!(rs.predecessor1(SUPER_BLOCK_SIZE), None);
+    assert_eq!(rs.predecessor1(2 * SUPER_BLOCK_SIZE - 1), None);
+    assert_eq!(rs.predecessor1(2 * SUPER_BLOCK_SIZE), None);
+
+    let bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.predecessor0(0), None);
+    assert_eq!(rs.predecessor0(SUPER_BLOCK_SIZE), None);
+    assert_eq!(rs.predecessor0(2 * SUPER_BLOCK_SIZE - 1), None);
+    assert_eq!(rs.predecessor0(2 * SUPER_BLOCK_SIZE), None);
+}
+
+#[test]
+fn test_non_existing_successor() {
+    let bv = BitVec::from_zeros(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.successor1(0), None);
+    assert_eq!(rs.successor1(SUPER_BLOCK_SIZE), None);
+    assert_eq!(rs.successor1(2 * SUPER_BLOCK_SIZE - 1), None);
+    assert_eq!(rs.successor1(2 * SUPER_BLOCK_SIZE), None);
+
+    let bv = BitVec::from_ones(2 * SUPER_BLOCK_SIZE);
+    let rs = RsVec::from_bit_vec(bv);
+    assert_eq!(rs.successor0(0), None);
+    assert_eq!(rs.successor0(SUPER_BLOCK_SIZE), None);
+    assert_eq!(rs.successor0(2 * SUPER_BLOCK_SIZE - 1), None);
+    assert_eq!(rs.successor0(2 * SUPER_BLOCK_SIZE), None);
+}
+
+#[test]
+fn test_empty_vec_succ_pred() {
+    let bv = BitVec::new();
+    let rs = RsVec::from_bit_vec(bv);
+
+    assert_eq!(rs.successor1(0), None);
+    assert_eq!(rs.predecessor1(0), None);
+    assert_eq!(rs.successor0(0), None);
+    assert_eq!(rs.successor1(0), None);
+}
+
+#[test]
+fn test_pred_randomized() {
+    let mut rng = StdRng::seed_from_u64(0);
+
+    let mut bv = BitVec::from_zeros(4 * SUPER_BLOCK_SIZE + BLOCK_SIZE / 3);
+    for i in 0..bv.len() {
+        if rng.random_bool(0.5) {
+            bv.flip_bit(i)
+        }
+    }
+
+    let rs = RsVec::from_bit_vec(bv.clone());
+
+    let mut last_0 = rs.select0(0) as u64;
+    let mut last_1 = rs.select1(0) as u64;
+
+    for i in 0..bv.len() {
+        if last_0 < i as u64 {
+            assert_eq!(rs.predecessor0(i), Some(last_0));
+        }
+        if last_1 < i as u64 {
+            assert_eq!(rs.predecessor1(i), Some(last_1));
+        }
+
+        if bv.is_bit_set_unchecked(i) {
+            last_1 = i as u64;
+        } else {
+            last_0 = i as u64;
+        }
+    }
+}
+
+#[test]
+fn test_succ_randomized() {
+    let mut rng = StdRng::seed_from_u64(0);
+
+    let mut bv = BitVec::from_zeros(4 * SUPER_BLOCK_SIZE + BLOCK_SIZE / 3);
+    for i in 0..bv.len() {
+        if rng.random_bool(0.5) {
+            bv.flip_bit(i)
+        }
+    }
+
+    let rs = RsVec::from_bit_vec(bv.clone());
+
+    let mut last_0 = rs.select0(rs.rank0 - 1) as u64;
+    let mut last_1 = rs.select1(rs.rank1 - 1) as u64;
+
+    for i in (0..bv.len()).rev() {
+        if last_0 > i as u64 {
+            assert_eq!(rs.successor0(i), Some(last_0));
+        }
+        if last_1 > i as u64 {
+            assert_eq!(rs.successor1(i), Some(last_1));
+        }
+
+        if bv.is_bit_set_unchecked(i) {
+            last_1 = i as u64;
+        } else {
+            last_0 = i as u64;
+        }
+    }
 }

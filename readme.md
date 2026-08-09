@@ -20,18 +20,19 @@ since the intrinsics speed up both `rank` and `select` operations by a factor of
 
 ## Why Vers?
 - Vers is among the fastest publicly available bit vector implementations for rank and select operations.
-- Vers has a substantially lower memory overhead than its competitors.
+- Vers has a substantially lower memory overhead than alternatives
 - Without crate features, all data structures are implemented in pure Rust and have no dependencies outside the standard library.
 - Every functionality is extensively documented.
-- Vers aims to provide more functionality for its data structures than competitors 
-  (e.g., Elias-Fano sequences and the Wavelet Matrix support predecessor and successor queries, 
-  the Wavelet Matrix supports statistical queries, all data structures implement various iterators, etc.).
+- Vers aims to provide full functionality for its data structures, as well as full integration into the ecosystem
+  (e.g., BitVec, Elias-Fano sequences, and Wavelet Matrix support predecessor and successor queries, 
+  the Wavelet Matrix supports various statistical queries, all data structures implement various iterators, etc.).
 
 ## Crate Features
 - `simd`: Enables the use of SIMD instructions for rank and select operations.
 This feature requires AVX-512 support and uses unsafe code.
 It also enables a special iterator for the rank/select bit vector that uses vectorized operations.
 - `serde`: Enables serialization and deserialization of the data structures using the `serde` crate.
+- `mem_dbg` Enables `mem_dbg` support (see Dependencies).
 - `u16_lookup` Enables a larger lookup table for BP tree queries. The larger table requires 128 KiB instead of 4 KiB.
 
 ## Benchmarks
@@ -130,18 +131,22 @@ The intrinsics in question are `popcnt` (supported since SSE4.2 resp. SSE4a on A
 and `tzcnt` (supported with BMI1 since Intel Haswell resp. AMD Jaguar, ca. 2013).
 
 ## Safety
-This crate uses no unsafe code, with the only exception being compiler intrinsic for `pdep`.
+With default features, this crate uses no unsafe code, with the only exception being compiler intrinsic for `pdep`.
 The intrinsics cannot fail with the provided inputs (provided they are
 supported by the target machine), so even if they were to be implemented incorrectly, no
 memory corruption can occur (only incorrect results).
 
 Unsafe code is hidden behind public API.
 
+The `simd` feature uses unsafe code for AVX intrinsics, and performs operations on memory addresses.
+
 ## Dependencies
 The library has no dependencies outside the Rust standard library by default.
-It has a plethora of dependencies for benchmarking purposes, but these are not required for normal use.
+
 Optionally, the `serde` feature can be enabled to allow serialization and deserialization of the data structures,
 which requires the `serde` crate and its `derive` feature.
+Similarly, [`mem_dbg`](https://docs.rs/mem_dbg/latest/mem_dbg/) support can be enabled with the
+`mem_dbg` feature.
 
 ## License
 Licensed under either of

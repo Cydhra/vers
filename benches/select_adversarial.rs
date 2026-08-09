@@ -1,12 +1,13 @@
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
-use rand::distributions::Uniform;
-use rand::{thread_rng, Rng};
+use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
+use rand::distr::Uniform;
+use rand::{rng, RngExt};
+use std::hint::black_box;
 use vers_vecs::{BitVec, RsVec};
 
 mod common;
 
 fn select_worst_case(b: &mut Criterion) {
-    let mut rng = thread_rng();
+    let mut rng = rng();
     let mut group = b.benchmark_group("Select: Adversarial Input");
     group.plot_config(common::plot_config());
 
@@ -18,7 +19,8 @@ fn select_worst_case(b: &mut Criterion) {
         let uniform_sample = Uniform::new(
             bit_vec.rank0(bit_vec.len()) / 4 * 3,
             bit_vec.rank0(bit_vec.len()),
-        );
+        )
+        .unwrap();
         group.bench_with_input(
             BenchmarkId::new("uniform input", length),
             &length,

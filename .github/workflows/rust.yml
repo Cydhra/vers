@@ -33,6 +33,15 @@ jobs:
       - name: Run tests
         run: cargo test --verbose --features serde
 
+  test-expensive:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: -C opt-level=3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tests
+        run: cargo test --verbose -- --ignored
+
   docs:
     runs-on: ubuntu-latest
     env:

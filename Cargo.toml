@@ -1,6 +1,6 @@
 [package]
 name = "vers-vecs"
-version = "1.8.1"
+version = "1.10.1"
 edition = "2021"
 authors = ["Johannes \"Cydhra\" Hengstler"]
 description = "A collection of succinct data structures supported by fast implementations of rank and select queries."
@@ -16,12 +16,13 @@ exclude = [
 ]
 
 [dependencies]
-serde = { version = "1.0", optional = true, features = ["derive"] }
+serde = { version = "^1.0", optional = true, features = ["derive"] }
+mem_dbg = { version = "^0.4.3", optional = true }
 
 [dev-dependencies]
 # benchmarking
-criterion = { version = "0.5.1", features = ["html_reports"] }
-rand = { version = "0.8", features = ["alloc"] }
+criterion = { version = "0.8.2", features = ["html_reports"] }
+rand = { version = "0.10.1", features = ["alloc"] }
 
 [features]
 simd = []
@@ -72,10 +73,14 @@ harness = false
 name = "elias_fano_construction"
 harness = false
 
+[[bench]]
+name = "rs_successor"
+harness = false
+
 [profile.bench]
 lto = true
 
 [package.metadata.docs.rs]
 all-features = true
 rustc-args = ["-C", "target-cpu=native"]
-rustdoc-args = ["-C", "target-cpu=native", "--cfg", "docsrs"]
+rustdoc-args = ["-C", "target-feature=+avx,+avx2,+avx512f,+avx512bw", "--cfg", "docsrs"]

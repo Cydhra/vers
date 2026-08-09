@@ -1,5 +1,5 @@
 use crate::rmq::sparse::SparseRmq;
-use rand::RngCore;
+use rand::Rng;
 
 #[test]
 fn small_test() {
@@ -17,7 +17,7 @@ fn small_test() {
 
 #[test]
 fn randomized_test() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     const L: usize = 100;
 
     let mut numbers_vec = Vec::with_capacity(L);

@@ -1,5 +1,5 @@
 use super::*;
-use rand::RngCore;
+use rand::Rng;
 
 #[test]
 fn test_small_bit_vector_rank0() {
@@ -62,7 +62,7 @@ fn test_fast_rmq() {
 
 #[test]
 fn test_fast_rmq_unsorted() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     const L: usize = 2 * BLOCK_SIZE;
 
     let mut numbers_vec = Vec::with_capacity(L);

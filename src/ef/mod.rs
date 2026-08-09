@@ -56,6 +56,7 @@ const BIN_SEARCH_THRESHOLD: u64 = 4;
 /// ```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
 pub struct EliasFanoVec {
     upper_vec: RsVec,
     lower_vec: BitVec,
@@ -377,9 +378,10 @@ impl EliasFanoVec {
                             }
                         }
 
-                        // update the cursor because we use it for the final index calculation
+                        // `final_bound` is absolute; the final return adds `start_index_lower`,
+                        // so we have to subtract it here to match the relative cursor coming out of the linear search.
                         if INDEX {
-                            cursor = final_bound as i64 + direction;
+                            cursor = final_bound as i64 + direction - start_index_lower as i64;
                         }
                         break;
                     }
@@ -387,8 +389,7 @@ impl EliasFanoVec {
 
                 return if INDEX {
                     // the loop ended because the element at cursor has a larger upper index,
-                    // so we return the previous element count
-                    // (element at curser - 1, +1 because count is not 0 based)
+                    // so we return the previous element count (element at curser - 1 + 1 because count is not 0 based)
                     start_index_lower + cursor as u64
                 } else {
                     (query_masked_upper | lower_candidate) + self.universe_zero

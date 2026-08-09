@@ -46,11 +46,17 @@
 //! The intrinsics do not operate on addresses, so even if they were to be implemented incorrectly,
 //! no memory safety issues would arise.
 //!
+//! The `simd` crate feature adds SIMD implementations to some of the operations (notably `select`)
+//! which do operate on pointers.
+//!
 //! # Crate Features
 //! - `simd` (disabled by default): Enables the use of SIMD instructions in the `RsVec`
 //!   implementation, and an additional iterator for the `RsVec` data structure.
 //! - `serde` (disabled by default): Enables serialization and deserialization support for all
 //!   data structures in this crate using the `serde` crate.
+//! - `mem_dbg` (disabled by default): Enables support for the `mem_dbg` crate on all structures,
+//!   providing memory layout debugging capabilities, as well as a more granular function to
+//!   calculate memory usage than `heap_size()`.
 //! - `bp_u16_lookup` (disabled by default): Uses a 16-bit lookup table for the balanced parenthesis
 //!   tree data structure. This is faster, but requires 128 KiB instead of 4 KiB.
 

@@ -51,7 +51,7 @@ const LOOKUP_MAX_VALUE: u32 = u8::MAX as u32;
 ///
 /// The rest of the bits are zero.
 #[allow(long_running_const_eval)]
-const PAREN_BLOCK_LOOKUP: [EncodedTableType; 1 << LOOKUP_BLOCK_SIZE] = calculate_lookup_table();
+static PAREN_BLOCK_LOOKUP: [EncodedTableType; 1 << LOOKUP_BLOCK_SIZE] = calculate_lookup_table();
 
 /// Offset to add to encoded excess values, so negative numbers are stored as positive integers, reducing
 /// encoding complexity
@@ -60,9 +60,9 @@ const ENCODING_OFFSET: i32 = LOOKUP_BLOCK_SIZE as i32;
 
 /// Bitmask for one of the lookup values.
 #[cfg(feature = "bp_u16_lookup")]
-const ENCODING_MASK: EncodedTableType = 0b111111;
+const ENCODING_MASK: EncodedTableType = 0b11_1111;
 #[cfg(not(feature = "bp_u16_lookup"))]
-const ENCODING_MASK: EncodedTableType = 0b11111;
+const ENCODING_MASK: EncodedTableType = 0b1_1111;
 
 /// Where in the encoded bit pattern to store minimum excess
 #[cfg(feature = "bp_u16_lookup")]

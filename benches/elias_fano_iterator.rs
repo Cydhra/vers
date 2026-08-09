@@ -1,22 +1,22 @@
+use std::hint::black_box;
 use std::time::{Duration, Instant};
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use rand::distributions::Standard;
-use rand::{thread_rng, Rng};
-
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use rand::distr::StandardUniform;
+use rand::RngExt;
 use vers_vecs::EliasFanoVec;
 
 mod common;
 
 fn bench_ef(b: &mut Criterion) {
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     let mut group = b.benchmark_group("Elias-Fano: Iteration");
     group.plot_config(common::plot_config());
 
     for l in common::SIZES {
         let mut sequence = (&mut rng)
-            .sample_iter(Standard)
+            .sample_iter(StandardUniform)
             .take(l)
             .collect::<Vec<u64>>();
         sequence.sort_unstable();

@@ -1,13 +1,13 @@
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
-use rand::distributions::Standard;
-use rand::{thread_rng, Rng};
-
+use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
+use rand::distr::StandardUniform;
+use rand::{rng, RngExt};
+use std::hint::black_box;
 use vers_vecs::EliasFanoVec;
 
 mod common;
 
 fn bench_ef(b: &mut Criterion) {
-    let mut rng = thread_rng();
+    let mut rng = rng();
 
     let mut group = b.benchmark_group("Elias-Fano: Construction");
 
@@ -16,7 +16,7 @@ fn bench_ef(b: &mut Criterion) {
             b.iter_batched(
                 || {
                     let mut sequence = (&mut rng)
-                        .sample_iter(Standard)
+                        .sample_iter(StandardUniform)
                         .take(l)
                         .collect::<Vec<u64>>();
                     sequence.sort_unstable();

@@ -44,6 +44,7 @@ use crate::{BitVec, EliasFanoVec};
 /// [`from_bitvec_inverted`]: #method.from_bitvec_inverted
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
 pub struct SparseRsVec {
     vec: EliasFanoVec,
     len: u64,
@@ -257,7 +258,7 @@ mod tests {
     use super::SparseRsVec;
     use crate::BitVec;
     use rand::prelude::StdRng;
-    use rand::{Rng, SeedableRng};
+    use rand::{RngExt, SeedableRng};
 
     #[test]
     fn test_sparse_rank() {
@@ -390,7 +391,7 @@ mod tests {
         let mut rng = StdRng::from_seed([0; 32]);
 
         for _ in 0..L / 4 {
-            bv.flip_bit(rng.gen_range(0..L));
+            bv.flip_bit(rng.random_range(0..L));
         }
 
         let sparse = SparseRsVec::from_bitvec(&bv);

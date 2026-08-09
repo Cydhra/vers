@@ -1,10 +1,11 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use std::hint::black_box;
 use std::time::{Duration, Instant};
 
 mod common;
 
 fn bench_select_iter(b: &mut Criterion) {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     let mut group = b.benchmark_group("Select Iterator: Randomized Input");
     group.plot_config(common::plot_config());

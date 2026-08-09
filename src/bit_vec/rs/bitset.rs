@@ -6,8 +6,8 @@
 use crate::RsVec;
 use std::mem::size_of;
 
-/// The number of bits in a RsVec that can be processed by AVX instructions at once.
-const VECTOR_SIZE: u64 = 16;
+/// The number of bits in a `RsVec` that can be processed by AVX instructions at once.
+const VECTOR_SIZE: usize = 16;
 
 // add iterator functions to RsVec
 impl RsVec {
@@ -73,22 +73,20 @@ impl RsVec {
 /// [`bit_set_iter0`]: RsVec::bit_set_iter0
 /// [`bit_set_iter1`]: RsVec::bit_set_iter1
 /// [`SelectIter`]: super::SelectIter
-#[allow(clippy::cast_possible_truncation)]
 pub struct BitSetIter<'a, const ZERO: bool> {
     vec: &'a RsVec,
     base: u64,
-    offsets: [u32; VECTOR_SIZE as usize],
+    offsets: [u32; VECTOR_SIZE],
     content_len: u8,
     cursor: u8,
 }
 
 impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
     pub(super) fn new(vec: &'a RsVec) -> Self {
-        #[allow(clippy::cast_possible_truncation)]
         let mut iter = Self {
             vec,
             base: 0,
-            offsets: [0; VECTOR_SIZE as usize],
+            offsets: [0; VECTOR_SIZE],
             content_len: 0,
             cursor: 0,
         };
@@ -105,10 +103,7 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
 
         unsafe {
             let offsets = _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-            assert!(
-                VECTOR_SIZE <= size_of::<u16>() as u64 * 8,
-                "change data types"
-            );
+            assert!(VECTOR_SIZE <= size_of::<u16>() * 8, "change data types");
             let mut mask = __mmask16::from(data);
             if ZERO {
                 mask = !mask;

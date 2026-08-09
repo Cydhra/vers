@@ -1,6 +1,6 @@
 use super::*;
 use rand::prelude::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use std::cmp::{max, min};
 
 #[test]
@@ -28,8 +28,8 @@ fn test_wavelet_encoding_randomized() {
     let mut rng = StdRng::from_seed([1; 32]);
 
     for _ in 0..100 {
-        let data: Vec<u8> = (0..rng.gen_range(500..1000))
-            .map(|_| rng.gen_range(0..=u8::MAX))
+        let data: Vec<u8> = (0..rng.random_range(500..1000))
+            .map(|_| rng.random_range(0..=u8::MAX))
             .collect();
         let data_u64: Vec<u64> = data.iter().map(|&x| x as u64).collect();
         let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
@@ -127,7 +127,7 @@ fn test_empty_vec_rank() {
 fn test_rank_randomized() {
     let mut rng = StdRng::from_seed([100; 32]);
 
-    let data: Vec<u8> = (0..1000).map(|_| rng.gen_range(0..=u8::MAX)).collect();
+    let data: Vec<u8> = (0..1000).map(|_| rng.random_range(0..=u8::MAX)).collect();
 
     let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
 
@@ -265,19 +265,19 @@ fn test_quantile() {
 fn test_quantile_randomized() {
     let mut rng = StdRng::from_seed([100; 32]);
 
-    let data: Vec<u8> = (0..1000).map(|_| rng.gen_range(0..=u8::MAX)).collect();
+    let data: Vec<u8> = (0..1000).map(|_| rng.random_range(0..=u8::MAX)).collect();
 
     let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
 
     for _ in 0..1000 {
-        let range_i = rng.gen_range(0..data.len() as u64);
-        let range_j = rng.gen_range(0..data.len() as u64);
+        let range_i = rng.random_range(0..data.len() as u64);
+        let range_j = rng.random_range(0..data.len() as u64);
         let range = min(range_i, range_j)..max(range_i, range_j);
 
         let k = if range.is_empty() {
             0
         } else {
-            rng.gen_range(range.clone()) - range.start
+            rng.random_range(range.clone()) - range.start
         };
 
         let mut range_data = data[range.start as usize..range.end as usize].to_vec();
@@ -597,14 +597,14 @@ fn test_successor_large_gap() {
 fn test_pred_succ_randomized() {
     let mut rng = StdRng::from_seed([100; 32]);
 
-    let data: Vec<u64> = (0..1000).map(|_| rng.gen_range(0..=u64::MAX)).collect();
+    let data: Vec<u64> = (0..1000).map(|_| rng.random_range(0..=u64::MAX)).collect();
     let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u64(&data, 64), 64);
 
     let mut sorted_data = data.clone();
     sorted_data.sort();
 
     for _ in 0..1000 {
-        let query = rng.gen_range(0..u64::MAX);
+        let query = rng.random_range(0..u64::MAX);
 
         let pred = sorted_data
             .iter()
@@ -693,7 +693,7 @@ fn test_wavelet_iter_randomized() {
     let mut rng = StdRng::from_seed([100; 32]);
 
     for _ in 0..50 {
-        let data: Vec<u8> = (0..1000).map(|_| rng.gen_range(0..=u8::MAX)).collect();
+        let data: Vec<u8> = (0..1000).map(|_| rng.random_range(0..=u8::MAX)).collect();
         let wavelet = WaveletMatrix::from_bit_vec(&BitVec::pack_sequence_u8(&data, 8), 8);
 
         let mut iter = wavelet.iter();
