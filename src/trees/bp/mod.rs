@@ -20,15 +20,10 @@ mod builder;
 // re-export the builders toplevel
 pub use builder::BpBuilder;
 
-#[cfg(feature = "bp_u16_lookup")]
+#[cfg_attr(feature = "bp_u16_lookup", path = "lookup_table.rs")]
+#[cfg_attr(not(feature = "bp_u16_lookup"), path = "lookup_bitwise.rs")]
 mod lookup;
-#[cfg(feature = "bp_u16_lookup")]
 use lookup::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
-
-#[cfg(not(feature = "bp_u16_lookup"))]
-mod lookup_query;
-#[cfg(not(feature = "bp_u16_lookup"))]
-use lookup_query::{process_block_bwd, process_block_fwd, LOOKUP_BLOCK_SIZE};
 
 /// A succinct tree data structure based on balanced parenthesis expressions.
 /// A tree with `n` nodes is encoded in a bit vector using `2n` bits plus the rank/select overhead
