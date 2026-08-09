@@ -87,7 +87,7 @@ impl WaveletMatrix {
         num_elements: u64,
         bit_lookup: LOOKUP,
     ) -> Self {
-        let element_len = bits_per_element as u64;
+        let element_len = u64::from(bits_per_element);
 
         #[allow(clippy::cast_possible_truncation)]
         let mut data = vec![BitVec::from_zeros(num_elements); element_len as usize];
@@ -147,10 +147,10 @@ impl WaveletMatrix {
     /// Panics if the number of bits in the bit vector is not a multiple of the number of bits per element.
     #[must_use]
     pub fn from_bit_vec(bit_vec: &BitVec, bits_per_element: u16) -> Self {
-        assert_eq!(bit_vec.len() % bits_per_element as u64, 0, "The number of bits in the bit vector must be a multiple of the number of bits per element.");
-        let num_elements = bit_vec.len() / bits_per_element as u64;
+        assert_eq!(bit_vec.len() % u64::from(bits_per_element), 0, "The number of bits in the bit vector must be a multiple of the number of bits per element.");
+        let num_elements = bit_vec.len() / u64::from(bits_per_element);
         Self::permutation_sorting(bits_per_element, num_elements, |element, bit| {
-            bit_vec.get_unchecked(element * bits_per_element as u64 + bit)
+            bit_vec.get_unchecked(element * u64::from(bits_per_element) + bit)
         })
     }
 
@@ -192,7 +192,7 @@ impl WaveletMatrix {
         bit_lookup: LOOKUP,
         element_lookup: ELEMENT,
     ) -> Self {
-        let element_len = bits_per_element as u64;
+        let element_len = u64::from(bits_per_element);
         let mut histogram = vec![0u64; 1 << bits_per_element];
         let mut borders = vec![0u64; 1 << bits_per_element];
         #[allow(clippy::cast_possible_truncation)]
@@ -255,19 +255,19 @@ impl WaveletMatrix {
     /// [`from_slice`]: WaveletMatrix::from_slice
     #[must_use]
     pub fn from_bit_vec_pc(bit_vec: &BitVec, bits_per_element: u16) -> Self {
-        assert_eq!(bit_vec.len() % bits_per_element as u64, 0, "The number of bits in the bit vector must be a multiple of the number of bits per element.");
+        assert_eq!(bit_vec.len() % u64::from(bits_per_element), 0, "The number of bits in the bit vector must be a multiple of the number of bits per element.");
         assert!(
             bits_per_element <= 64,
             "The number of bits per element cannot exceed 64."
         );
-        let num_elements = bit_vec.len() / bits_per_element as u64;
+        let num_elements = bit_vec.len() / u64::from(bits_per_element);
         Self::prefix_counting(
             bits_per_element,
             num_elements,
-            |element, bit| bit_vec.get_unchecked(element * bits_per_element as u64 + bit),
+            |element, bit| bit_vec.get_unchecked(element * u64::from(bits_per_element) + bit),
             |element| {
                 bit_vec
-                    .get_bits_unchecked(element * bits_per_element as u64, bits_per_element as u64)
+                    .get_bits_unchecked(element * u64::from(bits_per_element), u64::from(bits_per_element))
             },
         )
     }

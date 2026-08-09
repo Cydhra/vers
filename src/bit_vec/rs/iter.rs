@@ -153,11 +153,11 @@ macro_rules! gen_iter_impl {
                     // OR if the next block has a rank higher than the current rank
                     if self.last_block % (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize == 15
                         || self.vec.blocks.len() > self.last_block + 1
-                            && self.vec.blocks[self.last_block + 1].zeros as u64 > rank
+                            && u64::from(self.vec.blocks[self.last_block + 1].zeros) > rank
                     {
                         // instantly jump to the last searched position
                         block_index = self.last_block;
-                        rank -= self.vec.blocks[block_index].zeros as u64;
+                        rank -= u64::from(self.vec.blocks[block_index].zeros);
                     }
                 } else {
                     super_block = self.vec.search_super_block0(super_block, rank);
@@ -171,7 +171,7 @@ macro_rules! gen_iter_impl {
                     self.vec.search_block0(rank, &mut block_index);
 
                     self.last_block = block_index;
-                    rank -= self.vec.blocks[block_index].zeros as u64;
+                    rank -= u64::from(self.vec.blocks[block_index].zeros);
                 }
 
                 self.next_rank += 1;
@@ -198,11 +198,11 @@ macro_rules! gen_iter_impl {
                     // check if current block contains the one and if yes, we don't need to search
                     // this is true IF the zeros before the last block are less than the rank,
                     // since the block before then can't contain it
-                    if self.vec.blocks[self.last_block_back].zeros as u64 <= rank
+                    if u64::from(self.vec.blocks[self.last_block_back].zeros) <= rank
                     {
                         // instantly jump to the last searched position
                         block_index = self.last_block_back;
-                        rank -= self.vec.blocks[block_index].zeros as u64;
+                        rank -= u64::from(self.vec.blocks[block_index].zeros);
                     }
                 } else {
                     super_block = self.vec.search_super_block0(super_block, rank);
@@ -216,7 +216,7 @@ macro_rules! gen_iter_impl {
                     self.vec.search_block0(rank, &mut block_index);
 
                     self.last_block_back = block_index;
-                    rank -= self.vec.blocks[block_index].zeros as u64;
+                    rank -= u64::from(self.vec.blocks[block_index].zeros);
                 }
 
                 self.next_rank_back = self.next_rank_back.and_then(|x| if x > 0 { Some(x - 1) } else { None });
@@ -253,14 +253,14 @@ macro_rules! gen_iter_impl {
                     if self.last_block as u64 % (SUPER_BLOCK_SIZE / BLOCK_SIZE) == 15
                         || self.vec.blocks.len() > self.last_block + 1
                             && (self.last_block + 1 - block_at_super_block) as u64 * BLOCK_SIZE
-                                - self.vec.blocks[self.last_block + 1].zeros as u64
+                                - u64::from(self.vec.blocks[self.last_block + 1].zeros)
                                 > rank
                     {
                         // instantly jump to the last searched position
                         block_index = self.last_block;
                         let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize;
                         rank -= (block_index - block_at_super_block) as u64 * BLOCK_SIZE
-                            - self.vec.blocks[block_index].zeros as u64;
+                            - u64::from(self.vec.blocks[block_index].zeros);
                     }
                 } else {
                     super_block = self.vec.search_super_block1(super_block, rank);
@@ -280,7 +280,7 @@ macro_rules! gen_iter_impl {
 
                     self.last_block = block_index;
                     rank -= (block_index - block_at_super_block) as u64 * BLOCK_SIZE
-                        - self.vec.blocks[block_index].zeros as u64;
+                        - u64::from(self.vec.blocks[block_index].zeros);
                 }
 
                 self.next_rank += 1;
@@ -313,14 +313,14 @@ macro_rules! gen_iter_impl {
                     // this is true IF the ones before the last block are less than the rank,
                     // since the block before then can't contain it
                     if (self.last_block_back - block_at_super_block) as u64 * BLOCK_SIZE
-                        - self.vec.blocks[self.last_block_back].zeros as u64
+                        - u64::from(self.vec.blocks[self.last_block_back].zeros)
                             <= rank
                     {
                         // instantly jump to the last searched position
                         block_index = self.last_block_back;
                         let block_at_super_block = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize;
                         rank -= (block_index - block_at_super_block) as u64 * BLOCK_SIZE
-                            - self.vec.blocks[block_index].zeros as u64;
+                            - u64::from(self.vec.blocks[block_index].zeros);
                     }
                 } else {
                     super_block = self.vec.search_super_block1(super_block, rank);
@@ -340,7 +340,7 @@ macro_rules! gen_iter_impl {
 
                     self.last_block_back = block_index;
                     rank -= (block_index - block_at_super_block) as u64 * BLOCK_SIZE
-                        - self.vec.blocks[block_index].zeros as u64;
+                        - u64::from(self.vec.blocks[block_index].zeros);
                 }
 
                 self.next_rank_back = self.next_rank_back.and_then(|x| if x > 0 { Some(x - 1) } else { None });

@@ -148,12 +148,12 @@ impl RsVec {
             // count the zeros in the current word and add them to the counter
             // the last word may contain padding zeros, which should not be counted,
             // but since we do not append the last block descriptor, this is not a problem
-            let mut new_zeros = word.count_zeros() as u64;
+            let mut new_zeros = u64::from(word.count_zeros());
 
             // in the last block, remove remaining zeros of limb that aren't part of the vector
             if word_idx == vec.data.len() - 1 && !vec.len.is_multiple_of(WORD_SIZE) {
                 let mask = (1 << (vec.len % WORD_SIZE)) - 1;
-                new_zeros -= (word | mask).count_zeros() as u64;
+                new_zeros -= u64::from((word | mask).count_zeros());
             }
 
             let all_zeros = total_zeros + current_zeros + new_zeros;
@@ -287,25 +287,25 @@ impl RsVec {
 
         // then add the number of zeros/ones before the current block
         rank += if zero {
-            self.blocks[block_index].zeros as u64
+            u64::from(self.blocks[block_index].zeros)
         } else {
             ((block_index as u64 % (SUPER_BLOCK_SIZE / BLOCK_SIZE)) * BLOCK_SIZE)
-                - self.blocks[block_index].zeros as u64
+                - u64::from(self.blocks[block_index].zeros)
         };
 
         // naive popcount of blocks
         for &i in &self.data[((block_index as u64 * BLOCK_SIZE) / WORD_SIZE) as usize..index] {
             rank += if zero {
-                i.count_zeros() as u64
+                u64::from(i.count_zeros())
             } else {
-                i.count_ones() as u64
+                u64::from(i.count_ones())
             };
         }
 
         rank += if zero {
-            (!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as u64
+            u64::from((!self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones())
         } else {
-            (self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones() as u64
+            u64::from((self.data[index] & ((1 << (pos % WORD_SIZE)) - 1)).count_ones())
         };
 
         rank

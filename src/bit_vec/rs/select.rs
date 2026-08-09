@@ -35,7 +35,7 @@ impl super::RsVec {
         let mut block_index = super_block * (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize;
         self.search_block0(rank, &mut block_index);
 
-        rank -= self.blocks[block_index].zeros as u64;
+        rank -= u64::from(self.blocks[block_index].zeros);
 
         self.search_word_in_block0(rank, block_index)
     }
@@ -111,7 +111,7 @@ impl super::RsVec {
         unroll_n!(4,
             |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize / 2}|
                 // do not use select_unpredictable here, it degrades performance
-                if self.blocks.len() > *block_index + boundary && rank >= self.blocks[*block_index + boundary].zeros as u64 {
+                if self.blocks.len() > *block_index + boundary && rank >= u64::from(self.blocks[*block_index + boundary].zeros) {
                     *block_index += boundary;
                 },
             boundary /= 2);
@@ -135,13 +135,13 @@ impl super::RsVec {
         debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
         unroll_n!(7, |n = {0}| {
                     let word = self.data[block_index * (BLOCK_SIZE / WORD_SIZE) as usize + n];
-                    if (word.count_zeros() as u64) <= rank {
-                        rank -= word.count_zeros() as u64;
+                    if u64::from(word.count_zeros()) <= rank {
+                        rank -= u64::from(word.count_zeros());
                         index_counter += WORD_SIZE;
                     } else {
                         return block_index as u64 * BLOCK_SIZE
                             + index_counter
-                            + (1 << rank).pdep(!word).trailing_zeros() as u64;
+                            + u64::from((1 << rank).pdep(!word).trailing_zeros());
                     }
                 }, n += 1);
 
@@ -149,9 +149,9 @@ impl super::RsVec {
         // block, and thus outside the bitvector
         block_index as u64 * BLOCK_SIZE
             + index_counter
-            + (1 << rank)
+            + u64::from((1 << rank)
                 .pdep(!self.data[block_index * (BLOCK_SIZE / WORD_SIZE) as usize + 7])
-                .trailing_zeros() as u64
+                .trailing_zeros())
     }
 
     /// Search for the superblock that contains the rank.
@@ -217,7 +217,7 @@ impl super::RsVec {
         self.search_block1(rank, block_at_super_block, &mut block_index);
 
         rank -= (block_index - block_at_super_block) as u64 * BLOCK_SIZE
-            - self.blocks[block_index].zeros as u64;
+            - u64::from(self.blocks[block_index].zeros);
 
         self.search_word_in_block1(rank, block_index)
     }
@@ -330,7 +330,7 @@ impl super::RsVec {
         unroll_n!(4,
             |boundary = { (SUPER_BLOCK_SIZE / BLOCK_SIZE) as usize / 2}|
                 // do not use select_unpredictable here, it degrades performance
-                if self.blocks.len() > *block_index + boundary && rank >= (*block_index + boundary - block_at_super_block) as u64 * BLOCK_SIZE - self.blocks[*block_index + boundary].zeros as u64 {
+                if self.blocks.len() > *block_index + boundary && rank >= (*block_index + boundary - block_at_super_block) as u64 * BLOCK_SIZE - u64::from(self.blocks[*block_index + boundary].zeros) {
                     *block_index += boundary;
                 },
             boundary /= 2);
@@ -354,13 +354,13 @@ impl super::RsVec {
         debug_assert!(BLOCK_SIZE / WORD_SIZE == 8, "change unroll constant");
         unroll_n!(7, |n = {0}| {
             let word = self.data[block_index * (BLOCK_SIZE / WORD_SIZE) as usize + n];
-            if (word.count_ones() as u64) <= rank {
-                rank -= word.count_ones() as u64;
+            if u64::from(word.count_ones()) <= rank {
+                rank -= u64::from(word.count_ones());
                 index_counter += WORD_SIZE;
             } else {
                 return block_index as u64 * BLOCK_SIZE
                     + index_counter
-                    + (1 << rank).pdep(word).trailing_zeros() as u64;
+                    + u64::from((1 << rank).pdep(word).trailing_zeros());
             }
         }, n += 1);
 
@@ -368,9 +368,9 @@ impl super::RsVec {
         // block, and thus outside of the bitvector
         block_index as u64 * BLOCK_SIZE
             + index_counter
-            + (1 << rank)
+            + u64::from((1 << rank)
                 .pdep(self.data[block_index * (BLOCK_SIZE / WORD_SIZE) as usize + 7])
-                .trailing_zeros() as u64
+                .trailing_zeros())
     }
 
     /// Search for the superblock that contains the rank.
@@ -452,16 +452,16 @@ impl super::RsVec {
         {
             // successor is in current block
             if block_idx % (BLOCKS_PER_SUPERBLOCK as usize) == (BLOCKS_PER_SUPERBLOCK - 1) as usize
-                || self.blocks[block_idx + 1].zeros as u64 > rank
+                || u64::from(self.blocks[block_idx + 1].zeros) > rank
             {
-                rank -= self.blocks[block_idx].zeros as u64;
+                rank -= u64::from(self.blocks[block_idx].zeros);
                 return Some(self.search_word_in_block0(rank, block_idx));
             }
 
             block_idx = super_block_idx * (BLOCKS_PER_SUPERBLOCK as usize);
             self.search_block0(rank, &mut block_idx);
 
-            rank -= self.blocks[block_idx].zeros as u64;
+            rank -= u64::from(self.blocks[block_idx].zeros);
 
             Some(self.search_word_in_block0(rank, block_idx))
         } else {
@@ -522,11 +522,11 @@ impl super::RsVec {
             // successor is in current block
             if block_idx % BLOCKS_PER_SUPERBLOCK as usize == (BLOCKS_PER_SUPERBLOCK - 1) as usize
                 || (block_idx + 1 - block_at_super_block) as u64 * BLOCK_SIZE
-                    - self.blocks[block_idx + 1].zeros as u64
+                    - u64::from(self.blocks[block_idx + 1].zeros)
                     > rank
             {
                 let block_ones = (block_idx - block_at_super_block) as u64 * BLOCK_SIZE
-                    - self.blocks[block_idx].zeros as u64;
+                    - u64::from(self.blocks[block_idx].zeros);
                 rank -= block_ones;
                 return Some(self.search_word_in_block1(rank, block_idx));
             }
@@ -534,7 +534,7 @@ impl super::RsVec {
             block_idx = block_at_super_block;
             self.search_block1(rank, block_at_super_block, &mut block_idx);
             rank -= (block_idx - block_at_super_block) as u64 * BLOCK_SIZE
-                - self.blocks[block_idx].zeros as u64;
+                - u64::from(self.blocks[block_idx].zeros);
 
             Some(self.search_word_in_block1(rank, block_idx))
         } else {
@@ -580,15 +580,15 @@ impl super::RsVec {
             rank -= self.super_blocks[super_block_idx].zeros;
 
             // predecessor is in current block
-            if (self.blocks[block_idx].zeros as u64) < rank {
-                rank -= self.blocks[block_idx].zeros as u64;
+            if u64::from(self.blocks[block_idx].zeros) < rank {
+                rank -= u64::from(self.blocks[block_idx].zeros);
                 return Some(self.search_word_in_block0(rank, block_idx));
             }
 
             block_idx = super_block_idx * BLOCKS_PER_SUPERBLOCK as usize;
             self.search_block0(rank, &mut block_idx);
 
-            rank -= self.blocks[block_idx].zeros as u64;
+            rank -= u64::from(self.blocks[block_idx].zeros);
 
             Some(self.search_word_in_block0(rank, block_idx))
         } else {
@@ -638,7 +638,7 @@ impl super::RsVec {
             #[allow(clippy::cast_possible_truncation)] // casting on constants cant be that unsafe
             let block_at_super_block = super_block_idx * BLOCKS_PER_SUPERBLOCK as usize;
             let block_ones = (block_idx - block_at_super_block) as u64 * BLOCK_SIZE
-                - self.blocks[block_idx].zeros as u64;
+                - u64::from(self.blocks[block_idx].zeros);
             // predecessor is in current block
             if block_ones < rank {
                 rank -= block_ones;
@@ -648,7 +648,7 @@ impl super::RsVec {
             block_idx = block_at_super_block;
             self.search_block1(rank, block_at_super_block, &mut block_idx);
             rank -= (block_idx - block_at_super_block) as u64 * BLOCK_SIZE
-                - self.blocks[block_idx].zeros as u64;
+                - u64::from(self.blocks[block_idx].zeros);
 
             Some(self.search_word_in_block1(rank, block_idx))
         } else {
