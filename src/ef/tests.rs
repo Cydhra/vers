@@ -62,10 +62,10 @@ fn test_randomized_elias_fano() {
 
     let ef = EliasFanoVec::from_slice(&seq);
 
-    assert_eq!(ef.len(), seq.len());
+    assert_eq!(ef.len(), seq.len() as u64);
 
     for (i, &v) in seq.iter().enumerate() {
-        assert_eq!(ef.get_unchecked(i), v);
+        assert_eq!(ef.get_unchecked(i as u64), v);
     }
 
     for _ in 0..1000 {
@@ -110,7 +110,7 @@ fn test_clustered_ef() {
 
     let ef = EliasFanoVec::from_slice(&seq);
     for (i, &x) in seq.iter().enumerate() {
-        assert_eq!(ef.get_unchecked(i), x, "expected {:b}", x);
+        assert_eq!(ef.get_unchecked(i as u64), x, "expected {:b}", x);
         assert_eq!(ef.predecessor_unchecked(x), x);
         assert_eq!(ef.successor_unchecked(x), x);
     }
@@ -398,10 +398,10 @@ fn test_randomized_elias_fano_successor() {
 
     let ef = EliasFanoVec::from_slice(&seq);
 
-    assert_eq!(ef.len(), seq.len());
+    assert_eq!(ef.len(), seq.len() as u64);
 
     for (i, &v) in seq.iter().enumerate() {
-        assert_eq!(ef.get_unchecked(i), v);
+        assert_eq!(ef.get_unchecked(i as u64), v);
     }
 
     for _ in 0..1000 {
@@ -601,12 +601,12 @@ fn test_giant_vector() {
         .enumerate()
         .map(|(i, v)| (i + L - OFFSET, v))
     {
-        assert_eq!(ef.get(index), Some(value));
+        assert_eq!(ef.get(index as u64), Some(value));
         assert_eq!(ef.rank(data[index]), predecessor as u64 + 1);
         assert_eq!(ef.predecessor(value).unwrap(), value);
         assert_eq!(ef.predecessor(value - 1).unwrap(), data[predecessor]);
         assert_eq!(ef.successor(value).unwrap(), value);
-        assert_eq!(ef.delta(index).unwrap(), value - data[index - 1]);
+        assert_eq!(ef.delta(index as u64).unwrap(), value - data[index - 1]);
 
         // update predecessor
         if value > data[predecessor] {
@@ -630,5 +630,5 @@ fn test_giant_successor_gap() {
 
     assert_eq!(ef.successor(2), Some(3));
     assert_eq!(ef.predecessor(2), Some(1));
-    assert_eq!(ef.delta(L - 3), Some(2));
+    assert_eq!(ef.delta((L - 3) as u64), Some(2));
 }

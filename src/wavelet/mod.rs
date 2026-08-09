@@ -13,6 +13,7 @@ use crate::util::impl_vector_iterator;
 use crate::{BitVec, RsVec};
 use std::mem;
 use std::ops::Range;
+use crate::bit_vec::Bits;
 
 /// A wavelet matrix implementation implemented as described in
 /// [Navarro and Claude, 2021](http://dx.doi.org/10.1007/978-3-642-34109-0_18).
@@ -82,28 +83,31 @@ impl WaveletMatrix {
     /// - `num_elements`: The number of elements in the sequence.
     /// - `bit_lookup`: A closure that returns the `bit`-th bit of the `element`-th word.
     #[inline(always)] // should get rid of closures in favor of static calls
-    fn permutation_sorting<LOOKUP: Fn(usize, usize) -> u64>(
+    fn permutation_sorting<LOOKUP: Fn(u64, u64) -> u64>(
         bits_per_element: u16,
-        num_elements: usize,
+        num_elements: u64,
         bit_lookup: LOOKUP,
     ) -> Self {
-        let element_len = bits_per_element as usize;
+        let element_len = u64::from(bits_per_element);
 
-        let mut data = vec![BitVec::from_zeros(num_elements); element_len];
+        #[allow(clippy::cast_possible_truncation)]
+        let mut data = vec![BitVec::from_zeros(num_elements); element_len as usize];
 
         // insert the first bit of each word into the first bit vector
         // for each following level, insert the next bit of each word into the next bit vector
         // sorted stably by the previous bit vector
         let mut permutation = (0..num_elements).collect::<Vec<_>>();
-        let mut next_permutation = vec![0; num_elements];
+        #[allow(clippy::cast_possible_truncation)]
+        let mut next_permutation = vec![0; num_elements as usize];
 
         for (level, data) in data.iter_mut().enumerate() {
+            let level = level as u64;
             let mut total_zeros = 0;
             for (i, p) in permutation.iter().enumerate() {
                 if bit_lookup(*p, element_len - level - 1) == 0 {
                     total_zeros += 1;
                 } else {
-                    data.set(i, 1).unwrap();
+                    data.set(i as u64, 1).unwrap();
                 }
             }
 
@@ -113,7 +117,7 @@ impl WaveletMatrix {
                 let mut zero_boundary = 0;
                 let mut one_boundary = total_zeros;
                 for (i, p) in permutation.iter().enumerate() {
-                    if data.get_unchecked(i) == 0 {
+                    if data.get_unchecked(i as u64) == 0 {
                         next_permutation[zero_boundary] = *p;
                         zero_boundary += 1;
                     } else {
@@ -144,10 +148,10 @@ impl WaveletMatrix {
     /// Panics if the number of bits in the bit vector is not a multiple of the number of bits per element.
     #[must_use]
     pub fn from_bit_vec(bit_vec: &BitVec, bits_per_element: u16) -> Self {
-        assert_eq!(bit_vec.len() % bits_per_element as usize, 0, "The number of bits in the bit vector must be a multiple of the number of bits per element.");
-        let num_elements = bit_vec.len() / bits_per_element as usize;
+        assert_eq!(bit_vec.len() % u64::from(bits_per_element), 0, "The number of bits in the bit vector must be a multiple of the number of bits per element.");
+        let num_elements = bit_vec.len() / u64::from(bits_per_element);
         Self::permutation_sorting(bits_per_element, num_elements, |element, bit| {
-            bit_vec.get_unchecked(element * bits_per_element as usize + bit)
+            bit_vec.get_unchecked(element * u64::from(bits_per_element) + bit)
         })
     }
 
@@ -166,8 +170,10 @@ impl WaveletMatrix {
             bits_per_element <= 64,
             "The number of bits per element cannot exceed 64."
         );
-        Self::permutation_sorting(bits_per_element, sequence.len(), |element, bit| {
-            (sequence[element] >> bit) & 1
+        #[allow(clippy::cast_possible_truncation)]
+        // safe because the closure is only called with indices of `sequence`
+        Self::permutation_sorting(bits_per_element, sequence.len() as u64, |element, bit| {
+            (sequence[element as usize] >> bit) & 1
         })
     }
 
@@ -181,17 +187,19 @@ impl WaveletMatrix {
     /// - `bit_lookup`: A closure that returns the `bit`-th bit of the `element`-th word.
     /// - `element_lookup`: A closure that returns the `element`-th word.
     #[inline(always)] // should get rid of closures in favor of static calls
-    fn prefix_counting<LOOKUP: Fn(usize, usize) -> u64, ELEMENT: Fn(usize) -> u64>(
+    fn prefix_counting<LOOKUP: Fn(u64, u64) -> u64, ELEMENT: Fn(u64) -> u64>(
         bits_per_element: u16,
-        num_elements: usize,
+        num_elements: u64,
         bit_lookup: LOOKUP,
         element_lookup: ELEMENT,
     ) -> Self {
-        let element_len = bits_per_element as usize;
-        let mut histogram = vec![0usize; 1 << bits_per_element];
-        let mut borders = vec![0usize; 1 << bits_per_element];
-        let mut data = vec![BitVec::from_zeros(num_elements); element_len];
+        let element_len = u64::from(bits_per_element);
+        let mut histogram = vec![0u64; 1 << bits_per_element];
+        let mut borders = vec![0u64; 1 << bits_per_element];
+        #[allow(clippy::cast_possible_truncation)]
+        let mut data = vec![BitVec::from_zeros(num_elements); element_len as usize];
 
+        #[allow(clippy::cast_possible_truncation)] // element_lookup only returns small values
         for i in 0..num_elements {
             histogram[element_lookup(i) as usize] += 1;
             data[0].set_unchecked(i, bit_lookup(i, element_len - 1));
@@ -212,9 +220,10 @@ impl WaveletMatrix {
                     borders[h_minus_1] + histogram[h_minus_1];
             }
 
+            #[allow(clippy::cast_possible_truncation)] // element_lookup only returns small values
             for i in 0..num_elements {
                 let bit = bit_lookup(i, element_len - level - 1);
-                data[level].set_unchecked(
+                data[level as usize].set_unchecked(
                     borders[element_lookup(i) as usize >> (element_len - level)],
                     bit,
                 );
@@ -247,21 +256,19 @@ impl WaveletMatrix {
     /// [`from_slice`]: WaveletMatrix::from_slice
     #[must_use]
     pub fn from_bit_vec_pc(bit_vec: &BitVec, bits_per_element: u16) -> Self {
-        assert_eq!(bit_vec.len() % bits_per_element as usize, 0, "The number of bits in the bit vector must be a multiple of the number of bits per element.");
+        assert_eq!(bit_vec.len() % u64::from(bits_per_element), 0, "The number of bits in the bit vector must be a multiple of the number of bits per element.");
         assert!(
             bits_per_element <= 64,
             "The number of bits per element cannot exceed 64."
         );
-        let num_elements = bit_vec.len() / bits_per_element as usize;
+        let num_elements = bit_vec.len() / u64::from(bits_per_element);
         Self::prefix_counting(
             bits_per_element,
             num_elements,
-            |element, bit| bit_vec.get_unchecked(element * bits_per_element as usize + bit),
+            |element, bit| bit_vec.get_unchecked(element * u64::from(bits_per_element) + bit),
             |element| {
-                bit_vec.get_bits_unchecked(
-                    element * bits_per_element as usize,
-                    bits_per_element as usize,
-                )
+                bit_vec
+                    .get_bits_unchecked(element * u64::from(bits_per_element), u64::from(bits_per_element))
             },
         )
     }
@@ -287,18 +294,20 @@ impl WaveletMatrix {
             bits_per_element <= 64,
             "The number of bits per element cannot exceed 64."
         );
+        #[allow(clippy::cast_possible_truncation)]
+        // safe because the closures are called only with indices of `sequence`
         Self::prefix_counting(
             bits_per_element,
-            sequence.len(),
-            |element, bit| (sequence[element] >> bit) & 1,
-            |element| sequence[element],
+            sequence.len() as u64,
+            |element, bit| (sequence[element as usize] >> bit) & 1,
+            |element| sequence[element as usize],
         )
     }
 
     /// Generic function to read a value from the wavelet matrix and consume it with a closure.
     /// The function is used by the `get_value` and `get_u64` functions, deduplicating code.
     #[inline(always)]
-    fn reconstruct_value_unchecked<F: FnMut(u64)>(&self, mut i: usize, mut target_func: F) {
+    fn reconstruct_value_unchecked<F: FnMut(u64)>(&self, mut i: u64, mut target_func: F) {
         for level in 0..self.bits_per_element() {
             let bit = self.data[level].get_unchecked(i);
             target_func(bit);
@@ -328,7 +337,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.get_value(100), None);
     /// ```
     #[must_use]
-    pub fn get_value(&self, i: usize) -> Option<BitVec> {
+    pub fn get_value(&self, i: u64) -> Option<BitVec> {
         if self.data.is_empty() || i >= self.data[0].len() {
             None
         } else {
@@ -347,11 +356,11 @@ impl WaveletMatrix {
     ///
     /// [`get_value`]: WaveletMatrix::get_value
     #[must_use]
-    pub fn get_value_unchecked(&self, i: usize) -> BitVec {
-        let mut value = BitVec::from_zeros(self.bits_per_element());
+    pub fn get_value_unchecked(&self, i: u64) -> BitVec {
+        let mut value = BitVec::from_zeros(self.bits_per_element() as u64);
         let mut level = self.bits_per_element() - 1;
         self.reconstruct_value_unchecked(i, |bit| {
-            value.set_unchecked(level, bit);
+            value.set_unchecked(level as u64, bit);
             level = level.saturating_sub(1);
         });
         value
@@ -374,7 +383,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.get_u64(100), None);
     /// ```
     #[must_use]
-    pub fn get_u64(&self, i: usize) -> Option<u64> {
+    pub fn get_u64(&self, i: u64) -> Option<u64> {
         if self.bits_per_element() > 64 || self.data.is_empty() || i >= self.data[0].len() {
             None
         } else {
@@ -393,7 +402,7 @@ impl WaveletMatrix {
     ///
     /// [`get_u64`]: WaveletMatrix::get_u64
     #[must_use]
-    pub fn get_u64_unchecked(&self, i: usize) -> u64 {
+    pub fn get_u64_unchecked(&self, i: u64) -> u64 {
         let mut value = 0;
         self.reconstruct_value_unchecked(i, |bit| {
             value <<= 1;
@@ -419,9 +428,9 @@ impl WaveletMatrix {
     /// [`BitVec`]: BitVec
     /// [`rank_range`]: WaveletMatrix::rank_range
     #[must_use]
-    pub fn rank_range_unchecked(&self, mut range: Range<usize>, symbol: &BitVec) -> usize {
+    pub fn rank_range_unchecked(&self, mut range: Range<u64>, symbol: &BitVec) -> u64 {
         for (level, data) in self.data.iter().enumerate() {
-            if symbol.get_unchecked((self.bits_per_element() - 1) - level) == 0 {
+            if symbol.get_unchecked(((self.bits_per_element() - 1) - level) as u64) == 0 {
                 range.start = data.rank0(range.start);
                 range.end = data.rank0(range.end);
             } else {
@@ -455,10 +464,10 @@ impl WaveletMatrix {
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
-    pub fn rank_range(&self, range: Range<usize>, symbol: &BitVec) -> Option<usize> {
+    pub fn rank_range(&self, range: Range<u64>, symbol: &BitVec) -> Option<u64> {
         if range.start >= self.len()
             || range.end > self.len()
-            || symbol.len() != self.bits_per_element()
+            || symbol.len() != self.bits_per_element() as u64
         {
             None
         } else {
@@ -483,7 +492,7 @@ impl WaveletMatrix {
     ///
     /// [`rank_range_u64`]: WaveletMatrix::rank_range_u64
     #[must_use]
-    pub fn rank_range_u64_unchecked(&self, mut range: Range<usize>, symbol: u64) -> usize {
+    pub fn rank_range_u64_unchecked(&self, mut range: Range<u64>, symbol: u64) -> u64 {
         for (level, data) in self.data.iter().enumerate() {
             if (symbol >> ((self.bits_per_element() - 1) - level)) & 1 == 0 {
                 range.start = data.rank0(range.start);
@@ -517,7 +526,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.rank_range_u64(2..4, 4), Some(1));
     /// ```
     #[must_use]
-    pub fn rank_range_u64(&self, range: Range<usize>, symbol: u64) -> Option<usize> {
+    pub fn rank_range_u64(&self, range: Range<u64>, symbol: u64) -> Option<u64> {
         if range.start >= self.len() || range.end > self.len() || self.bits_per_element() > 64 {
             None
         } else {
@@ -548,7 +557,7 @@ impl WaveletMatrix {
     /// [`BitVec`]: BitVec
     /// [`rank_offset`]: WaveletMatrix::rank_offset
     #[must_use]
-    pub fn rank_offset_unchecked(&self, offset: usize, i: usize, symbol: &BitVec) -> usize {
+    pub fn rank_offset_unchecked(&self, offset: u64, i: u64, symbol: &BitVec) -> u64 {
         self.rank_range_unchecked(offset..i, symbol)
     }
 
@@ -582,11 +591,11 @@ impl WaveletMatrix {
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
-    pub fn rank_offset(&self, offset: usize, i: usize, symbol: &BitVec) -> Option<usize> {
+    pub fn rank_offset(&self, offset: u64, i: u64, symbol: &BitVec) -> Option<u64> {
         if offset > i
             || offset >= self.len()
             || i > self.len()
-            || symbol.len() != self.bits_per_element()
+            || symbol.len() != self.bits_per_element() as u64
         {
             None
         } else {
@@ -615,7 +624,7 @@ impl WaveletMatrix {
     ///
     /// [`rank_offset_u64`]: WaveletMatrix::rank_offset_u64
     #[must_use]
-    pub fn rank_offset_u64_unchecked(&self, offset: usize, i: usize, symbol: u64) -> usize {
+    pub fn rank_offset_u64_unchecked(&self, offset: u64, i: u64, symbol: u64) -> u64 {
         self.rank_range_u64_unchecked(offset..i, symbol)
     }
 
@@ -645,7 +654,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.rank_offset_u64(2, 4, 4), Some(1));
     /// ```
     #[must_use]
-    pub fn rank_offset_u64(&self, offset: usize, i: usize, symbol: u64) -> Option<usize> {
+    pub fn rank_offset_u64(&self, offset: u64, i: u64, symbol: u64) -> Option<u64> {
         if offset > i || offset >= self.len() || i > self.len() || self.bits_per_element() > 64 {
             None
         } else {
@@ -671,7 +680,7 @@ impl WaveletMatrix {
     /// [`BitVec`]: BitVec
     /// [`rank`]: WaveletMatrix::rank
     #[must_use]
-    pub fn rank_unchecked(&self, i: usize, symbol: &BitVec) -> usize {
+    pub fn rank_unchecked(&self, i: u64, symbol: &BitVec) -> u64 {
         self.rank_range_unchecked(0..i, symbol)
     }
 
@@ -698,8 +707,8 @@ impl WaveletMatrix {
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
-    pub fn rank(&self, i: usize, symbol: &BitVec) -> Option<usize> {
-        if i > self.len() || symbol.len() != self.bits_per_element() {
+    pub fn rank(&self, i: u64, symbol: &BitVec) -> Option<u64> {
+        if i > self.len() || symbol.len() != self.bits_per_element() as u64 {
             None
         } else {
             Some(self.rank_range_unchecked(0..i, symbol))
@@ -722,7 +731,7 @@ impl WaveletMatrix {
     ///
     /// [`rank_u64`]: WaveletMatrix::rank_u64
     #[must_use]
-    pub fn rank_u64_unchecked(&self, i: usize, symbol: u64) -> usize {
+    pub fn rank_u64_unchecked(&self, i: u64, symbol: u64) -> u64 {
         self.rank_range_u64_unchecked(0..i, symbol)
     }
 
@@ -746,7 +755,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.rank_u64(3, 1), Some(1));
     /// ```
     #[must_use]
-    pub fn rank_u64(&self, i: usize, symbol: u64) -> Option<usize> {
+    pub fn rank_u64(&self, i: u64, symbol: u64) -> Option<u64> {
         if i > self.len() || self.bits_per_element() > 64 {
             None
         } else {
@@ -775,11 +784,11 @@ impl WaveletMatrix {
     /// [`BitVec`]: BitVec
     /// [`select_offset`]: WaveletMatrix::select_offset
     #[must_use]
-    pub fn select_offset_unchecked(&self, offset: usize, rank: usize, symbol: &BitVec) -> usize {
+    pub fn select_offset_unchecked(&self, offset: u64, rank: u64, symbol: &BitVec) -> u64 {
         let mut range_start = offset;
 
         for (level, data) in self.data.iter().enumerate() {
-            if symbol.get_unchecked((self.bits_per_element() - 1) - level) == 0 {
+            if symbol.get_unchecked(((self.bits_per_element() - 1) - level) as u64) == 0 {
                 range_start = data.rank0(range_start);
             } else {
                 range_start = data.rank0 + data.rank1(range_start);
@@ -789,7 +798,7 @@ impl WaveletMatrix {
         let mut range_end = range_start + rank;
 
         for (level, data) in self.data.iter().enumerate().rev() {
-            if symbol.get_unchecked((self.bits_per_element() - 1) - level) == 0 {
+            if symbol.get_unchecked(((self.bits_per_element() - 1) - level) as u64) == 0 {
                 range_end = data.select0(range_end);
             } else {
                 range_end = data.select1(range_end - data.rank0);
@@ -823,8 +832,8 @@ impl WaveletMatrix {
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
-    pub fn select_offset(&self, offset: usize, rank: usize, symbol: &BitVec) -> Option<usize> {
-        if offset >= self.len() || symbol.len() != self.bits_per_element() {
+    pub fn select_offset(&self, offset: u64, rank: u64, symbol: &BitVec) -> Option<u64> {
+        if offset >= self.len() || symbol.len() != self.bits_per_element() as u64 {
             None
         } else {
             let idx = self.select_offset_unchecked(offset, rank, symbol);
@@ -855,7 +864,7 @@ impl WaveletMatrix {
     ///
     /// [`select_offset_u64`]: WaveletMatrix::select_offset_u64
     #[must_use]
-    pub fn select_offset_u64_unchecked(&self, offset: usize, rank: usize, symbol: u64) -> usize {
+    pub fn select_offset_u64_unchecked(&self, offset: u64, rank: u64, symbol: u64) -> u64 {
         let mut range_start = offset;
 
         for (level, data) in self.data.iter().enumerate() {
@@ -900,7 +909,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.select_offset_u64(2, 1, 4), None);
     /// ```
     #[must_use]
-    pub fn select_offset_u64(&self, offset: usize, rank: usize, symbol: u64) -> Option<usize> {
+    pub fn select_offset_u64(&self, offset: u64, rank: u64, symbol: u64) -> Option<u64> {
         if offset >= self.len() || self.bits_per_element() > 64 {
             None
         } else {
@@ -932,7 +941,7 @@ impl WaveletMatrix {
     /// [`BitVec`]: BitVec
     /// [`select`]: WaveletMatrix::select
     #[must_use]
-    pub fn select_unchecked(&self, rank: usize, symbol: &BitVec) -> usize {
+    pub fn select_unchecked(&self, rank: u64, symbol: &BitVec) -> u64 {
         self.select_offset_unchecked(0, rank, symbol)
     }
 
@@ -957,8 +966,8 @@ impl WaveletMatrix {
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
-    pub fn select(&self, rank: usize, symbol: &BitVec) -> Option<usize> {
-        if symbol.len() == self.bits_per_element() {
+    pub fn select(&self, rank: u64, symbol: &BitVec) -> Option<u64> {
+        if symbol.len() == self.bits_per_element() as u64 {
             let idx = self.select_unchecked(rank, symbol);
             if idx < self.len() {
                 Some(idx)
@@ -987,7 +996,7 @@ impl WaveletMatrix {
     ///
     /// [`select_u64`]: WaveletMatrix::select_u64
     #[must_use]
-    pub fn select_u64_unchecked(&self, rank: usize, symbol: u64) -> usize {
+    pub fn select_u64_unchecked(&self, rank: u64, symbol: u64) -> u64 {
         self.select_offset_u64_unchecked(0, rank, symbol)
     }
 
@@ -1009,7 +1018,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.select_u64(1, 4), Some(2));
     /// ```
     #[must_use]
-    pub fn select_u64(&self, rank: usize, symbol: u64) -> Option<usize> {
+    pub fn select_u64(&self, rank: u64, symbol: u64) -> Option<u64> {
         if self.bits_per_element() > 64 {
             None
         } else {
@@ -1037,8 +1046,8 @@ impl WaveletMatrix {
     ///
     /// [`quantile`]: WaveletMatrix::quantile
     #[must_use]
-    pub fn quantile_unchecked(&self, range: Range<usize>, k: usize) -> BitVec {
-        let result = BitVec::from_zeros(self.bits_per_element());
+    pub fn quantile_unchecked(&self, range: Range<u64>, k: u64) -> BitVec {
+        let result = BitVec::from_zeros(self.bits_per_element() as u64);
 
         self.partial_quantile_search_unchecked(range, k, 0, result)
     }
@@ -1051,12 +1060,12 @@ impl WaveletMatrix {
     #[inline(always)]
     fn partial_quantile_search_unchecked(
         &self,
-        mut range: Range<usize>,
-        mut k: usize,
+        mut range: Range<u64>,
+        mut k: u64,
         start_level: usize,
         mut prefix: BitVec,
     ) -> BitVec {
-        debug_assert!(prefix.len() == self.bits_per_element());
+        debug_assert!(prefix.len() == self.bits_per_element() as u64);
         debug_assert!(!range.is_empty());
         debug_assert!(range.end <= self.len());
 
@@ -1072,7 +1081,7 @@ impl WaveletMatrix {
             } else {
                 // the element is among the ones, so we set the bit to 1, and move the range
                 // into the 1-partition of the next level
-                prefix.set_unchecked((self.bits_per_element() - 1) - level, 1);
+                prefix.set_unchecked(((self.bits_per_element() - 1) - level) as u64, 1);
                 k -= zeros;
                 range.start = data.rank0 + (range.start - zeros_start); // range.start - zeros_start is the rank1 of range.start
                 range.end = data.rank0 + (range.end - zeros_end); // same here
@@ -1102,7 +1111,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.quantile(1..4, 0), Some(BitVec::pack_sequence_u8(&[1], 3)));
     /// ```
     #[must_use]
-    pub fn quantile(&self, range: Range<usize>, k: usize) -> Option<BitVec> {
+    pub fn quantile(&self, range: Range<u64>, k: u64) -> Option<BitVec> {
         if range.start >= self.len() || range.end > self.len() || k >= range.end - range.start {
             None
         } else {
@@ -1122,7 +1131,7 @@ impl WaveletMatrix {
     ///
     /// [`get_sorted`]: Self::get_sorted
     #[must_use]
-    pub fn get_sorted_unchecked(&self, i: usize) -> BitVec {
+    pub fn get_sorted_unchecked(&self, i: u64) -> BitVec {
         self.quantile_unchecked(0..self.len(), i)
     }
 
@@ -1145,7 +1154,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.get_sorted(2), Some(BitVec::pack_sequence_u8(&[2], 3)));
     /// ```
     #[must_use]
-    pub fn get_sorted(&self, i: usize) -> Option<BitVec> {
+    pub fn get_sorted(&self, i: u64) -> Option<BitVec> {
         if i >= self.len() {
             None
         } else {
@@ -1169,7 +1178,7 @@ impl WaveletMatrix {
     ///
     /// [`quantile_u64`]: WaveletMatrix::quantile_u64
     #[must_use]
-    pub fn quantile_u64_unchecked(&self, range: Range<usize>, k: usize) -> u64 {
+    pub fn quantile_u64_unchecked(&self, range: Range<u64>, k: u64) -> u64 {
         self.partial_quantile_search_u64_unchecked(range, k, 0, 0)
     }
 
@@ -1182,8 +1191,8 @@ impl WaveletMatrix {
     #[inline(always)]
     fn partial_quantile_search_u64_unchecked(
         &self,
-        mut range: Range<usize>,
-        mut k: usize,
+        mut range: Range<u64>,
+        mut k: u64,
         start_level: usize,
         mut prefix: u64,
     ) -> u64 {
@@ -1231,7 +1240,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.quantile_u64(1..4, 0), Some(1));
     /// ```
     #[must_use]
-    pub fn quantile_u64(&self, range: Range<usize>, k: usize) -> Option<u64> {
+    pub fn quantile_u64(&self, range: Range<u64>, k: u64) -> Option<u64> {
         if range.start >= self.len()
             || range.end > self.len()
             || self.bits_per_element() > 64
@@ -1256,7 +1265,7 @@ impl WaveletMatrix {
     ///
     /// [`get_sorted_u64`]: WaveletMatrix::get_sorted_u64
     #[must_use]
-    pub fn get_sorted_u64_unchecked(&self, i: usize) -> u64 {
+    pub fn get_sorted_u64_unchecked(&self, i: u64) -> u64 {
         self.quantile_u64_unchecked(0..self.len(), i)
     }
 
@@ -1277,7 +1286,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.get_sorted_u64(2), Some(2));
     /// ```
     #[must_use]
-    pub fn get_sorted_u64(&self, i: usize) -> Option<u64> {
+    pub fn get_sorted_u64(&self, i: u64) -> Option<u64> {
         if i >= self.len() || self.bits_per_element() > 64 {
             None
         } else {
@@ -1298,7 +1307,7 @@ impl WaveletMatrix {
     ///
     /// [`range_min`]: WaveletMatrix::range_min
     #[must_use]
-    pub fn range_min_unchecked(&self, range: Range<usize>) -> BitVec {
+    pub fn range_min_unchecked(&self, range: Range<u64>) -> BitVec {
         self.quantile_unchecked(range, 0)
     }
 
@@ -1320,7 +1329,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.range_min(1..3), Some(BitVec::pack_sequence_u8(&[4], 3)));
     /// ```
     #[must_use]
-    pub fn range_min(&self, range: Range<usize>) -> Option<BitVec> {
+    pub fn range_min(&self, range: Range<u64>) -> Option<BitVec> {
         self.quantile(range, 0)
     }
 
@@ -1338,7 +1347,7 @@ impl WaveletMatrix {
     ///
     /// [`range_min_u64`]: WaveletMatrix::range_min_u64
     #[must_use]
-    pub fn range_min_u64_unchecked(&self, range: Range<usize>) -> u64 {
+    pub fn range_min_u64_unchecked(&self, range: Range<u64>) -> u64 {
         self.quantile_u64_unchecked(range, 0)
     }
 
@@ -1361,7 +1370,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.range_min_u64(1..3), Some(4));
     /// ```
     #[must_use]
-    pub fn range_min_u64(&self, range: Range<usize>) -> Option<u64> {
+    pub fn range_min_u64(&self, range: Range<u64>) -> Option<u64> {
         self.quantile_u64(range, 0)
     }
 
@@ -1379,7 +1388,7 @@ impl WaveletMatrix {
     ///
     /// [`range_max`]: WaveletMatrix::range_max
     #[must_use]
-    pub fn range_max_unchecked(&self, range: Range<usize>) -> BitVec {
+    pub fn range_max_unchecked(&self, range: Range<u64>) -> BitVec {
         let k = range.end - range.start - 1;
         self.quantile_unchecked(range, k)
     }
@@ -1402,7 +1411,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.range_max(3..6), Some(BitVec::pack_sequence_u8(&[7], 3)));
     /// ```
     #[must_use]
-    pub fn range_max(&self, range: Range<usize>) -> Option<BitVec> {
+    pub fn range_max(&self, range: Range<u64>) -> Option<BitVec> {
         if range.is_empty() {
             None
         } else {
@@ -1425,7 +1434,7 @@ impl WaveletMatrix {
     ///
     /// [`range_max_u64`]: WaveletMatrix::range_max_u64
     #[must_use]
-    pub fn range_max_u64_unchecked(&self, range: Range<usize>) -> u64 {
+    pub fn range_max_u64_unchecked(&self, range: Range<u64>) -> u64 {
         let k = range.end - range.start - 1;
         self.quantile_u64_unchecked(range, k)
     }
@@ -1448,7 +1457,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.range_max_u64(3..6), Some(7));
     /// ```
     #[must_use]
-    pub fn range_max_u64(&self, range: Range<usize>) -> Option<u64> {
+    pub fn range_max_u64(&self, range: Range<u64>) -> Option<u64> {
         if range.is_empty() {
             None
         } else {
@@ -1473,7 +1482,7 @@ impl WaveletMatrix {
     ///
     /// [`range_median`]: WaveletMatrix::range_median
     #[must_use]
-    pub fn range_median_unchecked(&self, range: Range<usize>) -> BitVec {
+    pub fn range_median_unchecked(&self, range: Range<u64>) -> BitVec {
         let k = (range.end - 1 - range.start) / 2;
         self.quantile_unchecked(range, k)
     }
@@ -1499,7 +1508,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.range_median(0..6), Some(BitVec::pack_sequence_u8(&[2], 3)));
     /// ```
     #[must_use]
-    pub fn range_median(&self, range: Range<usize>) -> Option<BitVec> {
+    pub fn range_median(&self, range: Range<u64>) -> Option<BitVec> {
         if range.is_empty() {
             None
         } else {
@@ -1524,7 +1533,7 @@ impl WaveletMatrix {
     ///
     /// [`range_median_u64`]: WaveletMatrix::range_median_u64
     #[must_use]
-    pub fn range_median_u64_unchecked(&self, range: Range<usize>) -> u64 {
+    pub fn range_median_u64_unchecked(&self, range: Range<u64>) -> u64 {
         let k = (range.end - 1 - range.start) / 2;
         self.quantile_u64_unchecked(range, k)
     }
@@ -1550,7 +1559,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.range_median_u64(0..6), Some(2));
     /// ```
     #[must_use]
-    pub fn range_median_u64(&self, range: Range<usize>) -> Option<u64> {
+    pub fn range_median_u64(&self, range: Range<u64>) -> Option<u64> {
         if range.is_empty() || self.bits_per_element() > 64 || range.end > self.len() {
             None
         } else {
@@ -1568,10 +1577,10 @@ impl WaveletMatrix {
         T: Clone,
         Reader: Fn(usize, &T) -> u64,
         Writer: Fn(u64, usize, &mut T),
-        Quantile: Fn(&Self, Range<usize>, usize, usize, T) -> T,
+        Quantile: Fn(&Self, Range<u64>, u64, usize, T) -> T,
     >(
         &self,
-        mut range: Range<usize>,
+        mut range: Range<u64>,
         symbol: &T,
         mut result_value: T,
         bit_reader: Reader,
@@ -1584,7 +1593,7 @@ impl WaveletMatrix {
         // the level of the last node where we could go to an interval with smaller elements
         let mut last_one_level: Option<usize> = None;
         // the range of the last node where we could go to an interval with smaller elements
-        let mut next_smaller_range: Option<Range<usize>> = None;
+        let mut next_smaller_range: Option<Range<u64>> = None;
 
         for (level, data) in self.data.iter().enumerate() {
             let query_bit = bit_reader(level, symbol);
@@ -1679,8 +1688,8 @@ impl WaveletMatrix {
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
-    pub fn predecessor(&self, range: Range<usize>, symbol: &BitVec) -> Option<BitVec> {
-        if symbol.len() != self.bits_per_element()
+    pub fn predecessor(&self, range: Range<u64>, symbol: &BitVec) -> Option<BitVec> {
+        if symbol.len() != self.bits_per_element() as u64
             || range.is_empty()
             || self.is_empty()
             || range.end > self.len()
@@ -1691,10 +1700,10 @@ impl WaveletMatrix {
         self.predecessor_generic_unchecked(
             range,
             symbol,
-            BitVec::from_zeros(self.bits_per_element()),
-            |level, symbol| symbol.get_unchecked((self.bits_per_element() - 1) - level),
+            BitVec::from_zeros(self.bits_per_element() as u64),
+            |level, symbol| symbol.get_unchecked(((self.bits_per_element() - 1) - level) as u64),
             |bit, level, result| {
-                result.set_unchecked((self.bits_per_element() - 1) - level, bit);
+                result.set_unchecked(((self.bits_per_element() - 1) - level) as u64, bit);
             },
             Self::partial_quantile_search_unchecked,
         )
@@ -1723,7 +1732,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.predecessor_u64(0..6, 7), Some(7));
     /// ```
     #[must_use]
-    pub fn predecessor_u64(&self, range: Range<usize>, symbol: u64) -> Option<u64> {
+    pub fn predecessor_u64(&self, range: Range<u64>, symbol: u64) -> Option<u64> {
         if self.bits_per_element() > 64
             || range.is_empty()
             || self.is_empty()
@@ -1752,10 +1761,10 @@ impl WaveletMatrix {
         T: Clone,
         Reader: Fn(usize, &T) -> u64,
         Writer: Fn(u64, usize, &mut T),
-        Quantile: Fn(&Self, Range<usize>, usize, usize, T) -> T,
+        Quantile: Fn(&Self, Range<u64>, u64, usize, T) -> T,
     >(
         &self,
-        mut range: Range<usize>,
+        mut range: Range<u64>,
         symbol: &T,
         mut result_value: T,
         bit_reader: Reader,
@@ -1768,7 +1777,7 @@ impl WaveletMatrix {
         // the level of the last node where we could go to an interval with larger elements
         let mut last_zero_level: Option<usize> = None;
         // the range of the last node where we could go to an interval with larger elements
-        let mut next_larger_range: Option<Range<usize>> = None;
+        let mut next_larger_range: Option<Range<u64>> = None;
 
         for (level, data) in self.data.iter().enumerate() {
             let query_bit = bit_reader(level, symbol);
@@ -1866,8 +1875,8 @@ impl WaveletMatrix {
     ///
     /// [`BitVec`]: BitVec
     #[must_use]
-    pub fn successor(&self, range: Range<usize>, symbol: &BitVec) -> Option<BitVec> {
-        if symbol.len() != self.bits_per_element()
+    pub fn successor(&self, range: Range<u64>, symbol: &BitVec) -> Option<BitVec> {
+        if symbol.len() != self.bits_per_element() as u64
             || range.is_empty()
             || self.is_empty()
             || range.end > self.len()
@@ -1878,10 +1887,10 @@ impl WaveletMatrix {
         self.successor_generic_unchecked(
             range,
             symbol,
-            BitVec::from_zeros(self.bits_per_element()),
-            |level, symbol| symbol.get_unchecked((self.bits_per_element() - 1) - level),
+            BitVec::from_zeros(self.bits_per_element() as u64),
+            |level, symbol| symbol.get_unchecked(((self.bits_per_element() - 1) - level) as u64),
             |bit, level, result| {
-                result.set_unchecked((self.bits_per_element() - 1) - level, bit);
+                result.set_unchecked(((self.bits_per_element() - 1) - level) as u64, bit);
             },
             Self::partial_quantile_search_unchecked,
         )
@@ -1910,7 +1919,7 @@ impl WaveletMatrix {
     /// assert_eq!(wavelet_matrix.successor_u64(0..6, 2), Some(2));
     /// ```
     #[must_use]
-    pub fn successor_u64(&self, range: Range<usize>, symbol: u64) -> Option<u64> {
+    pub fn successor_u64(&self, range: Range<u64>, symbol: u64) -> Option<u64> {
         if self.bits_per_element() > 64
             || range.is_empty()
             || self.is_empty()
@@ -2029,17 +2038,9 @@ impl WaveletMatrix {
         self.data.len()
     }
 
-    /// Get the number of bits per element in the alphabet of the encoded sequence.
-    #[must_use]
-    #[deprecated(since = "1.5.1", note = "please use `bits_per_element` instead")]
-    #[allow(clippy::cast_possible_truncation)]
-    pub fn bit_len(&self) -> u16 {
-        self.bits_per_element() as u16
-    }
-
     /// Get the number of elements stored in the encoded sequence.
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub fn len(&self) -> u64 {
         if self.data.is_empty() {
             0
         } else {

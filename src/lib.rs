@@ -1,7 +1,7 @@
 #![warn(missing_docs)]
-#![allow(clippy::module_name_repetitions)]
 #![allow(clippy::assertions_on_constants)] // for asserts warning about incompatible constant values
 #![allow(clippy::inline_always)] // we actually measure performance increases with most of these
+#![allow(clippy::needless_for_each)] // readability of one-liners
 #![cfg_attr(docsrs, feature(doc_cfg))] // for conditional compilation in docs
 
 //! This crate provides a collection of data structures supported by fast implementations of
@@ -59,12 +59,12 @@
 //! - `bp_u16_lookup` (disabled by default): Uses a 16-bit lookup table for the balanced parenthesis
 //!   tree data structure. This is faster, but requires 128 KiB instead of 4 KiB.
 
-pub use bit_vec::fast_rs_vec::RsVec;
-pub use bit_vec::sparse::SparseRSVec;
-pub use bit_vec::BitVec;
-pub use elias_fano::EliasFanoVec;
-pub use rmq::binary_rmq::BinaryRmq;
-pub use rmq::fast_rmq::FastRmq;
+pub use bit_vec::rs::RsVec;
+pub use bit_vec::sparse::SparseRsVec;
+pub use bit_vec::{BitVec, Bits, BitsMut, HeapSize};
+pub use ef::EliasFanoVec;
+pub use rmq::small::SmallRmq;
+pub use rmq::sparse::SparseRmq;
 pub use trees::bp::{BpBuilder, BpTree};
 pub use trees::{IsAncestor, LevelTree, SubtreeSize, Tree, TreeBuilder};
 pub use wavelet::WaveletMatrix;
@@ -72,7 +72,7 @@ pub use wavelet::WaveletMatrix;
 pub mod bit_vec;
 
 #[forbid(unsafe_code)]
-pub mod elias_fano;
+pub mod ef;
 
 #[forbid(unsafe_code)]
 pub mod rmq;

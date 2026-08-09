@@ -75,7 +75,7 @@ impl RsVec {
 /// [`SelectIter`]: super::SelectIter
 pub struct BitSetIter<'a, const ZERO: bool> {
     vec: &'a RsVec,
-    base: usize,
+    base: u64,
     offsets: [u32; VECTOR_SIZE],
     content_len: u8,
     cursor: u8,
@@ -91,8 +91,8 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
             cursor: 0,
         };
 
-        if vec.len() > VECTOR_SIZE {
-            iter.load_chunk(vec.get_bits_unchecked(0, VECTOR_SIZE) as u16);
+        if vec.len() > VECTOR_SIZE as u64 {
+            iter.load_chunk(vec.get_bits_unchecked(0, VECTOR_SIZE as u64) as u16);
         }
 
         iter
@@ -116,12 +116,12 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
 
     fn load_next_chunk(&mut self) -> Option<()> {
         while self.cursor == self.content_len {
-            if self.base + VECTOR_SIZE >= self.vec.len() {
+            if self.base + VECTOR_SIZE as u64 >= self.vec.len() {
                 return None;
             }
 
-            self.base += VECTOR_SIZE;
-            let data = self.vec.get_bits_unchecked(self.base, VECTOR_SIZE) as u16;
+            self.base += VECTOR_SIZE as u64;
+            let data = self.vec.get_bits_unchecked(self.base, VECTOR_SIZE as u64) as u16;
             self.load_chunk(data);
         }
         Some(())
@@ -129,7 +129,7 @@ impl<'a, const ZERO: bool> BitSetIter<'a, ZERO> {
 }
 
 impl<const ZERO: bool> Iterator for BitSetIter<'_, ZERO> {
-    type Item = usize;
+    type Item = u64;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.base >= self.vec.len() {
@@ -159,6 +159,6 @@ impl<const ZERO: bool> Iterator for BitSetIter<'_, ZERO> {
 
         let offset = self.offsets[self.cursor as usize];
         self.cursor += 1;
-        Some(self.base + offset as usize)
+        Some(self.base + offset as u64)
     }
 }

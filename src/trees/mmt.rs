@@ -14,6 +14,7 @@
 use crate::BitVec;
 use std::cmp::max;
 use std::num::NonZeroUsize;
+use crate::bit_vec::Bits;
 
 /// A singular node in a binary min-max tree that is part of the [`BpTree`] data structure.
 ///
@@ -44,12 +45,16 @@ pub(crate) struct MinMaxTree {
 }
 
 impl MinMaxTree {
-    pub(crate) fn excess_tree(bit_vec: &BitVec, block_size: usize) -> Self {
+    pub(crate) fn excess_tree(bit_vec: &BitVec, block_size: u64) -> Self {
         if bit_vec.is_empty() {
             return Self::default();
         }
 
-        let num_leaves = bit_vec.len().div_ceil(block_size);
+        #[allow(clippy::cast_possible_truncation)] // safe due to the division
+        let num_leaves = bit_vec.len().div_ceil(block_size) as usize;
+        #[allow(clippy::cast_possible_truncation)] // only happens if available memory already exceeded
+        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_precision_loss)]
         let num_internal_nodes = max(1, (1 << (num_leaves as f64).log2().ceil() as usize) - 1);
 
         let mut nodes = vec![ExcessNode::default(); num_leaves + num_internal_nodes];
@@ -59,8 +64,9 @@ impl MinMaxTree {
 
         // bottom up construction
         for i in 0..bit_vec.len() {
+            #[allow(clippy::cast_possible_truncation)] // safe due to the division
             if i > 0 && i % block_size == 0 {
-                nodes[num_internal_nodes + i / block_size - 1] = ExcessNode {
+                nodes[num_internal_nodes + (i / block_size) as usize - 1] = ExcessNode {
                     total: total_excess,
                     min: min_excess,
                     max: max_excess,
@@ -450,7 +456,7 @@ mod tests {
     #[test]
     fn test_simple_excess_tree() {
         #[rustfmt::skip]
-        let bv = BitVec::from_bits(&[
+        let bv = BitVec::from_bits_u8(&[
             1, 1, 1, 0, 0, 1, 1, 1,
             0, 1, 0, 1, 1, 1, 0, 0,
             1, 0, 0, 1, 0, 0, 0, 0,
@@ -508,7 +514,7 @@ mod tests {
         //  3  4 5 6
         //  /\/\/\/\
         // 7 8 9 10 11 12 - -
-        let bv = BitVec::from_bits(&[0; 48]);
+        let bv = BitVec::from_bits_u8(&[0; 48]);
         let tree = MinMaxTree::excess_tree(&bv, 8);
 
         assert_eq!(tree.nodes.len(), 13); // 6 leaves + 7 internal nodes
@@ -589,7 +595,7 @@ mod tests {
     #[test]
     fn test_simple_fwd_search() {
         #[rustfmt::skip]
-        let bv = BitVec::from_bits(&[
+        let bv = BitVec::from_bits_u8(&[
             1, 1, 1, 1, 1, 1, 1, 1,
             1, 1, 1, 1, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
@@ -628,7 +634,7 @@ mod tests {
     #[test]
     fn test_fwd_search_with_multiple_blocks() {
         #[rustfmt::skip]
-        let bv = BitVec::from_bits(&[
+        let bv = BitVec::from_bits_u8(&[
             1, 1, 1, 1, 1, 1, 1, 1,
             1, 1, 1, 1, 1, 0, 0, 0,
             1, 1, 1, 1, 1, 0, 0, 0,
@@ -654,7 +660,7 @@ mod tests {
     #[test]
     fn test_fwd_search_relative_offsets() {
         #[rustfmt::skip]
-        let bv = BitVec::from_bits(&[
+        let bv = BitVec::from_bits_u8(&[
             1, 1, 1, 0,
             1, 0, 1, 1, // excess 2
             1, 0, 1, 0, // min excess 0, max excess 1
@@ -673,7 +679,7 @@ mod tests {
     #[test]
     fn test_simple_bwd_search() {
         #[rustfmt::skip]
-        let bv = BitVec::from_bits(&[
+        let bv = BitVec::from_bits_u8(&[
             1, 1, 1, 1, 1, 1, 1, 1,
             1, 1, 1, 1, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
@@ -712,7 +718,7 @@ mod tests {
     #[test]
     fn test_bwd_search_with_multiple_blocks() {
         #[rustfmt::skip]
-        let bv = BitVec::from_bits(&[
+        let bv = BitVec::from_bits_u8(&[
             1, 1, 1, 1, 1, 1, 1, 1,
             1, 1, 1, 1, 1, 0, 0, 0,
             1, 1, 1, 1, 1, 0, 0, 0,
@@ -738,7 +744,7 @@ mod tests {
     #[test]
     fn test_bwd_search_relative_offsets() {
         #[rustfmt::skip]
-        let bv = BitVec::from_bits(&[
+        let bv = BitVec::from_bits_u8(&[
             1, 1, 1, 0,
             1, 0, 1, 1, // excess 2
             1, 0, 1, 0, // min excess 0, max excess 1
@@ -755,7 +761,7 @@ mod tests {
     #[test]
     fn test_incomplete_block() {
         #[rustfmt::skip]
-        let bv = BitVec::from_bits(&[
+        let bv = BitVec::from_bits_u8(&[
             1, 1, 1, 1, 1, 1, 1, 0,
             0, 0, 0, 0, 0, 0
         ]);
@@ -775,7 +781,7 @@ mod tests {
 
     #[test]
     fn test_single_block() {
-        let bv = BitVec::from_bits(&[1, 1, 1, 1, 0, 0, 0, 0]);
+        let bv = BitVec::from_bits_u8(&[1, 1, 1, 1, 0, 0, 0, 0]);
 
         let tree = MinMaxTree::excess_tree(&bv, 8);
 
@@ -785,12 +791,12 @@ mod tests {
     #[test]
     fn test_leaf_calculation() {
         // test small tree
-        let bv = BitVec::from_bits(&vec![0; 1000]);
+        let bv = BitVec::from_bits_u8(&vec![0; 1000]);
         let tree = MinMaxTree::excess_tree(&bv, 1200);
         assert_eq!(tree.first_leaf(), 1);
 
         // test very large tree
-        let bv = BitVec::from_bits(&vec![0; 1000]);
+        let bv = BitVec::from_bits_u8(&vec![0; 1000]);
         let tree = MinMaxTree::excess_tree(&bv, 4);
 
         assert_eq!(tree.first_leaf(), 255)
@@ -800,7 +806,7 @@ mod tests {
     fn test_relative_excess() {
         // test a tree with 3 layers and different downwards traversals
         #[rustfmt::skip]
-        let bv = BitVec::from_bits(&[
+        let bv = BitVec::from_bits_u8(&[
             1, 1, 1, 1, 1, 1, 1, 1,
             1, 1, 1, 1, 1, 1, 1, 1,
             1, 1, 1, 1, 1, 1, 1, 1,

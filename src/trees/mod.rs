@@ -41,14 +41,14 @@ pub trait Tree {
 
     /// Convert a node handle into a contiguous index, allowing associated data to be stored in a vector.
     /// If `node` is not a valid node handle, the result is meaningless.
-    fn node_index(&self, node: Self::NodeHandle) -> usize;
+    fn node_index(&self, node: Self::NodeHandle) -> u64;
 
     /// Convert a contiguous index that enumerates all nodes into a node handle.
     /// This operation is the inverse of `node_index`.
     /// The index must be in the range `0..self.size()`.
     ///
     /// If the index is out of bounds, the behavior is unspecified.
-    fn node_handle(&self, index: usize) -> Self::NodeHandle;
+    fn node_handle(&self, index: u64) -> Self::NodeHandle;
 
     /// Returns true if the node is a leaf.
     /// If `node` is not a valid node handle, the result is meaningless.
@@ -63,7 +63,7 @@ pub trait Tree {
     fn depth(&self, node: Self::NodeHandle) -> u64;
 
     /// Returns the number of nodes in the tree.
-    fn size(&self) -> usize;
+    fn size(&self) -> u64;
 
     /// Returns true, if the tree has no nodes.
     fn is_empty(&self) -> bool {
@@ -81,7 +81,7 @@ pub trait SubtreeSize: Tree {
     ///
     /// Returns `None` if the `node` has no closing parenthesis (in an unbalanced parenthesis
     /// expression).
-    fn subtree_size(&self, node: Self::NodeHandle) -> Option<usize>;
+    fn subtree_size(&self, node: Self::NodeHandle) -> Option<u64>;
 }
 
 /// A trait for succinct tree data structures that support [`is_ancestor`] queries.
