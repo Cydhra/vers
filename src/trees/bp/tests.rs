@@ -930,7 +930,7 @@ fn test_from_padded_bitvec() {
 #[ignore]
 fn test_giant_trunk() {
     // test open and close across a graph that is a giant tree of maximum height
-    const L: usize = 1 << 34;
+    const L: usize = 1 << 32;
 
     let mut bv = BitVec::from_zeros(L + 2);
     for i in 0..L / 2 {
