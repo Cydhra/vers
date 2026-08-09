@@ -446,6 +446,7 @@ impl super::RsVec {
         let mut block_idx = (pos / BLOCK_SIZE) as usize;
         let super_block_idx = (pos / SUPER_BLOCK_SIZE) as usize;
 
+        #[allow(clippy::cast_possible_truncation)] // casting on constants cant be unsave
         if self.super_blocks.len() as u64 > (SUPER_BLOCK_SIZE + 1)
             && self.super_blocks[super_block_idx + 1].zeros > rank
         {
@@ -462,9 +463,9 @@ impl super::RsVec {
 
             rank -= self.blocks[block_idx].zeros as u64;
 
-            Some(self.search_word_in_block0(rank, block_idx) as u64)
+            Some(self.search_word_in_block0(rank, block_idx))
         } else {
-            Some(self.select0(rank) as u64)
+            Some(self.select0(rank))
         }
     }
 
@@ -506,6 +507,7 @@ impl super::RsVec {
         let mut block_idx = (pos / BLOCK_SIZE) as usize;
         let super_block_idx = (pos / SUPER_BLOCK_SIZE) as usize;
 
+        #[allow(clippy::cast_possible_truncation)] // casting on constants cant be that unsafe
         if self.super_blocks.len() > (super_block_idx + 1)
             && (super_block_idx + 1) as u64 * SUPER_BLOCK_SIZE
                 - self.super_blocks[super_block_idx + 1].zeros
@@ -534,9 +536,9 @@ impl super::RsVec {
             rank -= (block_idx - block_at_super_block) as u64 * BLOCK_SIZE
                 - self.blocks[block_idx].zeros as u64;
 
-            Some(self.search_word_in_block1(rank, block_idx) as u64)
+            Some(self.search_word_in_block1(rank, block_idx))
         } else {
-            Some(self.select1(rank) as u64)
+            Some(self.select1(rank))
         }
     }
 
@@ -573,6 +575,7 @@ impl super::RsVec {
         let mut block_idx = (pos / BLOCK_SIZE) as usize;
         let super_block_idx = (pos / SUPER_BLOCK_SIZE) as usize;
 
+        #[allow(clippy::cast_possible_truncation)] // casting on constants cant be that unsafe
         if self.super_blocks[super_block_idx].zeros < rank {
             rank -= self.super_blocks[super_block_idx].zeros;
 
@@ -587,9 +590,9 @@ impl super::RsVec {
 
             rank -= self.blocks[block_idx].zeros as u64;
 
-            Some(self.search_word_in_block0(rank, block_idx) as u64)
+            Some(self.search_word_in_block0(rank, block_idx))
         } else {
-            Some(self.select0(rank) as u64)
+            Some(self.select0(rank))
         }
     }
 
@@ -632,13 +635,14 @@ impl super::RsVec {
         if super_block_ones < rank {
             rank -= super_block_ones;
 
+            #[allow(clippy::cast_possible_truncation)] // casting on constants cant be that unsafe
             let block_at_super_block = super_block_idx * BLOCKS_PER_SUPERBLOCK as usize;
             let block_ones = (block_idx - block_at_super_block) as u64 * BLOCK_SIZE
                 - self.blocks[block_idx].zeros as u64;
             // predecessor is in current block
             if block_ones < rank {
                 rank -= block_ones;
-                return Some(self.search_word_in_block1(rank, block_idx) as u64);
+                return Some(self.search_word_in_block1(rank, block_idx));
             }
 
             block_idx = block_at_super_block;
@@ -646,9 +650,9 @@ impl super::RsVec {
             rank -= (block_idx - block_at_super_block) as u64 * BLOCK_SIZE
                 - self.blocks[block_idx].zeros as u64;
 
-            Some(self.search_word_in_block1(rank, block_idx) as u64)
+            Some(self.search_word_in_block1(rank, block_idx))
         } else {
-            Some(self.select1(rank) as u64)
+            Some(self.select1(rank))
         }
     }
 }

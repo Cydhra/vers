@@ -329,7 +329,7 @@ impl BitVec {
     {
         let mut bv = Self::with_capacity(sequence.len() as u64 * bits_per_element);
         for &word in sequence {
-            Self::pack_word_into_vector::<MAX_BITS>(&mut bv, word.into(), bits_per_element)
+            Self::pack_word_into_vector::<MAX_BITS>(&mut bv, word.into(), bits_per_element);
         }
         bv
     }
@@ -346,7 +346,7 @@ impl BitVec {
         let mut bv = Self::new();
 
         for word in iter {
-            Self::pack_word_into_vector::<MAX_BITS>(&mut bv, word.into(), bits_per_element)
+            Self::pack_word_into_vector::<MAX_BITS>(&mut bv, word.into(), bits_per_element);
         }
 
         bv
@@ -357,9 +357,9 @@ impl BitVec {
     #[inline(always)]
     fn pack_word_into_vector<const MAX_BITS: u64>(bv: &mut BitVec, word: u64, num_bits: u64) {
         if num_bits <= MAX_BITS {
-            bv.append_bits(word.into(), num_bits);
+            bv.append_bits(word, num_bits);
         } else {
-            bv.append_bits(word.into(), MAX_BITS);
+            bv.append_bits(word, MAX_BITS);
             let mut rest = num_bits - MAX_BITS;
             while rest > 0 {
                 bv.append_bits(0, min(rest, MAX_BITS));
@@ -670,6 +670,7 @@ impl BitVec {
     /// assert_eq!(bv.is_bit_set(2), Some(true));
     /// assert_eq!(bv.is_bit_set(3), Some(true));
     /// ```
+    #[must_use]
     pub fn from_bools(bools: &[bool]) -> Self {
         let mut bv = BitVec::with_capacity(bools.len() as u64);
         bools.iter().for_each(|&b| bv.append(b));
