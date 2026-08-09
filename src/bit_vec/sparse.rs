@@ -5,6 +5,7 @@
 //! [`BitVec`].
 
 use crate::{BitVec, EliasFanoVec};
+use crate::bit_vec::Bits;
 
 /// A succinct representation of a sparse vector with rank and select support.
 /// It is a thin wrapper around an [`EliasFanoVec`] that compresses the indices of 1-bits.
@@ -259,6 +260,7 @@ mod tests {
     use crate::BitVec;
     use rand::prelude::StdRng;
     use rand::{RngExt, SeedableRng};
+    use crate::bit_vec::Bits;
 
     #[test]
     fn test_sparse_rank() {

@@ -1,4 +1,4 @@
-use super::BitVec;
+use super::{BitVec, Bits};
 
 #[test]
 fn simple_bit_vec_test() {

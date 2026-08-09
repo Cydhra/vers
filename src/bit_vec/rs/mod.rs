@@ -17,7 +17,33 @@ pub use iter::*;
 use crate::util::impl_vector_iterator;
 use crate::BitVec;
 
-use super::WORD_SIZE;
+use super::{Bits, WORD_SIZE};
+
+pub trait RankSupport {
+    #[allow(clippy::inline_always)]
+    // #[inline(always)]
+    fn rank(&self, zero: bool, pos: u64) -> u64;
+
+    /// Return the 0-rank of the bit at the given position. The 0-rank is the number of
+    /// 0-bits in the vector up to but excluding the bit at the given position. Calling this
+    /// function with an index larger than the length of the bit-vector will report the total
+    /// number of 0-bits in the bit-vector.
+    ///
+    /// # Parameters
+    /// - `pos`: The position of the bit to return the rank of.
+    #[must_use]
+    fn rank0(&self, pos: u64) -> u64;
+
+    /// Return the 1-rank of the bit at the given position. The 1-rank is the number of
+    /// 1-bits in the vector up to but excluding the bit at the given position. Calling this
+    /// function with an index larger than the length of the bit-vector will report the total
+    /// number of 1-bits in the bit-vector.
+    ///
+    /// # Parameters
+    /// - `pos`: The position of the bit to return the rank of.
+    #[must_use]
+    fn rank1(&self, pos: u64) -> u64;
+}
 
 /// Size of a block in the bitvector.
 const BLOCK_SIZE: u64 = 512;

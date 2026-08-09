@@ -61,7 +61,7 @@
 
 pub use bit_vec::rs::RsVec;
 pub use bit_vec::sparse::SparseRsVec;
-pub use bit_vec::BitVec;
+pub use bit_vec::{BitVec, Bits, BitsMut, HeapSize};
 pub use ef::EliasFanoVec;
 pub use rmq::small::SmallRmq;
 pub use rmq::sparse::SparseRmq;

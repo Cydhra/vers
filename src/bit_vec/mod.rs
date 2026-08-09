@@ -16,6 +16,525 @@ pub mod mask;
 /// Size of a word in bitvectors. All vectors operate on 64-bit words.
 const WORD_SIZE: u64 = 64;
 
+pub trait HeapSize {
+    /// Returns the number of bytes on the heap for this structure.
+    /// Does not include allocated memory that isn't used.
+    #[must_use]
+    fn heap_size(&self) -> usize;
+}
+
+pub trait Bits {
+    /// Return the length of the bit vector. The length is measured in bits.
+    #[must_use]
+    fn len(&self) -> u64;
+
+    /// Return whether the bit vector is empty (contains no bits).
+    #[must_use]
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Return the bit at the given position.
+    /// The bit is encoded in the least significant bit of a u64 value.
+    /// If the position is larger than the length of the vector, None is returned.
+    ///
+    /// See also: [`get_unchecked`]
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use vers_vecs::{BitVec, Bits};
+    ///
+    /// let bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
+    ///
+    /// assert_eq!(bv.get(1), Some(0));
+    /// assert_eq!(bv.get(2), Some(1));
+    /// ```
+    ///
+    /// [`get_unchecked`]: Self::get_unchecked
+    #[must_use]
+    fn get(&self, pos: u64) -> Option<u64> {
+        if pos >= self.len() {
+            None
+        } else {
+            Some(self.get_unchecked(pos))
+        }
+    }
+
+    /// Return the bit at the given position.
+    /// The bit is encoded in the least significant bit of a u64 value.
+    ///
+    /// # Panics
+    /// If the position is larger than the length of the vector,
+    /// the function will either return unpredictable data, or panic.
+    /// Use [`get`] to properly handle this case with an `Option`.
+    ///
+    /// [`get`]: BitVec::get
+    #[must_use]
+    fn get_unchecked(&self, pos: u64) -> u64;
+
+    /// Return whether the bit at the given position is set.
+    /// If the position is larger than the length of the vector, None is returned.
+    ///
+    /// See also: [`is_bit_set_unchecked`]
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use vers_vecs::{BitVec, Bits};
+    ///
+    /// let bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
+    ///
+    /// assert!(!bv.is_bit_set(1).unwrap());
+    /// assert!(bv.is_bit_set(2).unwrap());
+    /// ```
+    ///
+    /// [`is_bit_set_unchecked`]: BitVec::is_bit_set_unchecked
+    #[must_use]
+    fn is_bit_set(&self, pos: u64) -> Option<bool> {
+        if pos >= self.len() {
+            None
+        } else {
+            Some(self.is_bit_set_unchecked(pos))
+        }
+    }
+
+    /// Return whether the bit at the given position is set.
+    ///
+    /// # Panics
+    /// If the position is larger than the length of the vector,
+    /// the function will either return unpredictable data, or panic.
+    /// Use [`is_bit_set`] to properly handle this case with an `Option`.
+    ///
+    /// [`is_bit_set`]: BitVec::is_bit_set
+    #[must_use]
+    fn is_bit_set_unchecked(&self, pos: u64) -> bool {
+        self.get_unchecked(pos) != 0
+    }
+
+    /// Return multiple bits at the given position.
+    /// The number of bits to return is given by `len`.
+    /// At most 64 bits can be returned.
+    /// If the position at the end of the query is larger than the length of the vector,
+    /// None is returned (even if the query partially overlaps with the vector).
+    /// If the length of the query is larger than 64, None is returned.
+    ///
+    /// The first bit at `pos` is the most significant bit of the return value
+    /// limited to `len` bits.
+    #[must_use]
+    fn get_bits(&self, pos: u64, len: u64) -> Option<u64> {
+        if len > WORD_SIZE || len == 0 {
+            return None;
+        }
+        if pos + len > self.len() {
+            None
+        } else {
+            Some(self.get_bits_unchecked(pos, len))
+        }
+    }
+
+    /// Return multiple bits at the given position. The number of bits to return is given by `len`.
+    /// At most 64 bits can be returned.
+    ///
+    /// Reading 0 bits is always legal, even if the index is out of bounds.
+    /// This behavior was chosen such that operations like the following behave expectedly:
+    /// ```
+    /// # use vers_vecs::{BitVec, Bits};
+    /// let mut bv = BitVec::new();
+    /// bv.append_bits_unchecked(1, 0);
+    /// bv.append_bits_unchecked(63, 0);
+    /// bv.append_bits_unchecked(1, 0);
+    ///
+    /// assert_eq!(bv.get_bits_unchecked(0, 0), 0);
+    /// assert_eq!(bv.get_bits_unchecked(1, 0), 0);
+    /// assert_eq!(bv.get_bits_unchecked(2, 0), 0);
+    /// ```
+    ///
+    /// # Errors
+    /// If the length of the query is larger than 64, unpredictable data will be returned.
+    /// Use [`get_bits`] to avoid this.
+    ///
+    /// # Panics
+    /// If the position or interval is larger than the length of the vector,
+    /// the function will either return any valid results padded with unpredictable
+    /// data or panic.
+    ///
+    /// [`get_bits`]: BitVec::get_bits
+    // This function is always inlined, because it gains a lot from loop optimization and
+    // can utilize the processor pre-fetcher better if it is.
+    #[must_use]
+    #[allow(clippy::comparison_chain)] // readability
+    #[allow(clippy::cast_possible_truncation)] // parameter must be out of scope for this to happen
+    fn get_bits_unchecked(&self, pos: u64, len: u64) -> u64;
+
+    /// Extract a packed element from a bit vector. The element is encoded in the bits at the given
+    /// `index`. The number of bits per encoded element is given by `n`.
+    ///
+    /// This is a convenience method to access elements previously packed using the [`pack_sequence_*`] methods,
+    /// and is equivalent to calling [`get_bits(index * n, n)`].
+    /// It is thus safe to use this method with any index and any size n <= 64.
+    ///
+    /// If the element is out of bounds, None is returned.
+    /// The element is returned as a u64 value.
+    ///
+    /// # Example
+    /// ```rust
+    /// use vers_vecs::{BitVec, Bits};
+    ///
+    /// let sequence = [10, 100, 124, 45, 223];
+    /// let bv = BitVec::pack_sequence_u64(&sequence, 8);
+    ///
+    /// assert_eq!(bv.unpack_element(0, 8), Some(10));
+    /// assert_eq!(bv.unpack_element(2, 8), Some(124));
+    /// ```
+    ///
+    /// [`pack_sequence_*`]: BitVec::pack_sequence_u64
+    /// [`get_bits(index * n, n)`]: BitVec::get_bits
+    #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)] // to gain optimization if n is constant
+    fn unpack_element(&self, index: u64, n: u64) -> Option<u64> {
+        self.get_bits(index * n, n)
+    }
+
+    /// Extract a packed element from a bit vector. The element is encoded in the bits at the given
+    /// `index`. The number of bits per encoded element is given by `n`.
+    ///
+    /// This is a convenience method to access elements previously packed using the [`pack_sequence_*`] methods,
+    /// and is equivalent to calling [`get_bits_unchecked(index * n, n)`].
+    /// It is thus safe to use this method with any index where `index * n + n` is in-bounds,
+    /// and any size n <= 64.
+    ///
+    /// # Panics
+    /// If the element is out of bounds, the function will either return unpredictable data or panic.
+    /// Use [`unpack_element`] for a checked version of this function.
+    ///
+    /// [`pack_sequence_*`]: BitVec::pack_sequence_u64
+    /// [`get_bits_unchecked(index * n, n)`]: BitVec::get_bits_unchecked
+    /// [`unpack_element`]: BitVec::unpack_element
+    #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)] // to gain optimization if n is constant
+    fn unpack_element_unchecked(&self, index: u64, n: u64) -> u64 {
+        self.get_bits_unchecked(index * n, n)
+    }
+
+    /// Return the number of ones in the bit vector. Since the bit vector doesn't store additional
+    /// metadata, this value is calculated. Use [`RsVec`] for constant-time rank operations.
+    ///
+    /// [`RsVec`]: crate::RsVec
+    #[must_use]
+    fn count_ones(&self) -> u64;
+
+    /// Return the number of zeros in the bit vector. Since the bit vector doesn't store additional
+    /// metadata, this value is calculated. Use [`RsVec`] for constant-time rank operations.
+    /// This method calls [`count_ones`].
+    ///
+    /// [`RsVec`]: crate::RsVec
+    /// [`count_ones`]: BitVec::count_ones
+    #[must_use]
+    fn count_zeros(&self) -> u64 {
+        self.len() - self.count_ones()
+    }
+}
+
+pub trait BitsMut: Bits {
+    /// Flip the bit at the given position.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use vers_vecs::{BitVec, Bits};
+    ///
+    /// let mut bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
+    /// bv.flip_bit(1);
+    ///
+    /// assert_eq!(bv.len(), 6);
+    /// assert_eq!(bv.get_bits(0, 6), Some(0b111111u64));
+    /// ```
+    ///
+    /// # Panics
+    /// If the position is larger than the length of the vector, the function panics.
+    fn flip_bit(&mut self, pos: u64);
+
+    /// Flip the bit at the given position.
+    ///
+    /// See also: [`flip_bit`]
+    ///
+    /// # Panics
+    /// If the position is larger than the length of the
+    /// vector, the function will either modify unused memory or panic.
+    /// This will not corrupt memory.
+    ///
+    /// [`flip_bit`]: BitVec::flip_bit
+    fn flip_bit_unchecked(&mut self, pos: u64);
+
+    /// Set the bit at the given position.
+    /// The bit is encoded in the least significant bit of a u64 value.
+    ///
+    /// See also: [`set_unchecked`]
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use vers_vecs::{BitVec, Bits};
+    ///
+    /// let mut bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
+    /// bv.set(1, 1).unwrap();
+    ///
+    /// assert_eq!(bv.len(), 6);
+    /// assert_eq!(bv.get_bits(0, 6), Some(0b111111u64));
+    /// ```
+    ///
+    /// # Errors
+    /// If the position is out of range, the function will return `Err` with an error message,
+    /// otherwise it will return an empty `Ok`.
+    ///
+    /// [`set_unchecked`]: BitVec::set_unchecked
+    fn set(&mut self, pos: u64, value: u64) -> Result<(), &str>;
+
+    /// Set the bit at the given position.
+    /// The bit is encoded in the least significant bit of a u64 value.
+    ///
+    /// # Panics
+    /// If the position is larger than the length of the vector,
+    /// the function will either do nothing, or panic.
+    /// Use [`set`] to properly handle this case with a `Result`.
+    ///
+    /// [`set`]: BitVec::set
+    fn set_unchecked(&mut self, pos: u64, value: u64);
+
+    /// Append a bit encoded as a `bool` to the bit vector, where `true` means 1 and `false` means 0.
+    ///
+    /// See also: [`append_bit`], [`append_bit_u32`], [`append_bit_u16`], [`append_bit_u8`], [`append_word`]
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use vers_vecs::{BitVec, Bits};
+    ///
+    /// let mut bv = BitVec::new();
+    /// bv.append(true);
+    ///
+    /// assert_eq!(bv.len(), 1);
+    /// assert_eq!(bv.get(0), Some(1));
+    /// ```
+    ///
+    /// [`append_bit`]: BitVec::append_bit
+    /// [`append_bit_u32`]: BitVec::append_bit_u32
+    /// [`append_bit_u16`]: BitVec::append_bit_u16
+    /// [`append_bit_u8`]: BitVec::append_bit_u8
+    /// [`append_word`]: BitVec::append_word
+    fn append(&mut self, bit: bool);
+
+    /// Drop the last n bits from the bit vector. If more bits are dropped than the bit vector
+    /// contains, the bit vector is cleared.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use vers_vecs::{BitVec, Bits};
+    ///
+    /// let mut bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
+    /// bv.drop_last(3);
+    ///
+    /// assert_eq!(bv.len(), 3);
+    /// assert_eq!(bv.get_bits(0, 3), Some(0b101u64));
+    ///
+    /// bv.drop_last(4);
+    ///
+    /// assert!(bv.is_empty());
+    /// ```
+    fn drop_last(&mut self, n: u64);
+
+    /// Append a bit encoded in a u64.
+    /// The least significant bit is appended to the bit vector.
+    /// All other bits are ignored.
+    ///
+    /// See also: [`append`], [`append_bit_u32`], [`append_bit_u16`], [`append_bit_u8`], [`append_word`]
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use vers_vecs::{BitVec, Bits};
+    ///
+    /// let mut bv = BitVec::new();
+    ///
+    /// bv.append_bit(1);
+    /// bv.append_bit(0);
+    ///
+    /// assert_eq!(bv.len(), 2);
+    /// assert_eq!(bv.get(0), Some(1));
+    /// assert_eq!(bv.get(1), Some(0));
+    /// ```
+    ///
+    /// [`append`]: BitVec::append
+    /// [`append_bit_u32`]: BitVec::append_bit_u32
+    /// [`append_bit_u16`]: BitVec::append_bit_u16
+    /// [`append_bit_u8`]: BitVec::append_bit_u8
+    /// [`append_word`]: BitVec::append_word
+    fn append_bit(&mut self, bit: u64);
+
+    /// Append a bit from a u32. The least significant bit is appended to the bit vector.
+    /// All other bits are ignored.
+    ///
+    /// See also: [`append`], [`append_bit`], [`append_bit_u16`], [`append_bit_u8`], [`append_word`]
+    ///
+    /// [`append`]: BitVec::append
+    /// [`append_bit`]: BitVec::append_bit
+    /// [`append_bit_u16`]: BitVec::append_bit_u16
+    /// [`append_bit_u8`]: BitVec::append_bit_u8
+    /// [`append_word`]: BitVec::append_word
+    fn append_bit_u32(&mut self, bit: u32) {
+        self.append_bit(u64::from(bit));
+    }
+
+    /// Append a bit from a u16. The least significant bit is appended to the bit vector.
+    /// All other bits are ignored.
+    ///
+    /// See also: [`append`], [`append_bit`], [`append_bit_u32`], [`append_bit_u8`], [`append_word`]
+    ///
+    /// [`append`]: BitVec::append
+    /// [`append_bit`]: BitVec::append_bit
+    /// [`append_bit_u32`]: BitVec::append_bit_u32
+    /// [`append_bit_u8`]: BitVec::append_bit_u8
+    /// [`append_word`]: BitVec::append_word
+    fn append_bit_u16(&mut self, bit: u16) {
+        self.append_bit(u64::from(bit));
+    }
+
+    /// Append a bit from a u8. The least significant bit is appended to the bit vector.
+    /// All other bits are ignored.
+    ///
+    /// See also: [`append`], [`append_bit`], [`append_bit_u32`], [`append_bit_u16`], [`append_word`]
+    ///
+    /// [`append`]: BitVec::append
+    /// [`append_bit`]: BitVec::append_bit
+    /// [`append_bit_u32`]: BitVec::append_bit_u32
+    /// [`append_bit_u16`]: BitVec::append_bit_u16
+    /// [`append_word`]: BitVec::append_word
+    fn append_bit_u8(&mut self, bit: u8) {
+        self.append_bit(u64::from(bit));
+    }
+
+    /// Append a word to the bit vector. The bits are appended in little endian order (i.e. the first
+    /// bit of the word is appended first).
+    ///
+    /// See also: [`append`], [`append_bit`], [`append_bit_u32`], [`append_bit_u16`], [`append_bit_u8`]
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use vers_vecs::{BitVec, Bits};
+    ///
+    /// let mut bv = BitVec::new();
+    /// bv.append_word(0b1010_1010_1010_1010u64);
+    ///
+    /// assert_eq!(bv.len(), 64);
+    /// for i in 0..64 {
+    ///    assert_eq!(bv.get(i), Some((0b1010_1010_1010_1010u64 >> i) & 1));
+    /// }
+    /// ```
+    ///
+    /// [`append`]: BitVec::append
+    /// [`append_bit`]: BitVec::append_bit
+    /// [`append_bit_u32`]: BitVec::append_bit_u32
+    /// [`append_bit_u16`]: BitVec::append_bit_u16
+    /// [`append_bit_u8`]: BitVec::append_bit_u8
+    fn append_word(&mut self, word: u64);
+
+    /// Append multiple bits to the bit vector.
+    /// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
+    /// The number of bits to append is given by `len`. The bits are taken from the least
+    /// significant bits of `bits`.
+    /// All other bits are ignored.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use vers_vecs::{BitVec, Bits};
+    ///
+    /// let mut bv = BitVec::new();
+    /// bv.append_bits(0b1010_1010_1010_1010u64, 16);
+    ///
+    /// assert_eq!(bv.len(), 16);
+    /// assert_eq!(bv.get_bits(0, 16), Some(0b1010_1010_1010_1010u64));
+    /// ```
+    ///
+    /// # Panics
+    /// Panics if `len` is larger than 64.
+    fn append_bits(&mut self, bits: u64, len: u64);
+
+    /// Append multiple bits to the bit vector.
+    /// The bits are appended in little-endian order (i.e. the least significant bit is appended first).
+    /// The number of bits to append is given by `len`. The bits are taken from the least
+    /// significant bits of `bits`.
+    ///
+    /// This function does not check if `len` is larger than 64.
+    ///
+    /// Furthermore, if the bit-vector has trailing bits that are not zero
+    /// (i.e. the length is not a multiple of 64, and those bits are partially set),
+    /// the function will OR the new data with the trailing bits, destroying the appended data.
+    /// This can happen, if a call `append_bits[_unchecked](word, len)` appends a word which has
+    /// set bits beyond the `len - 1`-th bit,
+    /// or if bits have been dropped from the bit vector using [`drop_last`].
+    ///
+    /// This means the function must only be called during initial construction of vectors which are known
+    /// to not have contained data previously, and if the input data is known to not contain superfluous set bits.
+    ///
+    /// See [`append_bits`] for a checked version of this function.
+    ///
+    /// # Panics
+    /// If `len` is larger than 64, the behavior is platform-dependent, and a processor
+    /// exception might be triggered.
+    ///
+    /// [`append_bits`]: BitVec::append_bits
+    /// [`drop_last`]: BitVec::drop_last
+    fn append_bits_unchecked(&mut self, bits: u64, len: u64);
+
+    /// Append the bits of another bit vector to the end of this vector.
+    /// If this vector does not contain a multiple of 64 bits, the appended limbs need to be
+    /// shifted to the left.
+    /// This function is guaranteed to reallocate the underlying vector at most once.
+    fn extend_bitvec(&mut self, other: &Self);
+
+    /// Split the vector in two at the specified index. The left half contains bits `0..at` and the
+    /// right half the remaining bits `at..`. If the split index is larger than the length of the
+    /// vector, the vector is returned unmodified in an `Err` variant.
+    ///
+    /// # Errors
+    /// If the index is out of bounds, the function will return an error
+    /// containing the original vector.
+    ///
+    /// See also: [`split_at_unchecked`]
+    ///
+    /// [`split_at_unchecked`]: Self::split_at_unchecked
+    fn split_at(self, at: u64) -> Result<(Self, Self), Self>
+    where
+        Self: Sized,
+    {
+        if at > self.len() {
+            Err(self)
+        } else {
+            Ok(self.split_at_unchecked(at))
+        }
+    }
+
+    /// Split the vector in two at the specified index. The left half contains bits `0..at` and the
+    /// right half the remaining bits `at..`.
+    ///
+    /// # Panics
+    /// If the index is larger than the length of the vector the function will panic or run
+    /// out of memory.
+    /// Use [`split_at`] to properly handle this case.
+    ///
+    /// [`split_at`]: Self::split_at
+    #[must_use]
+    fn split_at_unchecked(self, at: u64) -> (Self, Self)
+    where
+        Self: Sized;
+}
+
 /// Type alias for masked bitvectors that implement a simple bitwise binary operation.
 /// The first lifetime is for the bit vector that is being masked, the second lifetime is for the
 /// mask.
@@ -45,7 +564,7 @@ pub type BitMask<'s, 'b> = MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>;
 ///
 /// # Example
 /// ```rust
-/// use vers_vecs::{BitVec, RsVec};
+/// use vers_vecs::{BitVec, RsVec, Bits};
 ///
 /// let mut bit_vec = BitVec::new();
 /// bit_vec.append_bit(0u64);
@@ -62,6 +581,49 @@ pub type BitMask<'s, 'b> = MaskedBitVec<'s, 'b, fn(u64, u64) -> u64>;
 pub struct BitVec {
     data: Vec<u64>,
     len: u64,
+}
+
+impl Bits for BitVec {
+    fn len(&self) -> u64 {
+        self.len
+    }
+
+    fn get_unchecked(&self, pos: u64) -> u64 {
+        (self.data[(pos / WORD_SIZE) as usize] >> (pos % WORD_SIZE)) & 1
+    }
+
+    #[allow(clippy::comparison_chain)] // readability
+    #[allow(clippy::cast_possible_truncation)] // divisions make this save
+    #[allow(clippy::inline_always)]
+    #[inline(always)] // inline to gain loop optimization and pipeline advantages for elias fano
+    fn get_bits_unchecked(&self, pos: u64, len: u64) -> u64 {
+        debug_assert!(len <= WORD_SIZE);
+        if len == 0 {
+            return 0;
+        }
+
+        let partial_word = self.data[(pos / WORD_SIZE) as usize] >> (pos % WORD_SIZE);
+        if pos % WORD_SIZE + len <= WORD_SIZE {
+            partial_word & 1u64.checked_shl(len as u32).unwrap_or(0).wrapping_sub(1)
+        } else {
+            (partial_word
+                | (self.data[(pos / WORD_SIZE + 1) as usize] << (WORD_SIZE - pos % WORD_SIZE)))
+                & 1u64.checked_shl(len as u32).unwrap_or(0).wrapping_sub(1)
+        }
+    }
+
+    fn count_ones(&self) -> u64 {
+        let mut ones: u64 = self.data[0..(self.len / WORD_SIZE) as usize]
+            .iter()
+            .map(|limb| u64::from(limb.count_ones()))
+            .sum();
+        if !self.len.is_multiple_of(WORD_SIZE) {
+            ones += u64::from(
+                (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones(),
+            );
+        }
+        ones
+    }
 }
 
 impl BitVec {
@@ -112,7 +674,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let bits: &[u8] = &[1, 0, 1, 1, 1, 1];
     /// let bv = BitVec::from_bits_u8(&bits);
@@ -196,7 +758,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let bits = [true, false, true, true, true, true];
     /// let bv = BitVec::from_bits_iter(bits.iter().copied());
@@ -237,7 +799,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let words = [0, 256, u64::MAX];
     /// let bv = BitVec::from_limbs(&words);
@@ -270,7 +832,7 @@ impl BitVec {
     /// # Example
     /// ```rust
     /// use std::iter::repeat;
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let zeros = repeat(0xaaaaaaaaaaaaaaaau64).take(10);
     /// let bv = BitVec::from_limbs_iter(zeros);
@@ -302,7 +864,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let words = vec![0, 256, u64::MAX];
     /// let bv = BitVec::from_vec(words);
@@ -383,7 +945,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let sequence = [0b1010u64, 0b1100u64, 0b1111u64];
     /// let bv = BitVec::pack_sequence_u64(&sequence, 4);
@@ -417,7 +979,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let sequence = [0b1010u32, 0b1100u32, 0b1111u32];
     /// let bv = BitVec::pack_sequence_u32(&sequence, 4);
@@ -451,7 +1013,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let sequence = [0b1010u16, 0b1100u16, 0b1111u16];
     /// let bv = BitVec::pack_sequence_u16(&sequence, 4);
@@ -485,7 +1047,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let sequence = [0b1010u8, 0b1100u8, 0b1111u8];
     /// let bv = BitVec::pack_sequence_u8(&sequence, 4);
@@ -520,7 +1082,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let sequence = [0b1010u64, 0b1100u64, 0b1111u64];
     /// let bv = BitVec::pack_from_iter_u64(sequence.into_iter(), 4);
@@ -535,10 +1097,7 @@ impl BitVec {
     /// [`pack_from_iter_u16`]: BitVec::pack_from_iter_u16
     /// [`pack_from_iter_u8`]: BitVec::pack_from_iter_u8
     /// [`pack_sequence_u64`]: BitVec::pack_sequence_u64
-    pub fn pack_from_iter_u64<I: IntoIterator<Item = u64>>(
-        iter: I,
-        bits_per_element: u64,
-    ) -> Self {
+    pub fn pack_from_iter_u64<I: IntoIterator<Item = u64>>(iter: I, bits_per_element: u64) -> Self {
         Self::pack_bits_iter::<_, _, 64>(iter, bits_per_element)
     }
 
@@ -558,7 +1117,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let sequence = [0b1010u32, 0b1100u32, 0b1111u32];
     /// let bv = BitVec::pack_from_iter_u32(sequence.into_iter(), 4);
@@ -573,10 +1132,7 @@ impl BitVec {
     /// [`pack_from_iter_u16`]: BitVec::pack_from_iter_u16
     /// [`pack_from_iter_u8`]: BitVec::pack_from_iter_u8
     /// [`pack_sequence_u32`]: BitVec::pack_sequence_u32
-    pub fn pack_from_iter_u32<I: IntoIterator<Item = u32>>(
-        iter: I,
-        bits_per_element: u64,
-    ) -> Self {
+    pub fn pack_from_iter_u32<I: IntoIterator<Item = u32>>(iter: I, bits_per_element: u64) -> Self {
         Self::pack_bits_iter::<_, _, 32>(iter, bits_per_element)
     }
 
@@ -596,7 +1152,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let sequence = [0b1010u16, 0b1100u16, 0b1111u16];
     /// let bv = BitVec::pack_from_iter_u16(sequence.into_iter(), 4);
@@ -611,10 +1167,7 @@ impl BitVec {
     /// [`pack_from_iter_u32`]: BitVec::pack_from_iter_u32
     /// [`pack_from_iter_u8`]: BitVec::pack_from_iter_u8
     /// [`pack_sequence_u16`]: BitVec::pack_sequence_u16
-    pub fn pack_from_iter_u16<I: IntoIterator<Item = u16>>(
-        iter: I,
-        bits_per_element: u64,
-    ) -> Self {
+    pub fn pack_from_iter_u16<I: IntoIterator<Item = u16>>(iter: I, bits_per_element: u64) -> Self {
         Self::pack_bits_iter::<_, _, 16>(iter, bits_per_element)
     }
 
@@ -634,7 +1187,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let sequence = [0b1010u8, 0b1100u8, 0b1111u8];
     /// let bv = BitVec::pack_from_iter_u8(sequence.into_iter(), 4);
@@ -659,7 +1212,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let sequence = [true, false, true, true];
     /// let bv = BitVec::from_bools(&sequence);
@@ -683,7 +1236,7 @@ impl BitVec {
     ///
     /// # Example
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let sequence = [true, false, true, true];
     /// let bv = BitVec::from_bool_iter(sequence.into_iter());
@@ -707,7 +1260,7 @@ impl BitVec {
     /// # Example
     ///
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let mut bv = BitVec::new();
     /// bv.append(true);
@@ -739,7 +1292,7 @@ impl BitVec {
     /// # Example
     ///
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let mut bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
     /// bv.drop_last(3);
@@ -779,7 +1332,7 @@ impl BitVec {
     /// # Example
     ///
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let mut bv = BitVec::new();
     ///
@@ -859,7 +1412,7 @@ impl BitVec {
     /// # Example
     ///
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let mut bv = BitVec::new();
     /// bv.append_word(0b1010_1010_1010_1010u64);
@@ -897,7 +1450,7 @@ impl BitVec {
     /// # Example
     ///
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let mut bv = BitVec::new();
     /// bv.append_bits(0b1010_1010_1010_1010u64, 16);
@@ -988,24 +1541,12 @@ impl BitVec {
         }
     }
 
-    /// Return the length of the bit vector. The length is measured in bits.
-    #[must_use]
-    pub fn len(&self) -> u64 {
-        self.len
-    }
-
-    /// Return whether the bit vector is empty (contains no bits).
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-
     /// Flip the bit at the given position.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let mut bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
     /// bv.flip_bit(1);
@@ -1035,47 +1576,6 @@ impl BitVec {
         self.data[(pos / WORD_SIZE) as usize] ^= 1 << (pos % WORD_SIZE);
     }
 
-    /// Return the bit at the given position.
-    /// The bit is encoded in the least significant bit of a u64 value.
-    /// If the position is larger than the length of the vector, None is returned.
-    ///
-    /// See also: [`get_unchecked`]
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use vers_vecs::BitVec;
-    ///
-    /// let bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
-    ///
-    /// assert_eq!(bv.get(1), Some(0));
-    /// assert_eq!(bv.get(2), Some(1));
-    /// ```
-    ///
-    /// [`get_unchecked`]: Self::get_unchecked
-    #[must_use]
-    pub fn get(&self, pos: u64) -> Option<u64> {
-        if pos >= self.len {
-            None
-        } else {
-            Some(self.get_unchecked(pos))
-        }
-    }
-
-    /// Return the bit at the given position.
-    /// The bit is encoded in the least significant bit of a u64 value.
-    ///
-    /// # Panics
-    /// If the position is larger than the length of the vector,
-    /// the function will either return unpredictable data, or panic.
-    /// Use [`get`] to properly handle this case with an `Option`.
-    ///
-    /// [`get`]: BitVec::get
-    #[must_use]
-    pub fn get_unchecked(&self, pos: u64) -> u64 {
-        (self.data[(pos / WORD_SIZE) as usize] >> (pos % WORD_SIZE)) & 1
-    }
-
     /// Set the bit at the given position.
     /// The bit is encoded in the least significant bit of a u64 value.
     ///
@@ -1084,7 +1584,7 @@ impl BitVec {
     /// # Example
     ///
     /// ```rust
-    /// use vers_vecs::BitVec;
+    /// use vers_vecs::{BitVec, Bits};
     ///
     /// let mut bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
     /// bv.set(1, 1).unwrap();
@@ -1120,198 +1620,6 @@ impl BitVec {
         self.data[(pos / WORD_SIZE) as usize] = (self.data[(pos / WORD_SIZE) as usize]
             & !(0x1 << (pos % WORD_SIZE)))
             | ((value & 0x1) << (pos % WORD_SIZE));
-    }
-
-    /// Return whether the bit at the given position is set.
-    /// If the position is larger than the length of the vector, None is returned.
-    ///
-    /// See also: [`is_bit_set_unchecked`]
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use vers_vecs::BitVec;
-    ///
-    /// let bv = BitVec::from_bits_u8(&[1, 0, 1, 1, 1, 1]);
-    ///
-    /// assert!(!bv.is_bit_set(1).unwrap());
-    /// assert!(bv.is_bit_set(2).unwrap());
-    /// ```
-    ///
-    /// [`is_bit_set_unchecked`]: BitVec::is_bit_set_unchecked
-    #[must_use]
-    pub fn is_bit_set(&self, pos: u64) -> Option<bool> {
-        if pos >= self.len {
-            None
-        } else {
-            Some(self.is_bit_set_unchecked(pos))
-        }
-    }
-
-    /// Return whether the bit at the given position is set.
-    ///
-    /// # Panics
-    /// If the position is larger than the length of the vector,
-    /// the function will either return unpredictable data, or panic.
-    /// Use [`is_bit_set`] to properly handle this case with an `Option`.
-    ///
-    /// [`is_bit_set`]: BitVec::is_bit_set
-    #[must_use]
-    pub fn is_bit_set_unchecked(&self, pos: u64) -> bool {
-        self.get_unchecked(pos) != 0
-    }
-
-    /// Return multiple bits at the given position.
-    /// The number of bits to return is given by `len`.
-    /// At most 64 bits can be returned.
-    /// If the position at the end of the query is larger than the length of the vector,
-    /// None is returned (even if the query partially overlaps with the vector).
-    /// If the length of the query is larger than 64, None is returned.
-    ///
-    /// The first bit at `pos` is the most significant bit of the return value
-    /// limited to `len` bits.
-    #[must_use]
-    pub fn get_bits(&self, pos: u64, len: u64) -> Option<u64> {
-        if len > WORD_SIZE || len == 0 {
-            return None;
-        }
-        if pos + len > self.len {
-            None
-        } else {
-            Some(self.get_bits_unchecked(pos, len))
-        }
-    }
-
-    /// Return multiple bits at the given position. The number of bits to return is given by `len`.
-    /// At most 64 bits can be returned.
-    ///
-    /// Reading 0 bits is always legal, even if the index is out of bounds.
-    /// This behavior was chosen such that operations like the following behave expectedly:
-    /// ```
-    /// # use vers_vecs::BitVec;
-    /// let mut bv = BitVec::new();
-    /// bv.append_bits_unchecked(1, 0);
-    /// bv.append_bits_unchecked(63, 0);
-    /// bv.append_bits_unchecked(1, 0);
-    ///
-    /// assert_eq!(bv.get_bits_unchecked(0, 0), 0);
-    /// assert_eq!(bv.get_bits_unchecked(1, 0), 0);
-    /// assert_eq!(bv.get_bits_unchecked(2, 0), 0);
-    /// ```
-    ///
-    /// # Errors
-    /// If the length of the query is larger than 64, unpredictable data will be returned.
-    /// Use [`get_bits`] to avoid this.
-    ///
-    /// # Panics
-    /// If the position or interval is larger than the length of the vector,
-    /// the function will either return any valid results padded with unpredictable
-    /// data or panic.
-    ///
-    /// [`get_bits`]: BitVec::get_bits
-    // This function is always inlined, because it gains a lot from loop optimization and
-    // can utilize the processor pre-fetcher better if it is.
-    #[must_use]
-    #[allow(clippy::inline_always)]
-    #[allow(clippy::comparison_chain)] // readability
-    #[inline(always)] // inline to gain loop optimization and pipeline advantages for elias fano
-    #[allow(clippy::cast_possible_truncation)] // parameter must be out of scope for this to happen
-    pub fn get_bits_unchecked(&self, pos: u64, len: u64) -> u64 {
-        debug_assert!(len <= WORD_SIZE);
-        if len == 0 {
-            return 0;
-        }
-
-        let partial_word = self.data[(pos / WORD_SIZE) as usize] >> (pos % WORD_SIZE);
-        if pos % WORD_SIZE + len <= WORD_SIZE {
-            partial_word & 1u64.checked_shl(len as u32).unwrap_or(0).wrapping_sub(1)
-        } else {
-            (partial_word
-                | (self.data[(pos / WORD_SIZE + 1) as usize] << (WORD_SIZE - pos % WORD_SIZE)))
-                & 1u64.checked_shl(len as u32).unwrap_or(0).wrapping_sub(1)
-        }
-    }
-
-    /// Extract a packed element from a bit vector. The element is encoded in the bits at the given
-    /// `index`. The number of bits per encoded element is given by `n`.
-    ///
-    /// This is a convenience method to access elements previously packed using the [`pack_sequence_*`] methods,
-    /// and is equivalent to calling [`get_bits(index * n, n)`].
-    /// It is thus safe to use this method with any index and any size n <= 64.
-    ///
-    /// If the element is out of bounds, None is returned.
-    /// The element is returned as a u64 value.
-    ///
-    /// # Example
-    /// ```rust
-    /// use vers_vecs::BitVec;
-    ///
-    /// let sequence = [10, 100, 124, 45, 223];
-    /// let bv = BitVec::pack_sequence_u64(&sequence, 8);
-    ///
-    /// assert_eq!(bv.unpack_element(0, 8), Some(10));
-    /// assert_eq!(bv.unpack_element(2, 8), Some(124));
-    /// ```
-    ///
-    /// [`pack_sequence_*`]: BitVec::pack_sequence_u64
-    /// [`get_bits(index * n, n)`]: BitVec::get_bits
-    #[must_use]
-    #[allow(clippy::inline_always)]
-    #[inline(always)] // to gain optimization if n is constant
-    pub fn unpack_element(&self, index: u64, n: u64) -> Option<u64> {
-        self.get_bits(index * n, n)
-    }
-
-    /// Extract a packed element from a bit vector. The element is encoded in the bits at the given
-    /// `index`. The number of bits per encoded element is given by `n`.
-    ///
-    /// This is a convenience method to access elements previously packed using the [`pack_sequence_*`] methods,
-    /// and is equivalent to calling [`get_bits_unchecked(index * n, n)`].
-    /// It is thus safe to use this method with any index where `index * n + n` is in-bounds,
-    /// and any size n <= 64.
-    ///
-    /// # Panics
-    /// If the element is out of bounds, the function will either return unpredictable data or panic.
-    /// Use [`unpack_element`] for a checked version of this function.
-    ///
-    /// [`pack_sequence_*`]: BitVec::pack_sequence_u64
-    /// [`get_bits_unchecked(index * n, n)`]: BitVec::get_bits_unchecked
-    /// [`unpack_element`]: BitVec::unpack_element
-    #[must_use]
-    #[allow(clippy::inline_always)]
-    #[inline(always)] // to gain optimization if n is constant
-    pub fn unpack_element_unchecked(&self, index: u64, n: u64) -> u64 {
-        self.get_bits_unchecked(index * n, n)
-    }
-
-    /// Return the number of ones in the bit vector. Since the bit vector doesn't store additional
-    /// metadata, this value is calculated. Use [`RsVec`] for constant-time rank operations.
-    ///
-    /// [`RsVec`]: crate::RsVec
-    #[must_use]
-    #[allow(clippy::missing_panics_doc)] // can't panic because of manual bounds check
-    pub fn count_ones(&self) -> u64 {
-        let mut ones: u64 = self.data[0..(self.len / WORD_SIZE) as usize]
-            .iter()
-            .map(|limb| u64::from(limb.count_ones()))
-            .sum();
-        if !self.len.is_multiple_of(WORD_SIZE) {
-            ones += u64::from(
-                (self.data.last().unwrap() & ((1 << (self.len % WORD_SIZE)) - 1)).count_ones(),
-            );
-        }
-        ones
-    }
-
-    /// Return the number of zeros in the bit vector. Since the bit vector doesn't store additional
-    /// metadata, this value is calculated. Use [`RsVec`] for constant-time rank operations.
-    /// This method calls [`count_ones`].
-    ///
-    /// [`RsVec`]: crate::RsVec
-    /// [`count_ones`]: BitVec::count_ones
-    #[must_use]
-    pub fn count_zeros(&self) -> u64 {
-        self.len - self.count_ones()
     }
 
     /// Mask this bit vector with another bitvector using bitwise or. The mask is applied lazily

@@ -2,6 +2,7 @@ use super::*;
 use crate::BitVec;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use crate::bit_vec::Bits;
 
 #[test]
 fn test_fwd_search() {

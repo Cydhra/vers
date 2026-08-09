@@ -14,6 +14,7 @@
 use crate::BitVec;
 use std::cmp::max;
 use std::num::NonZeroUsize;
+use crate::bit_vec::Bits;
 
 /// A singular node in a binary min-max tree that is part of the [`BpTree`] data structure.
 ///

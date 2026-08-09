@@ -12,6 +12,7 @@ use crate::util::impl_ef_iterator;
 use crate::BitVec;
 use crate::RsVec;
 use std::cmp::max;
+use crate::bit_vec::Bits;
 
 /// We use linear search for small 1-blocks in the upper vector because it is generally more memory-
 /// friendly. But for large clusters this takes too long, so we switch to binary search.

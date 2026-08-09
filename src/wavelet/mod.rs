@@ -13,6 +13,7 @@ use crate::util::impl_vector_iterator;
 use crate::{BitVec, RsVec};
 use std::mem;
 use std::ops::Range;
+use crate::bit_vec::Bits;
 
 /// A wavelet matrix implementation implemented as described in
 /// [Navarro and Claude, 2021](http://dx.doi.org/10.1007/978-3-642-34109-0_18).
