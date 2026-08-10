@@ -199,7 +199,7 @@ impl RsVec {
                 index_1: 0,
             });
         } else {
-            debug_assert!(select_blocks[last_zero_select_block + 1].index_0 == 0);
+            debug_assert_eq!(select_blocks[last_zero_select_block + 1].index_0, 0);
             select_blocks[last_zero_select_block + 1].index_0 = super_blocks.len();
         }
         if last_one_select_block == select_blocks.len() - 1 {
@@ -208,7 +208,7 @@ impl RsVec {
                 index_1: super_blocks.len(),
             });
         } else {
-            debug_assert!(select_blocks[last_one_select_block + 1].index_1 == 0);
+            debug_assert_eq!(select_blocks[last_one_select_block + 1].index_1, 0);
             select_blocks[last_one_select_block + 1].index_1 = super_blocks.len();
         }
 

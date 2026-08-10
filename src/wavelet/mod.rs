@@ -1056,7 +1056,7 @@ impl WaveletMatrix {
         start_level: usize,
         mut prefix: BitVec,
     ) -> BitVec {
-        debug_assert!(prefix.len() == self.bits_per_element());
+        debug_assert_eq!(prefix.len(), self.bits_per_element());
         debug_assert!(!range.is_empty());
         debug_assert!(range.end <= self.len());
 

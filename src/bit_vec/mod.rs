@@ -331,7 +331,7 @@ impl BitVec {
     {
         let mut bv = Self::with_capacity(sequence.len() * bits_per_element);
         for &word in sequence {
-            Self::pack_word_into_vector::<MAX_BITS>(&mut bv, word.into(), bits_per_element)
+            Self::pack_word_into_vector::<MAX_BITS>(&mut bv, word.into(), bits_per_element);
         }
         bv
     }
@@ -348,7 +348,7 @@ impl BitVec {
         let mut bv = Self::new();
 
         for word in iter {
-            Self::pack_word_into_vector::<MAX_BITS>(&mut bv, word.into(), bits_per_element)
+            Self::pack_word_into_vector::<MAX_BITS>(&mut bv, word.into(), bits_per_element);
         }
 
         bv
@@ -359,9 +359,9 @@ impl BitVec {
     #[inline(always)]
     fn pack_word_into_vector<const MAX_BITS: usize>(bv: &mut BitVec, word: u64, num_bits: usize) {
         if num_bits <= MAX_BITS {
-            bv.append_bits(word.into(), num_bits);
+            bv.append_bits(word, num_bits);
         } else {
-            bv.append_bits(word.into(), MAX_BITS);
+            bv.append_bits(word, MAX_BITS);
             let mut rest = num_bits - MAX_BITS;
             while rest > 0 {
                 bv.append_bits(0, min(rest, MAX_BITS));
@@ -1588,7 +1588,7 @@ impl From<Vec<u64>> for BitVec {
 impl Extend<BitVec> for BitVec {
     fn extend<T: IntoIterator<Item = BitVec>>(&mut self, iter: T) {
         for v in iter {
-            self.extend_bitvec(&v)
+            self.extend_bitvec(&v);
         }
     }
 }
@@ -1596,7 +1596,7 @@ impl Extend<BitVec> for BitVec {
 impl<'t> Extend<&'t BitVec> for BitVec {
     fn extend<T: IntoIterator<Item = &'t BitVec>>(&mut self, iter: T) {
         for v in iter {
-            self.extend_bitvec(v)
+            self.extend_bitvec(v);
         }
     }
 }
